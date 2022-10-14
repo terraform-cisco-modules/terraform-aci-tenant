@@ -22,7 +22,7 @@ resource "aci_application_profile" "application_profiles" {
 }
 
 resource "mso_schema_template_anp" "application_profiles" {
-  provider = mso
+  provider = ndo
   depends_on = [
     mso_schema.schemas,
     mso_schema_site.sites
@@ -35,7 +35,7 @@ resource "mso_schema_template_anp" "application_profiles" {
 }
 
 resource "mso_schema_site_anp" "application_profiles" {
-  provider = mso
+  provider = ndo
   depends_on = [
     mso_schema_template_anp.application_profiles
   ]

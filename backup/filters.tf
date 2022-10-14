@@ -71,7 +71,7 @@ resource "aci_filter_entry" "filter_entries" {
 }
 
 resource "mso_schema_template_filter_entry" "filter_entries" {
-  provider = mso
+  provider = ndo
   depends_on = [
     mso_schema.schemas
   ]

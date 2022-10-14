@@ -82,7 +82,7 @@ resource "aci_taboo_contract" "contracts" {
 }
 
 resource "mso_schema_template_contract" "contracts" {
-  provider = mso
+  provider = ndo
   depends_on = [
     mso_schema.schemas,
   ]

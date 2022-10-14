@@ -1,5 +1,5 @@
 data "mso_schema" "schemas" {
-  provider = mso
+  provider = ndo
   depends_on = [
     mso_schema.schemas
   ]
@@ -9,7 +9,7 @@ data "mso_schema" "schemas" {
 }
 
 resource "mso_schema" "schemas" {
-  provider = mso
+  provider = ndo
   depends_on = [
     mso_tenant.tenants
   ]
@@ -26,7 +26,7 @@ resource "mso_schema" "schemas" {
 }
 
 resource "mso_schema_site" "sites" {
-  provider = mso
+  provider = ndo
   depends_on = [
     mso_schema.schemas
   ]

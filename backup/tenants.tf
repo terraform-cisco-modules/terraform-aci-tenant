@@ -67,19 +67,19 @@ Nexus Dashboard — Tenants
 _______________________________________________________________________________________________________________________
 */
 data "mso_site" "ndo_sites" {
-  provider = mso
+  provider = ndo
   for_each = toset(local.ndo_sites)
   name     = each.key
 }
 
 data "mso_user" "ndo_users" {
-  provider = mso
+  provider = ndo
   for_each = toset(local.ndo_users)
   username = each.key
 }
 
 resource "mso_tenant" "tenants" {
-  provider = mso
+  provider = ndo
   depends_on = [
     data.mso_site.ndo_sites,
     data.mso_user.ndo_users

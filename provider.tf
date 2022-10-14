@@ -10,8 +10,8 @@ terraform {
       source  = "CiscoDevNet/aci"
       version = ">= 2.5.2"
     }
-    mso = {
-      source = "CiscoDevNet/mso"
+    ndo = {
+      source  = "CiscoDevNet/mso"
       version = ">=0.7.0"
     }
   }

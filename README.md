@@ -15,70 +15,42 @@ A comprehensive example using this module is available here: https://github.com/
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.0 |
-| <a name="requirement_aci"></a> [aci](#requirement\_aci) | >= 2.1.0 |
+| <a name="requirement_aci"></a> [aci](#requirement\_aci) | >= 2.5.2 |
+| <a name="requirement_mso"></a> [mso](#requirement\_mso) | >=0.7.0 |
 ## Providers
 
-| Name | Version |
-|------|---------|
-| <a name="provider_aci"></a> [aci](#provider\_aci) | >= 2.1.0 |
+No providers.
 ## Inputs
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_remote_password_1"></a> [remote\_password\_1](#input\_remote\_password\_1) | Remote Host Password 1. | `string` | `""` | no |
-| <a name="input_remote_password_2"></a> [remote\_password\_2](#input\_remote\_password\_2) | Remote Host Password 2. | `string` | `""` | no |
-| <a name="input_remote_password_3"></a> [remote\_password\_3](#input\_remote\_password\_3) | Remote Host Password 3. | `string` | `""` | no |
-| <a name="input_remote_password_4"></a> [remote\_password\_4](#input\_remote\_password\_4) | Remote Host Password 4. | `string` | `""` | no |
-| <a name="input_remote_password_5"></a> [remote\_password\_5](#input\_remote\_password\_5) | Remote Host Password 5. | `string` | `""` | no |
-| <a name="input_ssh_key_contents"></a> [ssh\_key\_contents](#input\_ssh\_key\_contents) | SSH Private Key Based Authentication Contents. | `string` | `""` | no |
-| <a name="input_ssh_key_passphrase"></a> [ssh\_key\_passphrase](#input\_ssh\_key\_passphrase) | SSH Private Key Based Authentication Passphrase. | `string` | `""` | no |
-| <a name="input_radius_key_1"></a> [radius\_key\_1](#input\_radius\_key\_1) | RADIUS Key 1. | `string` | `""` | no |
-| <a name="input_radius_key_2"></a> [radius\_key\_2](#input\_radius\_key\_2) | RADIUS Key 2. | `string` | `""` | no |
-| <a name="input_radius_key_3"></a> [radius\_key\_3](#input\_radius\_key\_3) | RADIUS Key 3. | `string` | `""` | no |
-| <a name="input_radius_key_4"></a> [radius\_key\_4](#input\_radius\_key\_4) | RADIUS Key 4. | `string` | `""` | no |
-| <a name="input_radius_key_5"></a> [radius\_key\_5](#input\_radius\_key\_5) | RADIUS Key 5. | `string` | `""` | no |
-| <a name="input_radius_monitoring_password_1"></a> [radius\_monitoring\_password\_1](#input\_radius\_monitoring\_password\_1) | RADIUS Monitoring Password 1. | `string` | `""` | no |
-| <a name="input_radius_monitoring_password_2"></a> [radius\_monitoring\_password\_2](#input\_radius\_monitoring\_password\_2) | RADIUS Monitoring Password 2. | `string` | `""` | no |
-| <a name="input_radius_monitoring_password_3"></a> [radius\_monitoring\_password\_3](#input\_radius\_monitoring\_password\_3) | RADIUS Monitoring Password 3. | `string` | `""` | no |
-| <a name="input_radius_monitoring_password_4"></a> [radius\_monitoring\_password\_4](#input\_radius\_monitoring\_password\_4) | RADIUS Monitoring Password 4. | `string` | `""` | no |
-| <a name="input_radius_monitoring_password_5"></a> [radius\_monitoring\_password\_5](#input\_radius\_monitoring\_password\_5) | RADIUS Monitoring Password 5. | `string` | `""` | no |
-| <a name="input_tacacs_key_1"></a> [tacacs\_key\_1](#input\_tacacs\_key\_1) | TACACS Key 1. | `string` | `""` | no |
-| <a name="input_tacacs_key_2"></a> [tacacs\_key\_2](#input\_tacacs\_key\_2) | TACACS Key 2. | `string` | `""` | no |
-| <a name="input_tacacs_key_3"></a> [tacacs\_key\_3](#input\_tacacs\_key\_3) | TACACS Key 3. | `string` | `""` | no |
-| <a name="input_tacacs_key_4"></a> [tacacs\_key\_4](#input\_tacacs\_key\_4) | TACACS Key 4. | `string` | `""` | no |
-| <a name="input_tacacs_key_5"></a> [tacacs\_key\_5](#input\_tacacs\_key\_5) | TACACS Key 5. | `string` | `""` | no |
-| <a name="input_tacacs_monitoring_password_1"></a> [tacacs\_monitoring\_password\_1](#input\_tacacs\_monitoring\_password\_1) | TACACS Monitoring Password 1. | `string` | `""` | no |
-| <a name="input_tacacs_monitoring_password_2"></a> [tacacs\_monitoring\_password\_2](#input\_tacacs\_monitoring\_password\_2) | TACACS Monitoring Password 2. | `string` | `""` | no |
-| <a name="input_tacacs_monitoring_password_3"></a> [tacacs\_monitoring\_password\_3](#input\_tacacs\_monitoring\_password\_3) | TACACS Monitoring Password 3. | `string` | `""` | no |
-| <a name="input_tacacs_monitoring_password_4"></a> [tacacs\_monitoring\_password\_4](#input\_tacacs\_monitoring\_password\_4) | TACACS Monitoring Password 4. | `string` | `""` | no |
-| <a name="input_tacacs_monitoring_password_5"></a> [tacacs\_monitoring\_password\_5](#input\_tacacs\_monitoring\_password\_5) | TACACS Monitoring Password 5. | `string` | `""` | no |
 | <a name="input_model"></a> [model](#input\_model) | Model data. | `any` | n/a | yes |
+| <a name="input_aws_secret_key"></a> [aws\_secret\_key](#input\_aws\_secret\_key) | AWS Secret Key Id. It must be provided if the AWS account is not trusted. This parameter will only have effect with vendor = aws. | `string` | `""` | no |
+| <a name="input_azure_client_secret"></a> [azure\_client\_secret](#input\_azure\_client\_secret) | Azure Client Secret. It must be provided when azure\_access\_type to credentials. This parameter will only have effect with vendor = azure. | `string` | `"1"` | no |
+| <a name="input_bgp_password_1"></a> [bgp\_password\_1](#input\_bgp\_password\_1) | BGP Password 1. | `string` | `""` | no |
+| <a name="input_bgp_password_2"></a> [bgp\_password\_2](#input\_bgp\_password\_2) | BGP Password 2. | `string` | `""` | no |
+| <a name="input_bgp_password_3"></a> [bgp\_password\_3](#input\_bgp\_password\_3) | BGP Password 3. | `string` | `""` | no |
+| <a name="input_bgp_password_4"></a> [bgp\_password\_4](#input\_bgp\_password\_4) | BGP Password 4. | `string` | `""` | no |
+| <a name="input_bgp_password_5"></a> [bgp\_password\_5](#input\_bgp\_password\_5) | BGP Password 5. | `string` | `""` | no |
+| <a name="input_ospf_key_1"></a> [ospf\_key\_1](#input\_ospf\_key\_1) | OSPF Key 1. | `string` | `""` | no |
+| <a name="input_ospf_key_2"></a> [ospf\_key\_2](#input\_ospf\_key\_2) | OSPF Key 2. | `string` | `""` | no |
+| <a name="input_ospf_key_3"></a> [ospf\_key\_3](#input\_ospf\_key\_3) | OSPF Key 3. | `string` | `""` | no |
+| <a name="input_ospf_key_4"></a> [ospf\_key\_4](#input\_ospf\_key\_4) | OSPF Key 4. | `string` | `""` | no |
+| <a name="input_ospf_key_5"></a> [ospf\_key\_5](#input\_ospf\_key\_5) | OSPF Key 5. | `string` | `""` | no |
+| <a name="input_vrf_snmp_community_1"></a> [vrf\_snmp\_community\_1](#input\_vrf\_snmp\_community\_1) | SNMP Community 1. | `string` | `""` | no |
+| <a name="input_vrf_snmp_community_2"></a> [vrf\_snmp\_community\_2](#input\_vrf\_snmp\_community\_2) | SNMP Community 2. | `string` | `""` | no |
+| <a name="input_vrf_snmp_community_3"></a> [vrf\_snmp\_community\_3](#input\_vrf\_snmp\_community\_3) | SNMP Community 3. | `string` | `""` | no |
+| <a name="input_vrf_snmp_community_4"></a> [vrf\_snmp\_community\_4](#input\_vrf\_snmp\_community\_4) | SNMP Community 4. | `string` | `""` | no |
+| <a name="input_vrf_snmp_community_5"></a> [vrf\_snmp\_community\_5](#input\_vrf\_snmp\_community\_5) | SNMP Community 5. | `string` | `""` | no |
 ## Outputs
 
-No outputs.
+| Name | Description |
+|------|-------------|
+| <a name="output_bridge_domains"></a> [bridge\_domains](#output\_bridge\_domains) | n/a |
+| <a name="output_ndo_sites"></a> [ndo\_sites](#output\_ndo\_sites) | n/a |
+| <a name="output_ndo_users"></a> [ndo\_users](#output\_ndo\_users) | n/a |
+| <a name="output_tenants"></a> [tenants](#output\_tenants) | n/a |
 ## Resources
 
-| Name | Type |
-|------|------|
-| [aci_authentication_properties.authentication_properties](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/authentication_properties) | resource |
-| [aci_configuration_export_policy.configuration_export](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/configuration_export_policy) | resource |
-| [aci_console_authentication.console](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/console_authentication) | resource |
-| [aci_default_authentication.default](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/default_authentication) | resource |
-| [aci_duo_provider_group.duo_provider_groups](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/duo_provider_group) | resource |
-| [aci_file_remote_path.export_remote_hosts](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/file_remote_path) | resource |
-| [aci_global_security.security](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/global_security) | resource |
-| [aci_login_domain.login_domain](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/login_domain) | resource |
-| [aci_login_domain.login_domain_tacacs](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/login_domain) | resource |
-| [aci_login_domain_provider.aci_login_domain_provider_radius](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/login_domain_provider) | resource |
-| [aci_login_domain_provider.aci_login_domain_provider_tacacs](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/login_domain_provider) | resource |
-| [aci_radius_provider.radius_providers](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/radius_provider) | resource |
-| [aci_radius_provider_group.radius_provider_groups](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/radius_provider_group) | resource |
-| [aci_recurring_window.recurring_window](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/recurring_window) | resource |
-| [aci_rsa_provider.rsa_providers](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rsa_provider) | resource |
-| [aci_tacacs_accounting.tacacs_accounting](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/tacacs_accounting) | resource |
-| [aci_tacacs_accounting_destination.tacacs_accounting_destinations](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/tacacs_accounting_destination) | resource |
-| [aci_tacacs_provider.tacacs_providers](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/tacacs_provider) | resource |
-| [aci_tacacs_provider_group.tacacs_provider_groups](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/tacacs_provider_group) | resource |
-| [aci_tacacs_source.tacacs_sources](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/tacacs_source) | resource |
-| [aci_trigger_scheduler.trigger_schedulers](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/trigger_scheduler) | resource |
+No resources.
 <!-- END_TF_DOCS -->

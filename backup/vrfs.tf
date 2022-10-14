@@ -82,7 +82,7 @@ resource "aci_vrf" "vrfs" {
 }
 
 resource "mso_schema_template_vrf" "vrfs" {
-  provider = mso
+  provider = ndo
   depends_on = [
     aci_tenant.tenants,
     mso_schema.schemas
@@ -97,7 +97,7 @@ resource "mso_schema_template_vrf" "vrfs" {
 }
 
 resource "mso_schema_site_vrf" "vrfs" {
-  provider = mso
+  provider = ndo
   depends_on = [
     aci_tenant.tenants,
     mso_schema.schemas

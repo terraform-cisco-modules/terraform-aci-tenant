@@ -45,7 +45,7 @@ resource "aci_application_epg" "application_epgs" {
 
 
 resource "mso_schema_template_anp_epg" "application_epgs" {
-  provider = mso
+  provider = ndo
   depends_on = [
     mso_schema_template_anp.application_profiles
   ]

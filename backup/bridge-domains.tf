@@ -155,7 +155,7 @@ resource "aci_subnet" "bridge_domain_subnets" {
 
 
 resource "mso_schema_template_bd" "bridge_domains" {
-  provider = mso
+  provider = ndo
   depends_on = [
     mso_schema.schemas,
     mso_schema_site.sites
@@ -203,7 +203,7 @@ resource "mso_schema_template_bd" "bridge_domains" {
 }
 
 resource "mso_schema_site_bd" "bridge_domains" {
-  provider = mso
+  provider = ndo
   depends_on = [
     mso_schema_template_bd.bridge_domains
   ]
@@ -216,7 +216,7 @@ resource "mso_schema_site_bd" "bridge_domains" {
 }
 
 resource "mso_schema_site_bd_l3out" "bridge_domain_l3outs" {
-  provider = mso
+  provider = ndo
   depends_on = [
     mso_schema_site_bd.bridge_domains
   ]
@@ -229,7 +229,7 @@ resource "mso_schema_site_bd_l3out" "bridge_domain_l3outs" {
 }
 
 resource "mso_schema_template_bd_subnet" "bridge_domain_subnets" {
-  provider = mso
+  provider = ndo
   depends_on = [
     mso_schema_template_bd.bridge_domains
   ]
