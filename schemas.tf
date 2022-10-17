@@ -1,5 +1,5 @@
 data "mso_schema" "schemas" {
-  provider = ndo
+  provider = mso
   depends_on = [
     mso_schema.schemas
   ]
@@ -9,7 +9,7 @@ data "mso_schema" "schemas" {
 }
 
 resource "mso_schema" "schemas" {
-  provider = ndo
+  provider = mso
   depends_on = [
     mso_tenant.tenants
   ]
@@ -25,24 +25,13 @@ resource "mso_schema" "schemas" {
   }
 }
 
-resource "mso_schema_site" "sites" {
-  provider = ndo
+resource "mso_schema_site" "template_sites" {
+  provider = mso
   depends_on = [
     mso_schema.schemas
   ]
   for_each      = local.template_sites
   schema_id     = mso_schema.schemas[each.value.schema].id
-  site_id       = data.mso_site.ndo_sites[each.value.site].id
+  site_id       = data.mso_site.sites[each.value.site].id
   template_name = each.value.name
-}
-
-output "schemas" {
-  value = {
-    schemas = var.schemas != {} ? { for v in sort(
-      keys(data.mso_schema.schemas)
-    ) : v => data.mso_schema.schemas[v].id } : {}
-    # schema_template_sites = var.schemas != {} ? { for v in sort(
-    #   keys(mso_schema_site.sites)
-    # ) : v => mso_schema_site.sites[v].id } : {}
-  }
 }

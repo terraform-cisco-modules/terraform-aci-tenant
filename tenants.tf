@@ -8,8 +8,8 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_tenant" "tenants" {
-  for_each                      = { for k, v in local.tenants : k => v if v.controller_type == "apic" }
-  annotation                    = each.value.annotation != "" ? each.value.annotation : var.annotation
+  for_each                      = { for k, v in local.tenants : k => v if local.controller_type == "apic" }
+  annotation                    = each.value.annotation
   description                   = each.value.description
   name                          = each.key
   name_alias                    = each.value.alias
@@ -25,11 +25,21 @@ GUI Location:
  - Tenants > {tenant}: {annotations}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_rest_managed" "tenants_annotations" {
+resource "aci_rest_managed" "tenant_annotations" {
   depends_on = [
     aci_tenant.tenants
   ]
-  for_each   = local.tenants_annotations
+  for_each = {
+    for i in flatten([
+      for a, b in local.tenants : [
+        for v in b.annotations : {
+          key    = v.key
+          tenant = a
+          value  = v.value
+        }
+      ]
+    ]) : "${i.tenant}-${i.key}" => i if local.controller_type == "apic"
+  }
   dn         = "uni/tn-${each.value.tenant}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
   content = {
@@ -38,23 +48,24 @@ resource "aci_rest_managed" "tenants_annotations" {
   }
 }
 
+
 /*_____________________________________________________________________________________________________________________
 
 API Information:
  - Class: "tagAliasInst"
  - Distinguished Name: "uni/tn-{tenant}/alias"
 GUI Location:
- - Tenants > {tenant} > Networking > VRFs > {vrf}: global_alias
+ - Tenants > {tenant}: global_alias
 
 _______________________________________________________________________________________________________________________
 */
-resource "aci_rest_managed" "tenants_global_alias" {
+resource "aci_rest_managed" "tenant_global_alias" {
   depends_on = [
     aci_tenant.tenants
   ]
-  for_each   = local.tenants_global_alias
+  for_each   = { for k, v in local.tenants : k => v if v.global_alias != "" && local.controller_type == "apic" }
   class_name = "tagAliasInst"
-  dn         = "uni/tn-${each.value.tenant}/alias"
+  dn         = "uni/tn-${each.key}/alias"
   content = {
     name = each.value.global_alias
   }
@@ -66,67 +77,57 @@ resource "aci_rest_managed" "tenants_global_alias" {
 Nexus Dashboard — Tenants
 _______________________________________________________________________________________________________________________
 */
-data "mso_site" "ndo_sites" {
-  provider = ndo
-  for_each = toset(local.ndo_sites)
+data "mso_site" "sites" {
+  provider = mso
+  for_each = { for v in local.sites : v => v if local.controller_type == "ndo" }
   name     = each.key
 }
 
-data "mso_user" "ndo_users" {
-  provider = ndo
-  for_each = toset(local.ndo_users)
+data "mso_user" "users" {
+  provider = mso
+  for_each = { for v in local.users : v => v if local.controller_type == "ndo" }
   username = each.key
 }
 
 resource "mso_tenant" "tenants" {
-  provider = ndo
+  provider = mso
   depends_on = [
-    data.mso_site.ndo_sites,
-    data.mso_user.ndo_users
+    data.mso_site.sites,
+    data.mso_user.users
   ]
-  for_each     = { for k, v in local.tenants : k => v if v.controller_type == "ndo" }
+  for_each     = { for k, v in local.tenants : k => v if local.controller_type == "ndo" }
   description  = each.value.description
   name         = each.key
   display_name = each.key
   dynamic "site_associations" {
     for_each = { for k, v in each.value.sites : k => v if v.vendor == "aws" }
     content {
-      aws_access_key_id = length(regexall(
-        "aws", site_associations.value.vendor)
-      ) > 0 ? site_associations.value.aws_access_key_id : ""
-      aws_account_id = length(regexall(
-        "aws", site_associations.value.vendor)
-      ) > 0 ? site_associations.value.aws_account_id : ""
-      aws_secret_key = length(regexall(
-        "aws", site_associations.value.vendor)
-      ) > 0 ? var.aws_secret_key : ""
-      site_id = data.mso_site.sites[site_associations.value.site].id
-      vendor  = site_associations.value.vendor
+      aws_access_key_id = site_associations.value.aws_access_key_id
+      aws_account_id    = site_associations.value.aws_account_id
+      aws_secret_key    = var.aws_secret_key
+      site_id           = data.mso_site.sites[site_associations.value.site].id
+      vendor            = site_associations.value.vendor
     }
   }
   dynamic "site_associations" {
     for_each = { for k, v in each.value.sites : k => v if v.vendor == "azure" }
     content {
-      azure_access_type = length(regexall(
-        "azure", site_associations.value.vendor)
-      ) > 0 ? site_associations.value.azure_access_type : ""
+      azure_access_type = site_associations.value.azure_access_type
       azure_active_directory_id = length(regexall(
-        "azure", site_associations.value.vendor)
-      ) > 0 && site_associations.value.azure_access_type == "credentials" ? site_associations.value.azure_active_directory_id : ""
+        "credentials", site_associations.value.azure_access_type)
+      ) > 0 ? site_associations.value.azure_active_directory_id : ""
       azure_application_id = length(regexall(
-        "azure", site_associations.value.vendor)
-      ) > 0 && site_associations.value.azure_access_type == "credentials" ? site_associations.value.azure_application_id : ""
+        "credentials", site_associations.value.azure_access_type)
+      ) > 0 ? site_associations.value.azure_application_id : ""
       azure_client_secret = length(regexall(
-        "azure", site_associations.value.vendor)
-      ) > 0 && site_associations.value.azure_access_type == "credentials" ? var.azure_client_secret : ""
+        "credentials", site_associations.value.azure_access_type)
+      ) > 0 ? var.azure_client_secret : ""
       azure_shared_account_id = length(regexall(
-        "azure", site_associations.value.vendor)
-      ) > 0 && site_associations.value.azure_access_type == "shared" ? site_associations.value.azure_shared_account_id : ""
-      azure_subscription_id = length(regexall(
-        "azure", site_associations.value.vendor)
-      ) > 0 ? site_associations.value.azure_subscription_id : ""
-      site_id = data.mso_site.sites[site_associations.value.site].id
-      vendor  = site_associations.value.vendor
+        "shared", site_associations.value.azure_access_type)
+      ) > 0 ? site_associations.value.azure_shared_account_id : ""
+      azure_subscription_id = site_associations.value.azure_subscription_id
+      site_id               = data.mso_site.sites[site_associations.value.site].id
+      vendor                = site_associations.value.vendor
     }
   }
   dynamic "site_associations" {
@@ -136,13 +137,13 @@ resource "mso_tenant" "tenants" {
       ) == 0
     }
     content {
-      site_id = data.mso_site.ndo_sites[site_associations.value.site].id
+      site_id = data.mso_site.sites[site_associations.value.site].id
     }
   }
   dynamic "user_associations" {
     for_each = toset(each.value.users)
     content {
-      user_id = data.mso_user.ndo_users[user_associations.value].id
+      user_id = data.mso_user.users[user_associations.value].id
     }
   }
 }

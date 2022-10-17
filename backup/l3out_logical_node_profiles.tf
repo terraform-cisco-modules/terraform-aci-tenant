@@ -16,7 +16,7 @@ resource "aci_logical_node_profile" "l3out_node_profiles" {
   ]
   for_each      = local.l3out_node_profiles
   l3_outside_dn = aci_l3_outside.l3outs[each.value.l3out].id
-  annotation    = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation    = each.value.annotation
   description   = each.value.description
   name          = each.value.name
   name_alias    = each.value.alias
@@ -42,7 +42,7 @@ resource "aci_logical_node_to_fabric_node" "l3out_node_profiles_nodes" {
     aci_logical_node_profile.l3out_node_profiles
   ]
   for_each                = local.l3out_node_profiles_nodes
-  annotation              = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation              = each.value.annotation
   logical_node_profile_dn = aci_logical_node_profile.l3out_node_profiles[each.value.node_profile].id
   tdn                     = "topology/pod-${each.value.pod_id}/node-${each.value.node_id}"
   rtr_id                  = each.value.router_id
@@ -67,7 +67,7 @@ resource "aci_logical_interface_profile" "l3out_interface_profiles" {
   ]
   for_each                = local.l3out_interface_profiles
   logical_node_profile_dn = aci_logical_node_profile.l3out_node_profiles[each.value.node_profile].id
-  annotation              = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation              = each.value.annotation
   description             = each.value.description
   name                    = each.value.name
   prio                    = each.value.qos_class
@@ -129,7 +129,7 @@ resource "aci_l3out_path_attachment" "l3out_path_attachments" {
   ) > 0 ? "topology/pod-${each.value.pod_id}/paths-${element(each.value.nodes, 0)}/pathep-[${each.value.interface_or_policy_group}]" : ""
   if_inst_t   = each.value.interface_type
   addr        = each.value.interface_type != "ext-svi" ? each.value.primary_preferred_address : ""
-  annotation  = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation  = each.value.annotation
   autostate   = each.value.interface_type == "ext-svi" ? each.value.auto_state : "disabled"
   encap       = each.value.interface_type != "l3-port" ? "vlan-${each.value.encap_vlan}" : "unknown"
   mode        = each.value.mode == "trunk" ? "regular" : "native"
@@ -160,7 +160,7 @@ resource "aci_l3out_vpc_member" "l3out_vpc_member" {
   ]
   for_each     = local.l3out_paths_svi_addressing
   addr         = each.value.primary_preferred_address
-  annotation   = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation   = each.value.annotation
   description  = ""
   ipv6_dad     = each.value.ipv6_dad
   leaf_port_dn = aci_l3out_path_attachment.l3out_path_attachments[each.value.path].id
@@ -194,7 +194,7 @@ resource "aci_l3out_path_attachment_secondary_ip" "l3out_paths_secondary_ips" {
   for_each                 = local.l3out_paths_secondary_ips
   l3out_path_attachment_dn = aci_l3out_path_attachment.l3out_path_attachments[each.value.l3out_path].id
   addr                     = each.value.secondary_ip_address
-  annotation               = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation               = each.value.annotation
   ipv6_dad                 = each.value.ipv6_dad
 }
 
@@ -422,7 +422,7 @@ resource "aci_l3out_ospf_interface_profile" "l3out_ospf_interface_profiles" {
     aci_ospf_interface_policy.policies_ospf_interface,
   ]
   for_each   = local.l3out_ospf_interface_profiles
-  annotation = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation = each.value.annotation
   auth_key = length(regexall(
     "(md5|simple)", each.value.authentication_type)
     ) > 0 && each.value.ospf_key == 5 ? var.ospf_key_5 : length(regexall(

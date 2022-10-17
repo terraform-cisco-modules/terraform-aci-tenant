@@ -14,9 +14,9 @@ resource "aci_contract" "contracts" {
   depends_on = [
     aci_tenant.tenants
   ]
-  for_each    = { for k, v in local.contracts : k => v if v.controller_type == "apic" && v.contract_type == "standard" }
+  for_each    = { for k, v in local.contracts : k => v if local.controller_type == "apic" && v.contract_type == "standard" }
   tenant_dn   = aci_tenant.tenants[each.value.tenant].id
-  annotation  = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation  = each.value.annotation
   description = each.value.description
   name        = each.key
   name_alias  = each.value.alias
@@ -42,11 +42,11 @@ resource "aci_rest_managed" "oob_contracts" {
   depends_on = [
     aci_tenant.tenants
   ]
-  for_each   = { for k, v in local.contracts : k => v if v.controller_type == "apic" && v.contract_type == "oob" }
+  for_each   = { for k, v in local.contracts : k => v if local.controller_type == "apic" && v.contract_type == "oob" }
   dn         = "uni/tn-${each.value.tenant}/oobbrc-${each.key}"
   class_name = "vzOOBBrCP"
   content = {
-    # annotation = each.value.annotation != "" ? each.value.annotation : var.annotation
+    # annotation = each.value.annotation
     descr      = each.value.description
     name       = each.key
     nameAlias  = each.value.alias
@@ -73,9 +73,9 @@ resource "aci_taboo_contract" "contracts" {
   depends_on = [
     aci_tenant.tenants,
   ]
-  for_each    = { for k, v in local.contracts : k => v if v.controller_type == "apic" && v.contract_type == "taboo" }
+  for_each    = { for k, v in local.contracts : k => v if local.controller_type == "apic" && v.contract_type == "taboo" }
   tenant_dn   = aci_tenant.tenants[each.value.tenant].id
-  annotation  = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation  = each.value.annotation
   description = each.value.description
   name        = each.key
   name_alias  = each.value.alias
@@ -86,7 +86,7 @@ resource "mso_schema_template_contract" "contracts" {
   depends_on = [
     mso_schema.schemas,
   ]
-  for_each      = { for k, v in local.contracts : k => v if v.controller_type == "ndo" }
+  for_each      = { for k, v in local.contracts : k => v if local.controller_type == "ndo" }
   schema_id     = mso_schema.schemas[each.value.schema].id
   template_name = each.value.template
   contract_name = each.key

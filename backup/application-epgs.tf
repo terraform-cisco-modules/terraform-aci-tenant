@@ -13,8 +13,8 @@ resource "aci_application_epg" "application_epgs" {
     aci_application_profile.application_profiles,
     aci_bridge_domain.bridge_domains
   ]
-  for_each               = { for k, v in local.application_epgs : k => v if v.epg_type == "standard" && v.controller_type == "apic" }
-  annotation             = each.value.annotation != "" ? each.value.annotation : var.annotation
+  for_each               = { for k, v in local.application_epgs : k => v if v.epg_type == "standard" && local.controller_type == "apic" }
+  annotation             = each.value.annotation
   application_profile_dn = aci_application_profile.application_profiles[each.value.application_profile].id
   description            = each.value.description
   exception_tag          = each.value.contract_exception_tag
@@ -49,7 +49,7 @@ resource "mso_schema_template_anp_epg" "application_epgs" {
   depends_on = [
     mso_schema_template_anp.application_profiles
   ]
-  for_each                   = { for k, v in local.application_epgs : k => v if v.controller_type == "ndo" }
+  for_each                   = { for k, v in local.application_epgs : k => v if local.controller_type == "ndo" }
   anp_name                   = each.value.application_profile
   bd_name                    = each.value.bridge_domain
   bd_schema_id               = mso_schema.schemas[each.value.bd_schema].id
@@ -88,10 +88,10 @@ resource "aci_node_mgmt_epg" "mgmt_epgs" {
   depends_on = [
     aci_bridge_domain.bridge_domains,
   ]
-  for_each                 = { for k, v in local.application_epgs : k => v if length(regexall("(inb|oob)", v.epg_type)) > 0 && v.controller_type == "apic" }
+  for_each                 = { for k, v in local.application_epgs : k => v if length(regexall("(inb|oob)", v.epg_type)) > 0 && local.controller_type == "apic" }
   management_profile_dn    = "uni/tn-mgmt/mgmtp-default"
   name                     = each.key
-  annotation               = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation               = each.value.annotation
   encap                    = each.value.epg_type == "inb" ? "vlan-${each.value.vlan}" : ""
   match_t                  = each.value.epg_type == "inb" ? each.value.label_match_criteria : "AtleastOne"
   name_alias               = each.value.alias
@@ -115,7 +115,7 @@ resource "aci_epg_to_domain" "epg_to_domains" {
   depends_on = [
     aci_application_epg.application_epgs
   ]
-  for_each           = { for k, v in local.epg_to_domains : k => v if v.controller_type == "apic" && v.epg_type == "standard" }
+  for_each           = { for k, v in local.epg_to_domains : k => v if local.controller_type == "apic" && v.epg_type == "standard" }
   application_epg_dn = aci_application_epg.application_epgs[each.value.application_epg].id
   tdn = length(
     regexall("physical", each.value.domain_type)
@@ -251,7 +251,7 @@ resource "aci_rest_managed" "contract_to_oob_epgs" {
   dn         = "uni/tn-${each.value.tenant}/mgmtp-default/oob-${each.value.application_epg}/${each.value.contract_dn}-${each.value.contract}"
   class_name = each.value.contract_class
   content = {
-    # annotation = each.value.annotation != "" ? each.value.annotation : var.annotation
+    # annotation = each.value.annotation
     # matchT = each.value.match_type
     prio = each.value.qos_class
   }
@@ -297,7 +297,7 @@ resource "aci_rest_managed" "epg_to_static_paths" {
   ) > 0 ? "${aci_application_epg.application_epgs[each.value.epg].id}/rspathAtt-[topology/pod-${each.value.pod}/protpaths-${element(each.value.nodes, 0)}-${element(each.value.nodes, 1)}/pathep-[${each.value.name}]]" : ""
   class_name = "fvRsPathAtt"
   content = {
-    annotation = each.value.annotation != "" ? each.value.annotation : var.annotation
+    annotation = each.value.annotation
     encap = length(
       regexall("micro_seg", each.value.encapsulation_type)
       ) > 0 ? "vlan-${element(each.value.vlans, 0)}" : length(

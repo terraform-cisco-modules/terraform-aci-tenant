@@ -12,8 +12,8 @@ resource "aci_l3_outside" "l3outs" {
     aci_tenant.tenants,
     aci_vrf.vrfs
   ]
-  for_each               = { for k, v in local.l3outs : k => v if v.controller_type == "apic" }
-  annotation             = each.value.annotation != "" ? each.value.annotation : var.annotation
+  for_each               = { for k, v in local.l3outs : k => v if local.controller_type == "apic" }
+  annotation             = each.value.annotation
   description            = each.value.description
   enforce_rtctrl         = each.value.import == true ? ["export", "import"] : ["export"]
   name                   = each.key
@@ -41,9 +41,9 @@ resource "aci_l3out_bgp_external_policy" "external_bgp" {
   depends_on = [
     aci_l3_outside.l3outs
   ]
-  for_each      = { for k, v in local.l3outs : k => v if v.controller_type == "apic" && v.enable_bgp == true }
+  for_each      = { for k, v in local.l3outs : k => v if local.controller_type == "apic" && v.enable_bgp == true }
   l3_outside_dn = aci_l3_outside.l3outs[each.key].id
-  annotation    = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation    = each.value.annotation
 }
 
 
@@ -64,7 +64,7 @@ resource "aci_rest_managed" "l3out_route_profiles_for_redistribution" {
   dn         = "uni/tn-${each.value.tenant}/out-${each.value.l3out}/rsredistributePol-[${each.value.route_map}]-${each.value.source}"
   class_name = "l3extRsRedistributePol"
   content = {
-    annotation = each.value.annotation != "" ? each.value.annotation : var.annotation
+    annotation = each.value.annotation
     src        = each.value.source
     tDn = length(compact([each.value.rm_l3out])
     ) > 0 ? "uni/tn-${each.value.tenant}/out-${each.value.rm_l3out}/prof-${each.value.route_map}" : "uni/tn-${each.value.tenant}/prof-${each.value.route_map}"
@@ -85,11 +85,11 @@ resource "aci_rest_managed" "l3out_multicast" {
   depends_on = [
     aci_l3_outside.l3outs
   ]
-  for_each   = { for k, v in local.l3outs : k => v if v.controller_type == "apic" && (v.pim == true || v.pimv6 == true) }
+  for_each   = { for k, v in local.l3outs : k => v if local.controller_type == "apic" && (v.pim == true || v.pimv6 == true) }
   dn         = "uni/tn-${each.value.tenant}/out-${each.key}/pimextp"
   class_name = "pimExtP"
   content = {
-    annotation = each.value.annotation != "" ? each.value.annotation : var.annotation
+    annotation = each.value.annotation
     enableAf = anytrue(
       [each.value.pim, each.value.pimv6]
       ) ? replace(trim(join(",", concat([
@@ -113,11 +113,11 @@ resource "aci_rest_managed" "l3out_consumer_label" {
   depends_on = [
     aci_l3_outside.l3outs
   ]
-  for_each   = { for k, v in local.l3outs : k => v if v.controller_type == "apic" && v.consumer_label == "hcloudGolfLabel" }
+  for_each   = { for k, v in local.l3outs : k => v if local.controller_type == "apic" && v.consumer_label == "hcloudGolfLabel" }
   dn         = "uni/tn-${each.value.tenant}/out-${each.key}/conslbl-hcloudGolfLabel"
   class_name = "l3extConsLbl"
   content = {
-    annotation = each.value.annotation != "" ? each.value.annotation : var.annotation
+    annotation = each.value.annotation
     name       = "hcloudGolfLabel"
   }
 }
@@ -141,7 +141,7 @@ resource "aci_external_network_instance_profile" "l3out_external_epgs" {
   ]
   for_each       = { for k, v in local.l3out_external_epgs : k => v if v.epg_type != "oob" }
   l3_outside_dn  = aci_l3_outside.l3outs[each.value.l3out].id
-  annotation     = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation     = each.value.annotation
   description    = each.value.description
   exception_tag  = each.value.contract_exception_tag
   flood_on_encap = each.value.flood_on_encapsulation
@@ -188,7 +188,7 @@ resource "aci_rest_managed" "oob_external_epgs" {
   dn         = "uni/tn-mgmt/extmgmt-default/instp-{name}"
   class_name = "mgmtInstP"
   content = {
-    annotation = each.value.annotation != "" ? each.value.annotation : var.annotation
+    annotation = each.value.annotation
     name       = each.value.name
   }
 }
@@ -211,7 +211,7 @@ resource "aci_rest_managed" "external_epg_intra_epg_contracts" {
     aci_external_network_instance_profile.l3out_external_epgs,
     aci_rest_managed.oob_external_epgs
   ]
-  for_each   = { for k, v in local.l3out_ext_epg_contracts : k => v if v.controller_type == "apic" && v.contract_type == "intra_epg" }
+  for_each   = { for k, v in local.l3out_ext_epg_contracts : k => v if local.controller_type == "apic" && v.contract_type == "intra_epg" }
   dn         = "uni/tn-${each.value.tenant}/out-${each.value.l3out}/instP-${each.value.epg}/rsintraEpg-${each.value.contract}"
   class_name = "fvRsIntraEpg"
   content = {
@@ -239,7 +239,7 @@ resource "aci_rest_managed" "external_epg_contracts" {
     aci_external_network_instance_profile.l3out_external_epgs,
     aci_rest_managed.oob_external_epgs
   ]
-  for_each = { for k, v in local.l3out_ext_epg_contracts : k => v if v.controller_type == "apic" && v.contract_type != "intra_epg" }
+  for_each = { for k, v in local.l3out_ext_epg_contracts : k => v if local.controller_type == "apic" && v.contract_type != "intra_epg" }
   dn = length(regexall(
     "consumed", each.value.contract_type)
     ) > 0 ? "uni/tn-${each.value.tenant}/out-${each.value.l3out}/instP-${each.value.epg}/rscons-${each.value.contract}" : length(regexall(
@@ -294,7 +294,7 @@ resource "aci_l3_ext_subnet" "external_epg_subnets" {
       length(regexall(true, each.value.aggregate_import)) > 0 ? "import-rtctrl" : ""], [
       length(regexall(true, each.value.aggregate_shared_routes)) > 0 ? "shared-rtctrl" : ""]
   )), ","), ",,", ",") : "none"
-  annotation                           = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation                           = each.value.annotation
   description                          = each.value.description
   external_network_instance_profile_dn = aci_external_network_instance_profile.l3out_external_epgs[each.value.ext_epg].id
   ip                                   = each.value.subnet
@@ -370,7 +370,7 @@ resource "aci_l3out_ospf_external_policy" "l3out_ospf_external_policies" {
     aci_l3_outside.l3outs
   ]
   for_each   = local.l3out_ospf_external_policies
-  annotation = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation = each.value.annotation
   area_cost  = each.value.ospf_area_cost
   area_ctrl = anytrue([
     each.value.send_redistribution_lsas_into_nssa_area,

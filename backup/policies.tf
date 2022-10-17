@@ -13,7 +13,7 @@ resource "aci_bfd_interface_policy" "policies_bfd_interface" {
   ]
   for_each   = local.policies_bfd_interface
   admin_st   = each.value.admin_state
-  annotation = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation = each.value.annotation
   # Bug 803 Submitted
   # ctrl          = each.value.enable_sub_interface_optimization == true ? "opt-subif" : "none"
   description   = each.value.description
@@ -42,7 +42,7 @@ resource "aci_bgp_address_family_context" "policies_bgp_address_family_context" 
   ]
   # Missing Local Max ECMP
   for_each      = local.policies_bgp_address_family_context
-  annotation    = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation    = each.value.annotation
   ctrl          = each.value.enable_host_route_leak == true ? "host-rt-leak" : "none"
   description   = each.value.description
   e_dist        = each.value.ebgp_distance
@@ -69,7 +69,7 @@ resource "aci_bgp_best_path_policy" "policies_bgp_best_path" {
     aci_tenant.tenants
   ]
   for_each    = local.policies_bgp_best_path
-  annotation  = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation  = each.value.annotation
   ctrl        = each.value.relax_as_path_restriction == true ? "asPathMultipathRelax" : "0"
   description = each.value.description
   name        = each.key
@@ -92,7 +92,7 @@ resource "aci_bgp_peer_prefix" "policies_bgp_peer_prefix" {
   ]
   for_each     = local.policies_bgp_peer_prefix
   action       = each.value.action
-  annotation   = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation   = each.value.annotation
   description  = each.value.description
   name         = each.key
   max_pfx      = each.value.maximum_number_of_prefixes
@@ -116,7 +116,7 @@ resource "aci_bgp_route_summarization" "policies_bgp_route_summarization" {
     aci_tenant.tenants
   ]
   for_each   = local.policies_bgp_route_summarization
-  annotation = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation = each.value.annotation
   # attrmap     = each.value.attrmap
   ctrl        = each.value.generate_as_set_information == true ? "as-set" : "none"
   description = each.value.description
@@ -139,7 +139,7 @@ resource "aci_bgp_timers" "policies_bgp_timers" {
     aci_tenant.tenants
   ]
   for_each     = local.policies_bgp_timers
-  annotation   = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation   = each.value.annotation
   description  = each.value.description
   gr_ctrl      = each.value.graceful_restart_helper == true ? "helper" : "none"
   hold_intvl   = each.value.hold_interval
@@ -195,7 +195,7 @@ resource "aci_dhcp_relay_policy" "policies_dhcp_relay" {
     aci_tenant.tenants
   ]
   for_each    = local.policies_dhcp_relay
-  annotation  = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation  = each.value.annotation
   description = each.value.description
   mode        = each.value.mode
   name        = each.key
@@ -229,7 +229,7 @@ resource "aci_end_point_retention_policy" "policies_endpoint_retention" {
     aci_tenant.tenants
   ]
   for_each            = local.policies_endpoint_retention
-  annotation          = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation          = each.value.annotation
   bounce_age_intvl    = each.value.bounce_entry_aging_interval
   bounce_trig         = each.value.bounce_trigger
   description         = each.value.description
@@ -322,7 +322,7 @@ resource "aci_ospf_interface_policy" "policies_ospf_interface" {
   ]
   for_each    = local.policies_ospf_interface
   tenant_dn   = aci_tenant.tenants[each.value.tenant].id
-  annotation  = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation  = each.value.annotation
   description = each.value.description
   name        = each.key
   cost        = each.value.cost_of_interface == 0 ? "unspecified" : each.value.cost_of_interface
@@ -363,7 +363,7 @@ resource "aci_ospf_route_summarization" "policies_ospf_route_summarization" {
     aci_tenant.tenants
   ]
   for_each           = local.policies_ospf_route_summarization
-  annotation         = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation         = each.value.annotation
   cost               = each.value.cost == 0 ? "unspecified" : each.value.cost # 0 to 16777215
   description        = each.value.description
   inter_area_enabled = each.value.inter_area_enabled == true ? "yes" : "no"
@@ -387,7 +387,7 @@ resource "aci_ospf_timers" "policies_ospf_timers" {
     aci_tenant.tenants
   ]
   for_each   = local.policies_ospf_timers
-  annotation = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation = each.value.annotation
   bw_ref     = each.value.bandwidth_reference
   ctrl = anytrue(
     [

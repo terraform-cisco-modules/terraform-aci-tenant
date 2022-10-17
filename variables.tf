@@ -8,6 +8,10 @@ variable "model" {
   type        = any
 }
 
+variable "tenant" {
+  description = "Name of the Tenant"
+  type        = string
+}
 
 /*_____________________________________________________________________________________________________________________
 
