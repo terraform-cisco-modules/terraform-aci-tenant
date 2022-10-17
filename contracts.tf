@@ -81,28 +81,6 @@ resource "aci_taboo_contract" "contracts" {
   name_alias  = each.value.alias
 }
 
-resource "mso_schema_template_contract" "contracts" {
-  provider = ndo
-  depends_on = [
-    mso_schema.schemas,
-  ]
-  for_each      = { for k, v in local.contracts : k => v if local.controller_type == "ndo" }
-  schema_id     = mso_schema.schemas[each.value.schema].id
-  template_name = each.value.template
-  contract_name = each.key
-  display_name  = each.key
-  filter_type   = each.value.apply_both_directions == true ? "bothWay" : "oneWay"
-  scope         = each.value.scope
-  dynamic "filter_relationship" {
-    for_each = toset(each.value.filters)
-    content {
-      filter_schema_id     = mso_schema.schemas[each.value.schema].id
-      filter_template_name = each.value.template
-      filter_name          = filter_relationship.value
-    }
-  }
-  directives = each.value.log == true ? ["log"] : ["none"]
-}
 /*_____________________________________________________________________________________________________________________
 
 API Information:
@@ -120,7 +98,7 @@ resource "aci_contract_subject" "contract_subjects" {
     aci_taboo_contract.contracts,
   ]
   for_each      = { for k, v in local.contract_subjects : k => v if v.contract_type == "standard" }
-  annotation    = var.annotation
+  annotation    = each.value.annotation
   contract_dn   = aci_contract.contracts[each.value.contract].id
   cons_match_t  = each.value.label_match_criteria
   description   = each.value.description
@@ -233,19 +211,31 @@ resource "aci_rest_managed" "taboo_subject_filter" {
   }
 }
 
-output "contracts" {
-  value = {
-    apic_contracts = var.contracts != {} ? { for v in sort(
-      keys(aci_contract.contracts)
-    ) : v => aci_contract.contracts[v].id } : {}
-    apic_oob_contracts = var.contracts != {} ? { for v in sort(
-      keys(aci_rest_managed.oob_contracts)
-    ) : v => aci_rest_managed.oob_contracts[v].id } : {}
-    apic_taboo_contracts = var.contracts != {} ? { for v in sort(
-      keys(aci_taboo_contract.contracts)
-    ) : v => aci_taboo_contract.contracts[v].id } : {}
-    ndo_contracts = var.contracts != {} ? { for v in sort(
-      keys(mso_schema_template_contract.contracts)
-    ) : v => mso_schema_template_contract.contracts[v].id } : {}
+
+/*_____________________________________________________________________________________________________________________
+
+Nexus Dashboard — Contracts
+_______________________________________________________________________________________________________________________
+*/
+resource "mso_schema_template_contract" "contracts" {
+  provider = mso
+  depends_on = [
+    mso_schema.schemas,
+  ]
+  for_each      = { for k, v in local.contracts : k => v if local.controller_type == "ndo" }
+  schema_id     = mso_schema.schemas[each.value.schema].id
+  template_name = each.value.template
+  contract_name = each.key
+  display_name  = each.key
+  filter_type   = each.value.apply_both_directions == true ? "bothWay" : "oneWay"
+  scope         = each.value.scope
+  dynamic "filter_relationship" {
+    for_each = toset(each.value.filters)
+    content {
+      filter_schema_id     = mso_schema.schemas[each.value.schema].id
+      filter_template_name = each.value.template
+      filter_name          = filter_relationship.value
+    }
   }
+  directives = each.value.log == true ? ["log"] : ["none"]
 }

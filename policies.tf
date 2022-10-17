@@ -7,7 +7,7 @@ GUI Location:
  - Tenants > {tenant} > Policies > Protocol > BFD > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_bfd_interface_policy" "policies_bfd_interface" {
+resource "aci_bfd_interface_policy" "bfd_interface" {
   depends_on = [
     aci_tenant.tenants
   ]
@@ -36,7 +36,7 @@ GUI Location:
  - Tenants > {tenant} > Policies > Protocol > BGP > BGP Address Family Context > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_bgp_address_family_context" "policies_bgp_address_family_context" {
+resource "aci_bgp_address_family_context" "bgp_address_family_context" {
   depends_on = [
     aci_tenant.tenants
   ]
@@ -64,7 +64,7 @@ GUI Location:
  - Tenants > {tenant} > Policies > Protocol > BGP > BGP Best Path > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_bgp_best_path_policy" "policies_bgp_best_path" {
+resource "aci_bgp_best_path_policy" "bgp_best_path" {
   depends_on = [
     aci_tenant.tenants
   ]
@@ -86,7 +86,7 @@ GUI Location:
  - Tenants > {tenant} > Networking > Policies > Protocol > BGP >  BGP Peer Prefix > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_bgp_peer_prefix" "policies_bgp_peer_prefix" {
+resource "aci_bgp_peer_prefix" "bgp_peer_prefix" {
   depends_on = [
     aci_tenant.tenants
   ]
@@ -111,7 +111,7 @@ GUI Location:
  - Tenants > {tenant} > Policies > Protocol > BGP > BGP Route Summarization > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_bgp_route_summarization" "policies_bgp_route_summarization" {
+resource "aci_bgp_route_summarization" "bgp_route_summarization" {
   depends_on = [
     aci_tenant.tenants
   ]
@@ -134,7 +134,7 @@ GUI Location:
  - Tenants > {tenant} > Policies > Protocol > BGP > BGP Timers > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_bgp_timers" "policies_bgp_timers" {
+resource "aci_bgp_timers" "bgp_timers" {
   depends_on = [
     aci_tenant.tenants
   ]
@@ -160,7 +160,7 @@ GUI Location:
  - Tenants > {tenant} > Policies > Protocol > DHCP > Options Policies > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_dhcp_option_policy" "policies_dhcp_option" {
+resource "aci_dhcp_option_policy" "dhcp_option" {
   depends_on = [
     aci_tenant.tenants
   ]
@@ -190,7 +190,7 @@ GUI Location:
  - Tenants > {tenant} > Policies > Protocol > DHCP > Relay Policies > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_dhcp_relay_policy" "policies_dhcp_relay" {
+resource "aci_dhcp_relay_policy" "dhcp_relay" {
   depends_on = [
     aci_tenant.tenants
   ]
@@ -224,7 +224,7 @@ GUI Location:
  - Tenants > {tenant} > Policies > Protocol > End Point Retention > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_end_point_retention_policy" "policies_endpoint_retention" {
+resource "aci_end_point_retention_policy" "endpoint_retention" {
   depends_on = [
     aci_tenant.tenants
   ]
@@ -240,11 +240,6 @@ resource "aci_end_point_retention_policy" "policies_endpoint_retention" {
   remote_ep_age_intvl = each.value.remote_endpoint_aging_interval == 0 ? "infinite" : each.value.remote_endpoint_aging_interval
   tenant_dn           = aci_tenant.tenants[each.value.tenant].id
 }
-output "policies_endpoint_retention" {
-  value = var.policies_endpoint_retention != {} ? { for v in sort(
-    keys(aci_end_point_retention_policy.policies_endpoint_retention)
-  ) : v => aci_end_point_retention_policy.policies_endpoint_retention[v].id } : {}
-}
 
 
 /*_____________________________________________________________________________________________________________________
@@ -256,7 +251,7 @@ GUI Location:
 tenants > {tenant} > Policies > Protocol > HSRP > Group Policies > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_hsrp_group_policy" "policies_hsrp_group" {
+resource "aci_hsrp_group_policy" "hsrp_group" {
   depends_on = [
     aci_tenant.tenants
   ]
@@ -287,7 +282,7 @@ GUI Location:
 tenants > {tenant} > Policies > Protocol > HSRP > Interface Policies > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_hsrp_interface_policy" "policies_hsrp_interface" {
+resource "aci_hsrp_interface_policy" "hsrp_interface" {
   depends_on = [
     aci_tenant.tenants
   ]
@@ -316,7 +311,7 @@ GUI Location:
  - Tenants > {tenant} > Networking > Policies > Protocol > OSPF >  OSPF Interface > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_ospf_interface_policy" "policies_ospf_interface" {
+resource "aci_ospf_interface_policy" "ospf_interface" {
   depends_on = [
     aci_tenant.tenants
   ]
@@ -358,7 +353,7 @@ GUI Location:
  - Tenants > {tenant} > Networking > Policies > Protocol > OSPF >  OSPF Route Summarization > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_ospf_route_summarization" "policies_ospf_route_summarization" {
+resource "aci_ospf_route_summarization" "ospf_route_summarization" {
   depends_on = [
     aci_tenant.tenants
   ]
@@ -382,7 +377,7 @@ GUI Location:
  - Tenants > {tenant} > Networking > Policies > Protocol > OSPF >  OSPF Timers > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_ospf_timers" "policies_ospf_timers" {
+resource "aci_ospf_timers" "ospf_timers" {
   depends_on = [
     aci_tenant.tenants
   ]

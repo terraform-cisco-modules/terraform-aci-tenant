@@ -55,23 +55,23 @@ resource "aci_filter_entry" "filter_entries" {
   stateful      = each.value.stateful == true ? "yes" : "no"
   tcp_rules = anytrue(
     [
-      each.value.tcp_session_rules[0].acknowledgement,
-      each.value.tcp_session_rules[0].established,
-      each.value.tcp_session_rules[0].finish,
-      each.value.tcp_session_rules[0].reset,
-      each.value.tcp_session_rules[0].synchronize
+      each.value.tcp_session_rules.acknowledgement,
+      each.value.tcp_session_rules.established,
+      each.value.tcp_session_rules.finish,
+      each.value.tcp_session_rules.reset,
+      each.value.tcp_session_rules.synchronize
     ]
     ) ? compact(concat([
-      length(regexall(true, each.value.tcp_session_rules[0].acknowledgement)) > 0 ? "acknowledgement" : ""], [
-      length(regexall(true, each.value.tcp_session_rules[0].established)) > 0 ? "established" : ""], [
-      length(regexall(true, each.value.tcp_session_rules[0].finish)) > 0 ? "finish" : ""], [
-      length(regexall(true, each.value.tcp_session_rules[0].reset)) > 0 ? "reset" : ""], [
-      length(regexall(true, each.value.tcp_session_rules[0].synchronize)) > 0 ? "synchronize" : ""]
+      length(regexall(true, each.value.tcp_session_rules.acknowledgement)) > 0 ? "acknowledgement" : ""], [
+      length(regexall(true, each.value.tcp_session_rules.established)) > 0 ? "established" : ""], [
+      length(regexall(true, each.value.tcp_session_rules.finish)) > 0 ? "finish" : ""], [
+      length(regexall(true, each.value.tcp_session_rules.reset)) > 0 ? "reset" : ""], [
+      length(regexall(true, each.value.tcp_session_rules.synchronize)) > 0 ? "synchronize" : ""]
   )) : ["unspecified"]
 }
 
 resource "mso_schema_template_filter_entry" "filter_entries" {
-  provider = ndo
+  provider = mso
   depends_on = [
     mso_schema.schemas
   ]
@@ -93,31 +93,18 @@ resource "mso_schema_template_filter_entry" "filter_entries" {
   stateful             = each.value.stateful
   tcp_session_rules = anytrue(
     [
-      each.value.tcp_session_rules[0].acknowledgement,
-      each.value.tcp_session_rules[0].established,
-      each.value.tcp_session_rules[0].finish,
-      each.value.tcp_session_rules[0].reset,
-      each.value.tcp_session_rules[0].synchronize
+      each.value.tcp_session_rules.acknowledgement,
+      each.value.tcp_session_rules.established,
+      each.value.tcp_session_rules.finish,
+      each.value.tcp_session_rules.reset,
+      each.value.tcp_session_rules.synchronize
     ]
     ) ? compact(concat([
-      length(regexall(true, each.value.tcp_session_rules[0].acknowledgement)) > 0 ? "acknowledgement" : ""], [
-      length(regexall(true, each.value.tcp_session_rules[0].established)) > 0 ? "established" : ""], [
-      length(regexall(true, each.value.tcp_session_rules[0].finish)) > 0 ? "finish" : ""], [
-      length(regexall(true, each.value.tcp_session_rules[0].reset)) > 0 ? "reset" : ""], [
-      length(regexall(true, each.value.tcp_session_rules[0].synchronize)) > 0 ? "synchronize" : ""]
+      length(regexall(true, each.value.tcp_session_rules.acknowledgement)) > 0 ? "acknowledgement" : ""], [
+      length(regexall(true, each.value.tcp_session_rules.established)) > 0 ? "established" : ""], [
+      length(regexall(true, each.value.tcp_session_rules.finish)) > 0 ? "finish" : ""], [
+      length(regexall(true, each.value.tcp_session_rules.reset)) > 0 ? "reset" : ""], [
+      length(regexall(true, each.value.tcp_session_rules.synchronize)) > 0 ? "synchronize" : ""]
   )) : ["unspecified"]
 }
 
-output "filters" {
-  value = {
-    filters = var.filters != {} ? { for v in sort(
-      keys(aci_filter.filters)
-    ) : v => aci_filter.filters[v].id } : {}
-    apic_filter_entries = var.filters != {} ? { for v in sort(
-      keys(aci_filter_entry.filter_entries)
-    ) : v => aci_filter_entry.filter_entries[v].id } : {}
-    ndo_filter_entries = var.filters != {} ? { for v in sort(
-      keys(mso_schema_template_filter_entry.filter_entries)
-    ) : v => mso_schema_template_filter_entry.filter_entries[v].id } : {}
-  }
-}

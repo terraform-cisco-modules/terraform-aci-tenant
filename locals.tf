@@ -4,7 +4,6 @@ locals {
   # Model Inputs
   #__________________________________________________________
 
-  contracts         = lookup(local.tenant[index(local.tenant[*].name, var.tenant)], "contracts", {})
   defaults          = lookup(var.model, "defaults", {})
   networking        = lookup(local.tenant[index(local.tenant[*].name, var.tenant)], "networking", {})
   policies          = lookup(local.tenant[index(local.tenant[*].name, var.tenant)], "policies", {})
@@ -12,18 +11,32 @@ locals {
   templates_epgs    = lookup(lookup(var.model, "templates", {}), "application_epgs", {})
   templates_subnets = lookup(lookup(var.model, "templates", {}), "subnets", {})
   tenant            = lookup(var.model, "tenants", {})
+  tenant_contracts  = lookup(local.tenant[index(local.tenant[*].name, var.tenant)], "contracts", {})
 
   # Defaults
   app      = local.defaults.tenants.application_profiles
   adv      = local.bd.advanced_troubleshooting
   bd       = local.defaults.tenants.networking.bridge_domains
+  bfd      = local.defaults.tenants.policies.protocol.bfd_interface
+  bgpa     = local.defaults.tenants.policies.protocol.bgp.bgp_address_family_context
+  bgpb     = local.defaults.tenants.policies.protocol.bgp.bgp_best_path
+  bgpp     = local.defaults.tenants.policies.protocol.bgp.bgp_peer_prefix
+  bgps     = local.defaults.tenants.policies.protocol.bgp.bgp_route_summarization
+  bgpt     = local.defaults.tenants.policies.protocol.bgp.bgp_timers
   contract = local.defaults.tenants.contracts.contract
+  dhcpo    = local.defaults.tenants.policies.protocol.dhcp.option_policies
+  dhcpr    = local.defaults.tenants.policies.protocol.dhcp.relay_policies
+  ep       = local.defaults.tenants.policies.protocol.endpoint_retention
   epg      = local.app.application_epgs
   filter   = local.defaults.tenants.contracts.filters
   general  = local.bd.general
+  hsrpg    = local.defaults.tenants.policies.protocol.hsrp.group_policies
+  hsrpi    = local.defaults.tenants.policies.protocol.hsrp.interface_policies
   l3       = local.bd.l3_configurations
   l3out    = local.defaults.tenants.networking.l3outs
-  policy   = local.defaults.tenants.policies
+  ospfi    = local.defaults.tenants.policies.protocol.ospf.ospf_interface
+  ospfs    = local.defaults.tenants.policies.protocol.ospf.ospf_route_summarization
+  ospft    = local.defaults.tenants.policies.protocol.ospf.ospf_timers
   subnet   = local.l3.subnets
   tnt      = local.defaults.tenants
   vrf      = local.defaults.tenants.networking.vrfs
@@ -102,6 +115,7 @@ locals {
     ]) : "${i.schema}_${i.template}_${i.site}" => i
   }
 
+  apics_inband_mgmt_addresses = {}
   #__________________________________________________________
   #
   # VRF Variables
@@ -371,26 +385,27 @@ locals {
 
   #__________________________________________________________
   #
-  # Application Profiles and Endpoint Groups Variables
+  # Application Profile(s) and Endpoint Group(s) - Variables
   #__________________________________________________________
 
   application_profiles = {
     for v in lookup(local.tenant[index(local.tenant[*].name, var.tenant)], "application_profiles", {}) : v.name => {
-      alias             = lookup(v, "alias", local.app.alias)
-      annotation        = lookup(v, "annotation", local.app.annotation)
+      alias      = lookup(v, "alias", local.app.alias)
+      annotation = lookup(v, "annotation", local.app.annotation)
       annotations = length(lookup(v, "annotations", local.app.annotations)
       ) > 0 ? lookup(v, "annotations", local.app.annotations) : local.defaults.annotations
       application_epgs  = lookup(v, "application_epgs", [])
       description       = lookup(v, "description", local.app.description)
+      global_alias      = lookup(v, "global_alias", local.app.global_alias)
       monitoring_policy = lookup(v, "monitoring_policy", local.app.monitoring_policy)
       name              = v.name
       qos_class         = lookup(v, "qos_class", local.app.qos_class)
       ndo = {
-        schema            = local.schema
-        sites             = local.sites
-        template          = lookup(v, "template", "")
+        schema   = local.schema
+        sites    = local.sites
+        template = lookup(v, "template", "")
       }
-      tenant            = var.tenant
+      tenant = var.tenant
     }
   }
   application_sites = {
@@ -411,348 +426,331 @@ locals {
   #     [for v in value.applications_epgs : concat(lookup)]
   #   ]
   # ])
-
-  #application_epgs = {
-  #  for i in flatten([
-  #    for value in local.application_profiles : [
-  #      for v in value.application_epgs : {
-  #        alias                  = lookup(v, "alias", local.epg.alias)
-  #        annotation             = coalesce(lookup(v, "annotation", local.epg.annotation), local.defaults.annotation)
-  #        application_profile    = value.name
-  #        bridge_domain          = lookup(v, "bridge_domain", local.epg.bridge_domain)
-  #        contract_exception_tag = lookup(v, "contract_exception_tag", local.epg.contract_exception_tag)
-  #        contracts              = lookup(v, "contracts", [])
-  #        controller_type        = value.controller_type
-  #        custom_qos_policy      = lookup(v, "custom_qos_policy", local.epg.custom_qos_policy)
-  #        data_plane_policer     = lookup(v, "data_plane_policer", local.epg.data_plane_policer)
-  #        description            = lookup(v, "description", local.epg.description)
-  #        domains                = lookup(v, "domains", [])
-  #        epg_admin_state        = lookup(v, "epg_admin_state", local.epg.epg_admin_state)
-  #        epg_contract_masters = [
-  #          for s in lookup(v, "epg_contract_masters", []) : {
-  #            application_profile = lookup(s, "application_profile", value.name)
-  #            application_epg     = s.application_epg
-  #          }
-  #        ]
-  #        epg_to_aaeps = [
-  #          for s in lookup(v, "epg_to_aaeps", []) : {
-  #            aaep                      = s.aaep
-  #            instrumentation_immediacy = lookup(s, "instrumentation_immediacy", local.epg.epg_to_aaeps.instrumentation_immediacy)
-  #            mode                      = lookup(s, "mode", local.epg.epg_to_aaeps.mode)
-  #            vlans                     = lookup(s, "vlans", [])
-  #          }
-  #        ]
-  #        epg_type                 = v.epg_type != null ? v.epg_type : "standard"
-  #        fhs_trust_control_policy = v.fhs_trust_control_policy != null ? v.fhs_trust_control_policy : ""
-  #        flood_in_encapsulation   = v.flood_in_encapsulation != null ? v.flood_in_encapsulation : "disabled"
-  #        global_alias             = v.global_alias != null ? v.global_alias : ""
-  #        has_multicast_source     = v.has_multicast_source != null ? v.has_multicast_source : false
-  #        intra_epg_isolation      = v.intra_epg_isolation != null ? v.intra_epg_isolation : "unenforced"
-  #        label_match_criteria     = v.label_match_criteria != null ? v.label_match_criteria : "AtleastOne"
-  #        monitoring_policy        = v.monitoring_policy != null ? v.monitoring_policy : "default"
-  #        policy_source_tenant     = v.policy_source_tenant != null ? v.policy_source_tenant : local.first_tenant
-  #        preferred_group_member   = v.preferred_group_member != null ? v.preferred_group_member : false
-  #        qos_class                = v.qos_class != null ? v.qos_class : "unspecified"
-  #        schema                   = v.schema != null ? v.schema : local.first_tenant
-  #        # static_paths = v.static_paths != null ? compact(flatten([
-  #        #   for s in v.static_paths : [
-  #        #     length(regexall("vpc", s.path_type)
-  #        #       ) > 0 ? "topology/pod-${s.pod}/protpaths-${element(s.nodes, 0)}-${element(s.nodes, 1)}/pathep-[${s.name}]" : length(
-  #        #       regexall("pc", s.path_type)
-  #        #       ) > 0 ? "topology/pod-${s.pod}/paths-${element(s.nodes, 0)}/pathep-[${s.name}]" : length(
-  #        #       regexall("port", s.path_type)
-  #        #     ) > 0 ? "topology/pod-${s.pod}/paths-${element(s.nodes, 0)}/pathep-[eth${s.name}]" : ""
-  #        #   ]
-  #        # ])) : []
-  #        static_paths_for_loop = v.static_paths != null ? v.static_paths : []
-  #        template              = v.template != null ? v.template : local.first_tenant
-  #        tenant                = v.tenant != null ? v.tenant : local.first_tenant
-  #        useg_epg              = v.useg_epg != null ? v.useg_epg : false
-  #        vlan                  = v.vlan != null ? v.vlan : null
-  #        vrf                   = v.vrf != null ? v.vrf : "default"
-  #        vrf_schema            = v.vrf_schema != null ? v.vrf_schema : local.first_tenant
-  #        vrf_template          = v.vrf_template != null ? v.vrf_template : local.first_tenant
-  #        vzGraphCont           = v.vzGraphCont != null ? v.vzGraphCont : ""
-  #      }
-  #    ]
-  #  ]) : "${application_profile}-${v.name}" => i
-  #
-  #}
-  #
-  #epg_to_domains_loop = flatten([
-  #  for key, value in local.application_epgs : [
-  #    for k, v in value.domains : {
-  #      annotation               = v.annotation != null ? v.annotation : ""
-  #      allow_micro_segmentation = v.allow_micro_segmentation != null ? v.allow_micro_segmentation : false
-  #      application_epg          = key
-  #      controller_type          = value.controller_type
-  #      delimiter                = v.delimiter != null ? v.delimiter : ""
-  #      deploy_immediacy         = v.deploy_immediacy != null ? v.deploy_immediacy : "on-demand"
-  #      domain                   = v.domain
-  #      domain_type              = v.domain_type != null ? v.domain_type : "physical"
-  #      enhanced_lag_policy      = v.enhanced_lag_policy != null ? v.enhanced_lag_policy : ""
-  #      epg_type                 = value.epg_type
-  #      number_of_ports          = v.number_of_ports != null ? v.number_of_ports : 0
-  #      port_allocation          = v.port_allocation != null ? v.port_allocation : "none"
-  #      port_binding             = v.port_binding != null ? v.port_binding : "none"
-  #      resolution_immediacy     = v.resolution_immediacy != null ? v.resolution_immediacy : "on-demand"
-  #      security = v.security != null ? [
-  #        for s in v.security : {
-  #          allow_promiscuous = s.allow_promiscuous != null ? s.allow_promiscuous : "reject"
-  #          forged_transmits  = s.forged_transmits != null ? s.forged_transmits : "reject"
-  #          mac_changes       = s.mac_changes != null ? s.mac_changes : "reject"
-  #        }
-  #        ] : [
-  #        {
-  #          allow_promiscuous = "reject"
-  #          forged_transmits  = "reject"
-  #          mac_changes       = "reject"
-  #        }
-  #      ]
-  #      switch_provider = v.switch_provider != null ? v.switch_provider : "VMware"
-  #      vlan_mode       = v.vlan_mode != null ? v.vlan_mode : "dynamic"
-  #      vlans           = v.vlans != null ? v.vlans : []
-  #    }
-  #  ]
-  #])
-  #epg_to_domains = { for k, v in local.epg_to_domains_loop : "${v.application_epg}_${v.domain}" => v }
-  #
-  #
-  #epg_to_static_paths_loop = flatten([
-  #  for key, value in local.application_epgs : [
-  #    for k, v in value.static_paths_for_loop : {
-  #      annotation         = value.annotation
-  #      epg                = key
-  #      key1               = k
-  #      encapsulation_type = v.encapsulation_type != null ? v.encapsulation_type : "vlan"
-  #      mode               = v.mode != null ? v.mode : "trunk"
-  #      name               = v.name
-  #      nodes              = v.nodes
-  #      path_type          = v.path_type != null ? v.path_type : "port"
-  #      pod                = v.pod != null ? v.pod : 1
-  #      vlans              = v.vlans
-  #    }
-  #  ]
-  #])
-  #epg_to_static_paths = { for k, v in local.epg_to_static_paths_loop : "${v.epg}_${k}" => v }
-  #
-  #
-  #epg_to_aaeps_loop = flatten([
-  #  for key, value in local.application_epgs : [
-  #    for k, v in value.epg_to_aaeps : {
-  #      epg                       = key
-  #      aaep                      = v.aaep
-  #      instrumentation_immediacy = v.instrumentation_immediacy != null ? v.instrumentation_immediacy : "on-demand"
-  #      mode                      = v.mode != null ? v.mode : "regular"
-  #      vlans                     = v.vlans
-  #    }
-  #  ]
-  #])
-  #epg_to_aaeps = { for k, v in local.epg_to_aaeps_loop : "${v.epg}_${v.aaep}" => v }
-  #
-  #
-  #contract_to_epgs_loop = flatten([
-  #  for key, value in local.application_epgs : [
-  #    for k, v in value.contracts : {
-  #      annotation          = value.annotation
-  #      application_epg     = key
-  #      application_profile = value.application_profile
-  #      contract            = v.name
-  #      contract_class = length(regexall(
-  #        "consumed", v.contract_type)) > 0 ? "fvRsCons" : length(regexall(
-  #        "contract_interface", v.contract_type)) > 0 ? "fvRsConsIf" : length(regexall(
-  #        "intra_epg", v.contract_type)) > 0 ? "fvRsIntraEpg" : length(regexall(
-  #        "provided", v.contract_type)) > 0 && length(regexall(
-  #        "oob", value.epg_type)) > 0 ? "mgmtRsOoBProv" : length(regexall(
-  #        "provided", v.contract_type)) > 0 ? "fvRsProv" : length(regexall(
-  #        "taboo", v.contract_type)
-  #      ) > 0 ? "fvRsProtBy" : ""
-  #      contract_dn = length(regexall(
-  #        "consumed", v.contract_type)) > 0 ? "rscons" : length(regexall(
-  #        "contract_interface", v.contract_type)) > 0 ? "rsconsIf" : length(regexall(
-  #        "intra_epg", v.contract_type)) > 0 ? "rsintraEpg" : length(regexall(
-  #        "provided", v.contract_type)) > 0 && length(regexall(
-  #        "oob", value.epg_type)) > 0 ? "rsooBProv" : length(regexall(
-  #        "provided", v.contract_type)) > 0 ? "rsprov" : length(regexall(
-  #        "taboo", v.contract_type)
-  #      ) > 0 ? "rsprotBy" : ""
-  #      contract_tdn    = length(regexall("taboo", v.contract_type)) > 0 ? "taboo" : "brc"
-  #      contract_tenant = v.tenant != null ? v.tenant : value.tenant
-  #      contract_type   = v.contract_type
-  #      epg_type        = value.epg_type
-  #      qos_class       = v.qos_class != null ? v.qos_class : "unspecified"
-  #      tenant          = value.tenant
-  #    }
-  #  ]
-  #])
-  #contract_to_epgs = { for k, v in local.contract_to_epgs_loop : "${v.application_epg}_${k}_${v.contract}" => v }
+  application_epgs = {
+    for i in flatten([
+      for value in local.application_profiles : [
+        for v in value.application_epgs : {
+          alias      = lookup(v, "alias", local.epg.alias)
+          annotation = lookup(v, "annotation", local.epg.annotation)
+          annotations = length(lookup(v, "annotations", local.epg.annotations)
+          ) > 0 ? lookup(v, "annotations", local.epg.annotations) : local.defaults.annotations
+          application_profile    = value.name
+          bridge_domain          = lookup(v, "bridge_domain", local.epg.bridge_domain)
+          contract_exception_tag = lookup(v, "contract_exception_tag", local.epg.contract_exception_tag)
+          contracts              = lookup(v, "contracts", [])
+          controller_type        = value.controller_type
+          custom_qos_policy      = lookup(v, "custom_qos_policy", local.epg.custom_qos_policy)
+          data_plane_policer     = lookup(v, "data_plane_policer", local.epg.data_plane_policer)
+          description            = lookup(v, "description", local.epg.description)
+          domains                = lookup(v, "domains", [])
+          epg_admin_state        = lookup(v, "epg_admin_state", local.epg.epg_admin_state)
+          epg_contract_masters = [
+            for s in lookup(v, "epg_contract_masters", []) : {
+              application_profile = lookup(s, "application_profile", value.name)
+              application_epg     = s.application_epg
+            }
+          ]
+          epg_to_aaeps = [
+            for s in lookup(v, "epg_to_aaeps", []) : {
+              aaep = s.aaep
+              instrumentation_immediacy = lookup(
+                s, "instrumentation_immediacy", local.epg.epg_to_aaeps.instrumentation_immediacy
+              )
+              mode  = lookup(s, "mode", local.epg.epg_to_aaeps.mode)
+              vlans = lookup(s, "vlans", [])
+            }
+          ]
+          epg_type                 = lookup(v, "epg_type", local.epg.epg_type)
+          fhs_trust_control_policy = lookup(v, "fhs_trust_control_policy", local.epg.fhs_trust_control_policy)
+          flood_in_encapsulation   = lookup(v, "flood_in_encapsulation", local.epg.flood_in_encapsulation)
+          global_alias             = lookup(v, "global_alias", local.epg.global_alias)
+          has_multicast_source     = lookup(v, "has_multicast_source", local.epg.has_multicast_source)
+          intra_epg_isolation      = lookup(v, "intra_epg_isolation", local.epg.intra_epg_isolation)
+          label_match_criteria     = lookup(v, "label_match_criteria", local.epg.label_match_criteria)
+          monitoring_policy        = lookup(v, "monitoring_policy", local.epg.monitoring_policy)
+          name                     = v.name
+          ndo = {
+            schema   = local.schema
+            sites    = local.sites
+            template = lookup(v, "template", "")
+          }
+          preferred_group_member = lookup(v, "preferred_group_member", local.epg.preferred_group_member)
+          qos_class              = lookup(v, "qos_class", local.epg.qos_class)
+          static_paths           = lookup(v, "static_paths", [])
+          tenant                 = var.tenant
+          useg_epg               = lookup(v, "useg_epg", local.epg.useg_epg)
+          vlan                   = lookup(v, "vlan", local.epg.vlan)
+          vrf = {
+            name     = local.bridge_domains[v.bridge_domain].vrf.name
+            schema   = local.bridge_domains[v.bridge_domain].vrf.schema
+            template = local.bridge_domains[v.bridge_domain].vrf.template
+            tenant   = local.bridge_domains[v.bridge_domain].vrf.tenant
+          }
+          vzGraphCont = lookup(v, "vzGraphCont", local.epg.vzGraphCont)
+        }
+      ]
+    ]) : "${i.application_profile}-${i.name}" => i
+  }
+  epg_to_domains = {
+    for i in flatten([
+      for key, value in local.application_epgs : [
+        for v in value.domains : {
+          annotation               = lookup(v, "annotation", local.epg.domains.annotation)
+          allow_micro_segmentation = lookup(v, "allow_micro_segmentation", local.epg.domains.allow_micro_segmentation)
+          application_profile      = lookup(v, "application_profile", local.epg.domains.application_profile)
+          application_epg          = lookup(v, "application_epg", local.epg.domains.application_epg)
+          delimiter                = lookup(v, "delimiter", local.epg.domains.delimiter)
+          deploy_immediacy         = lookup(v, "deploy_immediacy", local.epg.domains.deploy_immediacy)
+          domain                   = v.name
+          domain_type              = lookup(v, "domain_type", local.epg.domain_type)
+          enhanced_lag_policy      = lookup(v, "enhanced_lag_policy", local.epg.enhanced_lag_policy)
+          epg_type                 = value.epg_type
+          number_of_ports          = lookup(v, "number_of_ports", local.epg.number_of_ports)
+          port_allocation          = lookup(v, "port_allocation", local.epg.port_allocation)
+          port_binding             = lookup(v, "port_binding", local.epg.port_binding)
+          resolution_immediacy     = lookup(v, "resolution_immediacy", local.epg.resolution_immediacy)
+          security = {
+            allow_promiscuous = lookup(lookup(v, "security", {}), "allow_promiscuous", local.epg.security.allow_promiscuous)
+            forged_transmits  = lookup(lookup(v, "security", {}), "forged_transmits", local.epg.security.forged_transmits)
+            mac_changes       = lookup(lookup(v, "security", {}), "mac_changes", local.epg.security.mac_changes)
+          }
+          switch_provider = lookup(v, "switch_provider", local.epg.switch_provider)
+          vlan_mode       = lookup(v, "vlan_mode", local.epg.vlan_mode)
+          vlans           = lookup(v, "vlans", local.epg.vlans)
+        }
+      ]
+    ]) : "${i.application_profile}-${i.application_epg}-${i.domain}" => i
+  }
+  epg_to_static_paths = {
+    for i in flatten([
+      for key, value in local.application_epgs : [
+        for v in value.static_paths : [
+          for s in v.names : {
+            annotation          = value.annotation
+            application_epg     = key
+            application_profile = value.application_profile
+            encapsulation_type  = lookup(v, "encapsulation_type", local.epg.static_paths.encapsulation_type)
+            mode                = lookup(v, "mode", local.epg.static_paths.mode)
+            name                = s
+            nodes               = v.nodes
+            path_type           = lookup(v, "path_type", local.epg.static_paths.path_type)
+            pod                 = lookup(v, "pod", local.epg.static_paths.pod)
+            vlans               = lookup(v, "vlans", local.epg.static_paths.vlans)
+          }
+        ]
+      ]
+    ]) : "${i.application_profile}-${i.application_epg}-${i.name}" => i
+  }
+  epg_to_aaeps = {
+    for i in flatten([
+      for key, value in local.application_epgs : [
+        for v in value.epg_to_aaeps : {
+          application_epg     = key
+          application_profile = value.application_profile
+          aaep                = v.aaep
+          instrumentation_immediacy = lookup(
+            v, "instrumentation_immediacy", local.epg.epg_to_aaeps.instrumentation_immediacy
+          )
+          mode  = lookup(v, "mode", local.epg.epg_to_aaeps.mode)
+          vlans = v.vlans
+        }
+      ]
+    ]) : "${i.application_profile}-${i.application_epg}-${i.aaep}" => i
+  }
+  contract_to_epgs = {
+    for i in flatten([
+      for key, value in local.application_epgs : [
+        for v in value.contracts : {
+          annotation          = value.annotation
+          application_epg     = key
+          application_profile = value.application_profile
+          contract            = v.name
+          contract_class = length(regexall(
+            "consumed", lookup(v, "contract_type", local.epg.contracts.contract_type))) > 0 ? "fvRsCons" : length(
+            regexall("contract_interface", lookup(v, "contract_type", local.epg.contracts.contract_type))
+            ) > 0 ? "fvRsConsIf" : length(regexall(
+            "intra_epg", lookup(v, "contract_type", local.epg.contracts.contract_type))) > 0 ? "fvRsIntraEpg" : length(
+            regexall("provided", lookup(v, "contract_type", local.epg.contracts.contract_type))
+            ) > 0 && length(regexall(
+              "oob", value.epg_type)) > 0 ? "mgmtRsOoBProv" : length(regexall(
+            "provided", lookup(v, "contract_type", local.epg.contracts.contract_type))) > 0 ? "fvRsProv" : length(
+            regexall("taboo", lookup(v, "contract_type", local.epg.contracts.contract_type)
+          )) > 0 ? "fvRsProtBy" : ""
+          contract_dn = length(regexall(
+            "consumed", lookup(v, "contract_type", local.epg.contracts.contract_type))) > 0 ? "rscons" : length(
+            regexall("contract_interface", lookup(v, "contract_type", local.epg.contracts.contract_type))
+            ) > 0 ? "rsconsIf" : length(regexall("intra_epg", lookup(
+              v, "contract_type", local.epg.contracts.contract_type))) > 0 ? "rsintraEpg" : length(regexall(
+              "provided", lookup(v, "contract_type", local.epg.contracts.contract_type))) > 0 && length(regexall(
+              "oob", value.epg_type)) > 0 ? "rsooBProv" : length(regexall(
+            "provided", lookup(v, "contract_type", local.epg.contracts.contract_type))) > 0 ? "rsprov" : length(
+            regexall("taboo", lookup(v, "contract_type", local.epg.contracts.contract_type))
+          ) > 0 ? "rsprotBy" : ""
+          contract_tdn = length(regexall("taboo", lookup(v, "contract_type", local.epg.contracts.contract_type))
+          ) > 0 ? "taboo" : "brc"
+          contract_tenant = lookup(v, "tenant", var.tenant)
+          contract_type   = lookup(v, "contract_type", local.epg.contracts.contract_type)
+          qos_class       = lookup(v, "qos_class", local.epg.contracts.qos_class)
+          epg_type        = value.epg_type
+          tenant          = value.tenant
+        }
+      ]
+    ]) : "${i.application_profile}-${i.application_epg}-${i.contract_type}-${i.contract}" => i
+  }
 
 
-  #  #__________________________________________________________
-  #  #
-  #  # Contract Variables
-  #  #__________________________________________________________
+  #__________________________________________________________
   #
-  #  contracts = {
-  #    for k, v in var.contracts : k => {
-  #      alias                 = v.alias != null ? v.alias : ""
-  #      annotation            = v.annotation != null ? v.annotation : ""
-  #      annotations           = v.annotations != null ? v.annotations : []
-  #      apply_both_directions = coalesce(v.subjects[0]["apply_both_directions"], false)
-  #      contract_type         = v.contract_type != null ? v.contract_type : "standard"
-  #      controller_type       = v.controller_type != null ? v.controller_type : "apic"
-  #      description           = v.description != null ? v.description : ""
-  #      filters = v.subjects != null ? flatten([
-  #        for s in v.subjects : [
-  #          s.filters
-  #        ]
-  #      ]) : []
-  #      global_alias = v.global_alias != null ? v.global_alias : ""
-  #      log          = v.log != null ? v.log : false
-  #      qos_class    = v.qos_class != null ? v.qos_class : "unspecified"
-  #      schema       = v.schema != null ? v.schema : local.first_tenant
-  #      subjects     = v.subjects != null ? v.subjects : []
-  #      scope        = v.scope != null ? v.scope : "context"
-  #      target_dscp  = v.target_dscp != null ? v.target_dscp : "unspecified"
-  #      template     = v.template != null ? v.template : local.first_tenant
-  #      tenant       = v.tenant != null ? v.tenant : local.first_tenant
-  #    }
-  #  }
+  # Contract Variables
+  #__________________________________________________________
+
+  contracts = {
+    for v in lookup(local.tenant_contracts, "contracts", []) : v.name => {
+      alias      = lookup(v, "alias", local.contract.alias)
+      annotation = lookup(v, "annotation", local.contract.annotation)
+      annotations = length(lookup(v, "annotations", local.contract.annotations)
+      ) > 0 ? lookup(v, "annotations", local.contract.annotations) : local.defaults.annotations
+      apply_both_directions = lookup(lookup(
+        v, "subjects", {})[0], "apply_both_directions", local.contract.subjects.apply_both_directions
+      )
+      contract_type = lookup(v, "contract_type", local.contract.contract_type)
+      description   = lookup(v, "description", local.contract.description)
+      filters = flatten([
+        for s in lookup(v, "subjects", []) : [
+          s.filters
+        ]
+      ])
+      global_alias = v.global_alias != null ? v.global_alias : ""
+      log          = v.log != null ? v.log : false
+      ndo = {
+        schema   = local.schema
+        sites    = local.sites
+        template = lookup(v, "template", "")
+      }
+      qos_class   = lookup(v, "qos_class", local.contract.qos_class)
+      subjects    = lookup(v, "subjects", [])
+      scope       = lookup(v, "scope", local.contract.scope)
+      target_dscp = lookup(v, "target_dscp", local.contract.target_dscp)
+      tenant      = var.tenant
+    }
+  }
+
+
+  contract_subjects = {
+    for i in flatten([
+      for key, value in local.contracts : [
+        for v in value.subjects : {
+          action                = lookup(v, "action", local.contract.subjects.action)
+          apply_both_directions = lookup(v, "apply_both_directions", local.contract.subjects.apply_both_directions)
+          contract              = key
+          contract_type         = value.contract_type
+          description           = lookup(v, "description", local.contract.subjects.description)
+          directives            = lookup(v, "directives", local.contract.subjects.directives)
+          filters               = lookup(v, "filters", [])
+          label_match_criteria  = lookup(v, "label_match_criteria", local.contract.subjects.label_match_criteria)
+          name                  = v.name
+          qos_class             = lookup(v, "qos_class", value.qos_class)
+          target_dscp           = lookup(v, "target_dscp", value.target_dscp)
+          tenant                = value.tenant
+        }
+      ] if value.controller_type == "apic"
+    ]) : "${i.contract}_${i.name}" => i
+  }
+
+  subject_filters = {
+    for i in flatten([
+      for k, v in local.contract_subjects : [
+        for s in v.filters : {
+          action        = v.action
+          contract      = v.contract
+          contract_type = v.contract_type
+          directives = {
+            enable_policy_compression = lookup(lookup(
+              v, "directives"), "enable_policy_compression", local.contract.subject.directives.enable_policy_compression
+            )
+            log = lookup(lookup(v, "directives"), "log", local.contract.subject.directives.log)
+          }
+          filter  = s
+          subject = v.name
+          tenant  = v.tenant
+        }
+      ]
+    ]) : "${i.contract}_${i.subject}_${i.filter}" => i
+  }
+
+
+  #__________________________________________________________
   #
+  # Filter Variables
+  #__________________________________________________________
+
+  filters = {
+    for v in lookup(local.tenant_contracts, "filters", []) : v.name => {
+      alias      = lookup(v, "alias", local.filter.alias)
+      annotation = lookup(v, "annotation", local.filter.annotation)
+      annotations = length(lookup(v, "annotations", local.filter.annotations)
+      ) > 0 ? lookup(v, "annotations", local.filter.annotations) : local.defaults.annotations
+      description    = lookup(v, "description", local.filter.description)
+      filter_entries = lookup(v, "filter_entries", [])
+      ndo = {
+        schema   = local.schema
+        template = lookup(v, "template", "")
+      }
+      tenant = var.tenant
+    }
+  }
+
+  filter_entries = {
+    for i in flatten([
+      for key, value in local.filters : [
+        for k, v in value.filter_entries : {
+          alias                 = lookup(v, "alias", local.filter.alias)
+          annotation            = lookup(v, "annotation", local.filter.annotation)
+          arp_flag              = lookup(v, "arp_flag", local.filter.arp_flag)
+          description           = lookup(v, "description", local.filter.description)
+          destination_port_from = lookup(v, "destination_port_from", local.filter.destination_port_from)
+          destination_port_to   = lookup(v, "destination_port_to", local.filter.destination_port_to)
+          ethertype             = lookup(v, "ethertype", local.filter.ethertype)
+          filter_name           = key
+          icmpv4_type           = lookup(v, "icmpv4_type", local.filter.icmpv4_type)
+          icmpv6_type           = lookup(v, "icmpv6_type", local.filter.icmpv6_type)
+          ip_protocol           = lookup(v, "ip_protocol", local.filter.ip_protocol)
+          match_dscp            = lookup(v, "match_dscp", local.filter.match_dscp)
+          match_only_fragments  = lookup(v, "match_only_fragments", local.filter.match_only_fragments)
+          name                  = v.name
+          ndo                   = value.ndo
+          source_port_from      = lookup(v, "source_port_from", local.filter.source_port_from)
+          source_port_to        = lookup(v, "source_port_to", local.filter.source_port_to)
+          stateful              = lookup(v, "stateful", local.filter.stateful)
+          tcp_session_rules = {
+            acknowledgement = lookup(lookup(
+              v, "tcp_session_rules", {}), "acknowledgement", local.filter.tcp_session_rules.acknowledgement
+            )
+            established = lookup(lookup(
+              v, "tcp_session_rules", {}), "established", local.filter.tcp_session_rules.established
+            )
+            finish = lookup(lookup(v, "tcp_session_rules", {}), "finish", local.filter.tcp_session_rules.finish)
+            reset  = lookup(lookup(v, "tcp_session_rules", {}), "reset", local.filter.tcp_session_rules.reset)
+            synchronize = lookup(lookup(
+              v, "tcp_session_rules", {}), "synchronize", local.filter.tcp_session_rules.synchronize
+            )
+          }
+          tenant = value.tenant
+        }
+      ]
+    ]) : "${i.filter_name}_${i.name}" => i
+  }
+
+
+  #__________________________________________________________
   #
-  #  contract_subjects_loop = flatten([
-  #    for key, value in local.contracts : [
-  #      for k, v in value.subjects : {
-  #        action                = v.action != null ? v.action : "permit"
-  #        apply_both_directions = v.apply_both_directions != null ? v.apply_both_directions : true
-  #        contract              = key
-  #        contract_type         = value.contract_type
-  #        description           = v.description != null ? v.description : ""
-  #        directives            = v.directives != null ? v.directives : []
-  #        filters               = v.filters
-  #        label_match_criteria  = v.label_match_criteria != null ? v.label_match_criteria : "AtleastOne"
-  #        name                  = v.name
-  #        qos_class             = v.qos_class != null ? v.qos_class : value.qos_class
-  #        target_dscp           = v.target_dscp != null ? v.target_dscp : value.qos_class
-  #        tenant                = value.tenant
-  #      }
-  #    ] if value.controller_type == "apic"
-  #  ])
-  #  contract_subjects = { for k, v in local.contract_subjects_loop : "${v.contract}_${v.name}" => v }
-  #
-  #  subject_filters_loop = flatten([
-  #    for k, v in local.contract_subjects : [
-  #      for s in v.filters : {
-  #        action        = v.action
-  #        contract      = v.contract
-  #        contract_type = v.contract_type
-  #        directives = length(v.directives) > 0 ? [
-  #          for i in v.directives : {
-  #            enable_policy_compression = i.enable_policy_compression != null ? i.enable_policy_compression : false
-  #            log                       = i.log != null ? i.log : false
-  #          }
-  #          ] : [
-  #          {
-  #            enable_policy_compression = false
-  #            log                       = false
-  #          }
-  #        ]
-  #        directives = v.directives
-  #        filter     = s
-  #        subject    = v.name
-  #        tenant     = v.tenant
-  #      }
-  #    ]
-  #  ])
-  #  subject_filters = { for k, v in local.subject_filters_loop : "${v.contract}_${v.subject}_${v.filter}" => v }
-  #
-  #  contract_annotations_loop = flatten([
-  #    for key, value in local.contracts : [
-  #      for k, v in value.annotations : {
-  #        key      = value.key
-  #        value    = v.value
-  #        type     = value.type
-  #        contract = key
-  #      }
-  #    ]
-  #  ])
-  #  contract_annotations = { for k, v in local.contract_annotations_loop : "${v.contract}_${v.key}" => v }
-  #
-  #
-  #  #__________________________________________________________
-  #  #
-  #  # Filter Variables
-  #  #__________________________________________________________
-  #
-  #  filters = {
-  #    for k, v in var.filters : k => {
-  #      annotation      = v.annotation != null ? v.annotation : ""
-  #      controller_type = v.controller_type != null ? v.controller_type : "apic"
-  #      description     = v.description != null ? v.description : ""
-  #      filter_entries  = v.filter_entries != null ? v.filter_entries : []
-  #      alias           = v.alias != null ? v.alias : ""
-  #      schema          = v.schema != null ? v.schema : local.first_tenant
-  #      template        = v.template != null ? v.template : local.first_tenant
-  #      tenant          = v.tenant != null ? v.tenant : local.first_tenant
-  #    }
-  #  }
-  #
-  #  filter_entries_loop = flatten([
-  #    for key, value in local.filters : [
-  #      for k, v in value.filter_entries : {
-  #        annotation            = v.annotation != null ? v.annotation : ""
-  #        arp_flag              = v.arp_flag != null ? v.arp_flag : "unspecified"
-  #        controller_type       = value.controller_type
-  #        description           = v.description != null ? v.description : ""
-  #        destination_port_from = v.destination_port_from != null ? v.destination_port_from : "unspecified"
-  #        destination_port_to   = v.destination_port_to != null ? v.destination_port_to : "unspecified"
-  #        ethertype             = v.ethertype != null ? v.ethertype : "unspecified"
-  #        filter_name           = key
-  #        icmpv4_type           = v.icmpv4_type != null ? v.icmpv4_type : "unspecified"
-  #        icmpv6_type           = v.icmpv6_type != null ? v.icmpv6_type : "unspecified"
-  #        ip_protocol           = v.ip_protocol != null ? v.ip_protocol : "unspecified"
-  #        match_dscp            = v.match_dscp != null ? v.match_dscp : "unspecified"
-  #        match_only_fragments  = v.match_only_fragments != null ? v.match_only_fragments : false
-  #        name                  = v.name != null ? v.name : "default"
-  #        alias                 = v.alias != null ? v.alias : ""
-  #        source_port_from      = v.source_port_from != null ? v.source_port_from : "unspecified"
-  #        source_port_to        = v.source_port_to != null ? v.source_port_to : "unspecified"
-  #        schema                = value.schema
-  #        stateful              = v.stateful != null ? v.stateful : false
-  #        tcp_session_rules = v.tcp_session_rules != null ? [
-  #          for s in v.tcp_session_rules : {
-  #            acknowledgement = s.acknowledgement != null ? s.acknowledgement : false
-  #            established     = s.established != null ? s.established : false
-  #            finish          = s.finish != null ? s.finish : false
-  #            reset           = s.reset != null ? s.reset : false
-  #            synchronize     = s.synchronize != null ? s.synchronize : false
-  #          }
-  #          ] : [
-  #          {
-  #            acknowledgement = false
-  #            established     = false
-  #            finish          = false
-  #            reset           = false
-  #            synchronize     = false
-  #          }
-  #        ]
-  #        template = value.template
-  #        tenant   = value.tenant
-  #      }
-  #    ]
-  #  ])
-  #  filter_entries = { for k, v in local.filter_entries_loop : "${v.filter_name}_${v.name}" => v }
-  #
-  #
-  #  #__________________________________________________________
-  #  #
-  #  # L3Out Variables
-  #  #__________________________________________________________
-  #
-  #  #==================================
-  #  # L3Outs
-  #  #==================================
-  #
+  # L3Out Variables
+  #__________________________________________________________
+
+  #==================================
+  # L3Outs
+  #==================================
+
   #  l3outs = {
   #    for k, v in var.l3outs : k => {
   #      alias                 = v.alias != null ? v.alias : ""
@@ -788,7 +786,7 @@ locals {
   #    }
   #  }
   #
-  #  l3out_route_profiles_loop = flatten([
+  #  l3out_route_profiles = flatten([
   #    for key, value in local.l3outs : [
   #      for k, v in value.route_profiles_for_redistribution : {
   #        annotation = value.annotation
@@ -808,7 +806,7 @@ locals {
   #  # L3Outs - External EPGs
   #  #==================================
   #
-  #  external_epgs_loop = flatten([
+  #  external_epgs = flatten([
   #    for key, value in local.l3outs : [
   #      for k, v in value.external_epgs : {
   #        alias                  = v.alias != null ? v.alias : ""
@@ -845,7 +843,7 @@ locals {
   #  ])
   #  l3out_external_epgs = { for k, v in local.external_epgs_loop : "${v.l3out}_${v.epg_type}_${v.name}" => v }
   #
-  #  ext_epg_contracts_loop = flatten([
+  #  ext_epg_contracts = flatten([
   #    for key, value in local.l3out_external_epgs : [
   #      for k, v in value.contracts : {
   #        annotation      = value.annotation
@@ -862,7 +860,7 @@ locals {
   #  ])
   #  l3out_ext_epg_contracts = { for k, v in local.ext_epg_contracts_loop : "${v.l3out}_${v.epg}_${v.contract_type}_${v.contract}" => v }
   #
-  #  external_epg_subnets_loop_1 = flatten([
+  #  l3out_external_epg_subnets = flatten([
   #    for key, value in local.l3out_external_epgs : [
   #      for k, v in value.subnets : {
   #        aggregate_export        = coalesce(v.aggregate[0].aggregate_export, false)
@@ -919,7 +917,7 @@ locals {
   #  # L3Outs - OSPF External Policies
   #  #=======================================================================================
   #
-  #  ospf_process_loop = flatten([
+  #  l3out_ospf_external_policies = flatten([
   #    for key, value in local.l3outs : [
   #      for k, v in value.ospf_external_profile : {
   #        annotation                              = value.annotation
@@ -956,7 +954,7 @@ locals {
   #    }
   #  }
   #
-  #  nodes_loop = flatten([
+  #  l3out_node_profiles_nodes = flatten([
   #    for key, value in local.l3out_node_profiles : [
   #      for k, v in value.nodes : {
   #        annotation                = value.annotation
@@ -976,7 +974,7 @@ locals {
   #  # L3Outs - Logical Node Profiles - Logical Interface Profiles
   #  #=======================================================================================
   #
-  #  interface_profiles_loop = flatten([
+  #  l3out_interface_profiles = flatten([
   #    for key, value in local.l3out_node_profiles : [
   #      for k, v in value.interface_profiles : {
   #        annotation                  = value.annotation
@@ -1064,7 +1062,7 @@ locals {
   #  ])
   #  l3out_interface_profiles = { for k, v in local.interface_profiles_loop : "${v.node_profile}_${v.name}" => v }
   #
-  #  svi_addressing_loop = flatten([
+  #  l3out_paths_svi_addressing = flatten([
   #    for key, value in local.l3out_interface_profiles : [
   #      for s in value.svi_addresses : {
   #        annotation                = value.annotation
@@ -1081,7 +1079,7 @@ locals {
   #  ])
   #  l3out_paths_svi_addressing = { for k, v in local.svi_addressing_loop : "${v.path}_${v.side}" => v }
   #
-  #  secondaries_loop_1 = flatten([
+  #  l3out_paths_secondary_ips = flatten([
   #    for k, v in local.l3out_interface_profiles : [
   #      for s in v.secondaries_keys : {
   #        annotation           = v.annotation
@@ -1112,25 +1110,18 @@ locals {
   #  # L3Outs - Logical Node Profiles - Logical Interface Profiles - BGP Peers
   #  #=======================================================================================
   #
-  #  bgp_peer_connectivity_profiles_loop = flatten([
+  #  bgp_peer_connectivity_profiles = {
+  #    for i in flatten([
   #    for key, value in local.l3out_interface_profiles : [
   #      for k, v in value.bgp_peers : {
-  #        address_type_controls = v.address_type_controls != null ? [
-  #          for s in v.address_type_controls : {
+  #        address_type_controls = {
   #            af_mcast = s.af_mcast != null ? s.af_mcast : false
   #            af_ucast = s.af_ucast != null ? s.af_ucast : true
   #          }
-  #          ] : [
-  #          {
-  #            af_mcast = false
-  #            af_ucast = true
-  #          }
-  #        ]
   #        admin_state           = v.admin_state != null ? v.admin_state : "enabled"
   #        allowed_self_as_count = v.allowed_self_as_count != null ? v.allowed_self_as_count : 3
   #        annotation            = value.annotation
-  #        bgp_controls = v.bgp_controls != null ? [
-  #          for s in v.bgp_controls : {
+  #        bgp_controls = {
   #            allow_self_as           = s.allow_self_as != null ? s.allow_self_as : false
   #            as_override             = s.as_override != null ? s.as_override : false
   #            disable_peer_as_check   = s.disable_peer_as_check != null ? s.disable_peer_as_check : false
@@ -1139,17 +1130,6 @@ locals {
   #            send_domain_path        = s.send_domain_path != null ? s.send_domain_path : false
   #            send_extended_community = s.send_extended_community != null ? s.send_extended_community : false
   #          }
-  #          ] : [
-  #          {
-  #            allow_self_as           = false
-  #            as_override             = false
-  #            disable_peer_as_check   = false
-  #            next_hop_self           = false
-  #            send_community          = false
-  #            send_domain_path        = false
-  #            send_extended_community = false
-  #          }
-  #        ]
   #        bgp_peer_prefix_policy = v.bgp_peer_prefix_policy != null ? v.bgp_peer_prefix_policy : ""
   #        description            = v.description != null ? v.description : ""
   #        ebgp_multihop_ttl      = v.ebgp_multihop_ttl != null ? v.ebgp_multihop_ttl : 1
@@ -1159,32 +1139,17 @@ locals {
   #        path_profile           = "${key}"
   #        peer_address           = v.peer_address != null ? v.peer_address : "**REQUIRED**"
   #        peer_asn               = v.peer_asn
-  #        peer_controls = v.peer_controls != null ? [
-  #          for s in v.peer_controls : {
+  #        peer_controls = {
   #            bidirectional_forwarding_detection = s.bidirectional_forwarding_detection != null ? s.bidirectional_forwarding_detection : false
   #            disable_connected_check            = s.disable_connected_check != null ? s.disable_connected_check : false
   #          }
-  #          ] : [
-  #          {
-  #            bidirectional_forwarding_detection = false
-  #            disable_connected_check            = true
-  #          }
-  #        ]
   #        peer_level           = v.peer_level != null ? v.peer_level : "interface"
   #        policy_source_tenant = v.policy_source_tenant != null ? v.policy_source_tenant : "common"
-  #        private_as_control = v.private_as_control != null ? [
-  #          for s in v.private_as_control : {
+  #        private_as_control = {
   #            remove_all_private_as            = s.remove_all_private_as != null ? s.remove_all_private_as : false
   #            remove_private_as                = s.remove_private_as != null ? s.remove_private_as : false
   #            replace_private_as_with_local_as = s.replace_private_as_with_local_as != null ? s.replace_private_as_with_local_as : false
   #          }
-  #          ] : [
-  #          {
-  #            remove_all_private_as            = false
-  #            remove_private_as                = false
-  #            replace_private_as_with_local_as = false
-  #          }
-  #        ]
   #        route_control_profiles = v.route_control_profiles != null ? [
   #          for s in v.route_control_profiles : {
   #            direction = s.direction
@@ -1194,9 +1159,7 @@ locals {
   #        weight_for_routes_from_neighbor = v.weight_for_routes_from_neighbor != null ? v.weight_for_routes_from_neighbor : 0
   #      }
   #    ]
-  #  ])
-  #  bgp_peer_connectivity_profiles = {
-  #    for k, v in local.bgp_peer_connectivity_profiles_loop : "${v.path_profile}_${v.peer_address}" => v
+  #  ]) : "${i.path_profile}_${i.peer_address}" => i
   #  }
   #
   #
@@ -1279,288 +1242,305 @@ locals {
   #    ]
   #  ])
   #  l3out_ospf_interface_profiles = { for k, v in local.ospf_profiles_loop : "${v.interface_profile}_${v.name}" => v }
+
+
+  #__________________________________________________________
   #
+  # Policies - BFD Interface
+  #__________________________________________________________
+
+  policies_bfd_interface = {
+    for v in lookup(local.policies, "bfd_interface", []) : v.name => {
+      admin_state           = lookup(v, "admin_state", local.bfd.admin_state)
+      annotation            = lookup(v, "annotation", local.bfd.annotation)
+      description           = lookup(v, "description", local.bfd.description)
+      detection_multiplier  = lookup(v, "detection_multiplier", local.bfd.detection_multiplier)
+      echo_admin_state      = lookup(v, "echo_admin_state", local.bfd.echo_admin_state)
+      echo_recieve_interval = lookup(v, "echo_recieve_interval", local.bfd.echo_recieve_interval)
+      enable_sub_interface_optimization = lookup(
+        v, "enable_sub_interface_optimization", local.bfd.enable_sub_interface_optimization
+      )
+      minimum_recieve_interval  = lookup(v, "minimum_recieve_interval", local.bfd.minimum_recieve_interval)
+      minimum_transmit_interval = lookup(v, "minimum_transmit_interval", local.bfd.minimum_transmit_interval)
+      tenant                    = var.tenant
+    }
+  }
+
+
+  #__________________________________________________________
   #
-  #  #__________________________________________________________
-  #  #
-  #  # Policies - BFD Interface
-  #  #__________________________________________________________
+  # Policies - BGP
+  #__________________________________________________________
+
+  policies_bgp_address_family_context = {
+    for v in lookup(lookup(local.policies, "bgp", {}), "bgp_address_family_context", []) : v.name => {
+      annotation             = lookup(v, "annotation", local.bgpa.annotation)
+      description            = lookup(v, "description", local.bgpa.description)
+      ebgp_distance          = lookup(v, "ebgp_distance", local.bgpa.ebgp_distance)
+      ebgp_max_ecmp          = lookup(v, "ebgp_max_ecmp", local.bgpa.ebgp_max_ecmp)
+      enable_host_route_leak = lookup(v, "enable_host_route_leak", local.bgpa.enable_host_route_leak)
+      ibgp_distance          = lookup(v, "ibgp_distance", local.bgpa.ibgp_distance)
+      ibgp_max_ecmp          = lookup(v, "ibgp_max_ecmp", local.bgpa.ibgp_max_ecmp)
+      local_distance         = lookup(v, "local_distance", local.bgpa.local_distance)
+      tenant                 = var.tenant
+    }
+  }
+
+  policies_bgp_best_path = {
+    for v in lookup(lookup(local.policies, "bgp", {}), "bgp_best_path", []) : v.name => {
+      annotation                = lookup(v, "annotation", local.bgpb.annotation)
+      description               = lookup(v, "description", local.bgpb.description)
+      relax_as_path_restriction = lookup(v, "relax_as_path_restriction", local.bgpb.relax_as_path_restriction)
+      tenant                    = var.tenant
+    }
+  }
+
+  policies_bgp_peer_prefix = {
+    for v in lookup(lookup(local.policies, "bgp", {}), "bgp_peer_prefix", []) : v.name => {
+      action                     = lookup(v, "action", local.bgpp.action)
+      annotation                 = lookup(v, "annotation", local.bgpp.annotation)
+      description                = lookup(v, "description", local.bgpp.description)
+      maximum_number_of_prefixes = lookup(v, "maximum_number_of_prefixes", local.bgpp.maximum_number_of_prefixes)
+      restart_time               = lookup(v, "restart_time", local.bgpp.restart_time)
+      tenant                     = var.tenant
+      threshold                  = lookup(v, "threshold", local.bgpp.threshold)
+    }
+  }
+
+  policies_bgp_route_summarization = {
+    for v in lookup(lookup(local.policies, "bgp", {}), "bgp_route_summarization", []) : v.name => {
+      annotation                  = lookup(v, "annotation", local.bgps.annotation)
+      description                 = lookup(v, "description", local.bgps.description)
+      generate_as_set_information = lookup(v, "generate_as_set_information", local.bgps.generate_as_set_information)
+      tenant                      = var.tenant
+    }
+  }
+
+  policies_bgp_timers = {
+    for v in lookup(lookup(local.policies, "bgp", {}), "bgp_timers", []) : v.name => {
+      annotation              = lookup(v, "annotation", local.bgpt.annotation)
+      description             = lookup(v, "description", local.bgpt.description)
+      graceful_restart_helper = lookup(v, "graceful_restart_helper", local.bgpt.graceful_restart_helper)
+      hold_interval           = lookup(v, "hold_interval", local.bgpt.hold_interval)
+      keepalive_interval      = lookup(v, "keepalive_interval", local.bgpt.keepalive_interval)
+      maximum_as_limit        = lookup(v, "maximum_as_limit", local.bgpt.maximum_as_limit)
+      stale_interval          = lookup(v, "stale_interval", local.bgpt.stale_interval)
+      tenant                  = var.tenant
+    }
+  }
+
+
+  #__________________________________________________________
   #
-  #  policies_bfd_interface = {
-  #    for k, v in var.policies_bfd_interface : k => {
-  #      admin_state                       = v.admin_state != null ? v.admin_state : "enabled"
-  #      annotation                        = v.annotation != null ? v.annotation : ""
-  #      description                       = v.description != null ? v.description : ""
-  #      detection_multiplier              = v.detection_multiplier != null ? v.detection_multiplier : 3
-  #      echo_admin_state                  = v.echo_admin_state != null ? v.echo_admin_state : "enabled"
-  #      echo_recieve_interval             = v.echo_recieve_interval != null ? v.echo_recieve_interval : 50
-  #      enable_sub_interface_optimization = v.enable_sub_interface_optimization != null ? v.enable_sub_interface_optimization : false
-  #      minimum_recieve_interval          = v.minimum_recieve_interval != null ? v.minimum_recieve_interval : 50
-  #      minimum_transmit_interval         = v.minimum_transmit_interval != null ? v.minimum_transmit_interval : 50
-  #      tenant                            = v.tenant != null ? v.tenant : local.first_tenant
-  #    }
-  #  }
+  # Policies - DHCP Variables
+  #__________________________________________________________
+
+  policies_dhcp_option = {
+    for v in lookup(lookup(local.policies, "dhcp", {}), "option_policies", []) : v.name => {
+      annotation  = lookup(v, "annotation", local.dhcpo.annotation)
+      description = lookup(v, "description", local.dhcpo.description)
+      options = { for value in lookup(v, "options", []) : v.name =>
+        {
+          data           = value.data
+          dhcp_option_id = value.dhcp_option_id
+          name           = value.name
+        }
+      }
+      tenant = var.tenant
+    }
+  }
+
+  policies_dhcp_relay = {
+    for v in lookup(lookup(local.policies, "dhcp", {}), "relay_policies", []) : v.name => {
+      annotation  = lookup(v, "annotation", local.dhcpr.annotation)
+      description = lookup(v, "description", local.dhcpr.description)
+      dhcp_relay_providers = { for value in v.dhcp_relay_providers : value.address =>
+        {
+          address = value.address
+          application_profile = lookup(
+            value, "application_profile", local.dhcpr.dhcp_relay_providers.application_profile
+          )
+          epg      = lookup(value, "epg", local.dhcpr.dhcp_relay_providers.epg)
+          epg_type = lookup(value, "epg_type", local.dhcpr.dhcp_relay_providers.epg_type)
+          l3out    = lookup(value, "l3out", local.dhcpr.dhcp_relay_providers.l3out)
+          tenant   = var.tenant
+        }
+      }
+      mode   = lookup(v, "mode", local.dhcpr.mode)
+      tenant = var.tenant
+    }
+  }
+
+
+  #__________________________________________________________
   #
+  # Policies - Endpoint Retention Variables
+  #__________________________________________________________
+
+  policies_endpoint_retention = {
+    for v in lookup(local.policies, "endpoint_retention", []) : v.name => {
+      annotation = lookup(v, "annotation", local.ep.annotation)
+      bounce_entry_aging_interval = lookup(
+        v, "bounce_entry_aging_interval", local.ep.bounce_entry_aging_interval
+      )
+      bounce_trigger = lookup(v, "bounce_trigger", local.ep.bounce_trigger)
+      description    = lookup(v, "description", local.ep.description)
+      hold_interval  = lookup(v, "hold_interval", local.ep.hold_interval)
+      local_endpoint_aging_interval = lookup(
+        v, "local_endpoint_aging_interval", local.ep.local_endpoint_aging_interval
+      )
+      move_frequency = lookup(v, "move_frequency", local.ep.move_frequency)
+      remote_endpoint_aging_interval = lookup(
+        v, "remote_endpoint_aging_interval", local.ep.remote_endpoint_aging_interval
+      )
+      tenant = var.tenant
+    }
+  }
+
+
+  #__________________________________________________________
   #
-  #  #__________________________________________________________
-  #  #
-  #  # Policies - BGP
-  #  #__________________________________________________________
+  # Policies - HSRP
+  #__________________________________________________________
+
+  policies_hsrp_group = {
+    for v in lookup(lookup(local.policies, "hsrp", {}), "group_policies", []) : v.name => {
+      annotation  = lookup(v, "annotation", local.hsrpg.annotation)
+      description = lookup(v, "description", local.hsrpg.description)
+      enable_preemption_for_the_group = lookup(
+        v, "enable_preemption_for_the_group", local.hsrpg.enable_preemption_for_the_group
+      )
+      hello_interval = lookup(v, "hello_interval", local.hsrpg.hello_interval)
+      hold_interval  = lookup(v, "hold_interval", local.hsrpg.hold_interval)
+      key            = lookup(v, "key", local.hsrpg.key)
+      max_seconds_to_prevent_preemption = lookup(
+        v, "max_seconds_to_prevent_preemption", local.hsrpg.max_seconds_to_prevent_preemption
+      )
+      min_preemption_delay = lookup(v, "min_preemption_delay", local.hsrpg.min_preemption_delay)
+      preemption_delay_after_reboot = lookup(
+        v, "preemption_delay_after_reboot", local.hsrpg.preemption_delay_after_reboot
+      )
+      priority = lookup(v, "priority", local.hsrpg.priority)
+      timeout  = lookup(v, "timeout", local.hsrpg.timeout)
+      type     = lookup(v, "type", local.hsrpg.type)
+      tenant   = var.tenant
+    }
+  }
+
+  policies_hsrp_interface = {
+    for v in lookup(lookup(local.policies, "hsrp", {}), "interface_policies", []) : v.name => {
+      annotation   = lookup(v, "annotation", local.hsrpi.annotation)
+      delay        = lookup(v, "delay", local.hsrpi.delay)
+      description  = lookup(v, "description", local.hsrpi.description)
+      reload_delay = lookup(v, "reload_delay", local.hsrpi.reload_delay)
+      enable_bidirectional_forwarding_detection = lookup(
+        v, "enable_bidirectional_forwarding_detection", local.hsrpi.enable_bidirectional_forwarding_detection
+      )
+      use_burnt_in_mac_address_of_the_interface = lookup(
+        v, "use_burnt_in_mac_address_of_the_interface", local.hsrpi.use_burnt_in_mac_address_of_the_interface
+      )
+      tenant = var.tenant
+    }
+  }
+
+
+  #__________________________________________________________
   #
-  #  policies_bgp_address_family_context = {
-  #    for k, v in var.policies_bgp_address_family_context : k => {
-  #      annotation             = v.annotation != null ? v.annotation : ""
-  #      description            = v.description != null ? v.description : ""
-  #      ebgp_distance          = v.ebgp_distance != null ? v.ebgp_distance : 20
-  #      ebgp_max_ecmp          = v.ebgp_max_ecmp != null ? v.ebgp_max_ecmp : 16
-  #      enable_host_route_leak = v.enable_host_route_leak != null ? v.enable_host_route_leak : false
-  #      ibgp_distance          = v.ibgp_distance != null ? v.ibgp_distance : 200
-  #      ibgp_max_ecmp          = v.ibgp_max_ecmp != null ? v.ibgp_max_ecmp : 16
-  #      local_distance         = v.local_distance != null ? v.local_distance : 220
-  #      tenant                 = v.tenant != null ? v.tenant : local.first_tenant
-  #    }
-  #  }
+  # Policies - OSPF Variables
+  #__________________________________________________________
+
+  policies_ospf_interface = {
+    for v in lookup(lookup(local.policies, "ospf", {}), "ospf_interface", []) : v.name => {
+      annotation        = lookup(v, "annotation", local.ospfi.annotation)
+      cost_of_interface = lookup(v, "cost_of_interface", local.ospfi.cost_of_interface)
+      dead_interval     = lookup(v, "dead_interval", local.ospfi.dead_interval)
+      description       = lookup(v, "description", local.ospfi.description)
+      hello_interval    = lookup(v, "hello_interval", local.ospfi.hello_interval)
+      interface_controls = {
+        advertise_subnet      = lookup(v, "advertise_subnet", local.ospfi.interface_controls.advertise_subnet)
+        bfd                   = lookup(v, "bfd", local.ospfi.interface_controls.bfd)
+        mtu_ignore            = lookup(v, "mtu_ignore", local.ospfi.interface_controls.mtu_ignore)
+        passive_participation = lookup(v, "passive_participation", local.ospfi.interface_controls.passive_participation)
+      }
+      network_type        = lookup(v, "network_type", local.ospfi.network_type)
+      priority            = lookup(v, "priority", local.ospfi.priority)
+      retransmit_interval = lookup(v, "retransmit_interval", local.ospfi.retransmit_interval)
+      tenant              = var.tenant
+      transmit_delay      = lookup(v, "transmit_delay", local.ospfi.transmit_delay)
+    }
+  }
+
+  policies_ospf_route_summarization = {
+    for v in lookup(lookup(local.policies, "ospf", {}), "ospf_route_summarization", []) : v.name => {
+      annotation         = lookup(v, "annotation", local.ospfs.annotation)
+      cost               = lookup(v, "cost", local.ospfs.cost)
+      description        = lookup(v, "description", local.ospfs.description)
+      inter_area_enabled = lookup(v, "inter_area_enabled", local.ospfs.inter_area_enabled)
+      tenant             = var.tenant
+    }
+  }
+
+  policies_ospf_timers = {
+    for v in lookup(lookup(local.policies, "ospf", {}), "ospf_timers", []) : v.name => {
+      annotation                = lookup(v, "annotation", local.ospft.annotation)
+      bandwidth_reference       = lookup(v, "bandwidth_reference", local.ospft.bandwidth_reference)
+      description               = lookup(v, "description", local.ospft.description)
+      admin_distance_preference = lookup(v, "admin_distance_preference", local.ospft.admin_distance_preference)
+      graceful_restart_helper   = lookup(v, "graceful_restart_helper", local.ospft.graceful_restart_helper)
+      initial_spf_scheduled_delay_interval = lookup(
+        v, "initial_spf_scheduled_delay_interval", local.ospft.initial_spf_scheduled_delay_interval
+      )
+      lsa_group_pacing_interval = lookup(v, "lsa_group_pacing_interval", local.ospft.lsa_group_pacing_interval)
+      lsa_generation_throttle_hold_interval = lookup(
+        v, "lsa_generation_throttle_hold_interval", local.ospft.lsa_generation_throttle_hold_interval
+      )
+      lsa_generation_throttle_maximum_interval = lookup(
+        v, "lsa_generation_throttle_maximum_interval", local.ospft.lsa_generation_throttle_maximum_interval
+      )
+      lsa_generation_throttle_start_wait_interval = lookup(
+        v, "lsa_generation_throttle_start_wait_interval", local.ospft.lsa_generation_throttle_start_wait_interval
+      )
+      lsa_maximum_action         = lookup(v, "lsa_maximum_action", local.ospft.lsa_maximum_action)
+      lsa_threshold              = lookup(v, "lsa_threshold", local.ospft.lsa_threshold)
+      maximum_ecmp               = lookup(v, "maximum_ecmp", local.ospft.maximum_ecmp)
+      maximum_lsa_reset_interval = lookup(v, "maximum_lsa_reset_interval", local.ospft.maximum_lsa_reset_interval)
+      maximum_lsa_sleep_count    = lookup(v, "maximum_lsa_sleep_count", local.ospft.maximum_lsa_sleep_count)
+      maximum_lsa_sleep_interval = lookup(v, "maximum_lsa_sleep_interval", local.ospft.maximum_lsa_sleep_interval)
+      maximum_number_of_not_self_generated_lsas = lookup(
+        v, "maximum_number_of_not_self_generated_lsas", local.ospft.maximum_number_of_not_self_generated_lsas
+      )
+      minimum_hold_time_between_spf_calculations = lookup(
+        v, "minimum_hold_time_between_spf_calculations", local.ospft.minimum_hold_time_between_spf_calculations
+      )
+      minimum_interval_between_arrival_of_a_lsa = lookup(
+        v, "minimum_interval_between_arrival_of_a_lsa", local.ospft.minimum_interval_between_arrival_of_a_lsa
+      )
+      maximum_wait_time_between_spf_calculations = lookup(
+        v, "maximum_wait_time_between_spf_calculations", local.ospft.maximum_wait_time_between_spf_calculations
+      )
+      control_knobs = {
+        enable_name_lookup_for_router_ids = lookup(
+          lookup(v, "control_knobs"
+        ), "enable_name_lookup_for_router_ids", local.ospft.control_knobs.enable_name_lookup_for_router_ids)
+        prefix_suppress = lookup(lookup(v, "control_knobs"
+        ), "prefix_suppress", local.ospft.control_knobs.prefix_suppress)
+      }
+      tenant = var.tenant
+    }
+  }
+
+
+  #__________________________________________________________
   #
-  #  policies_bgp_best_path = {
-  #    for k, v in var.policies_bgp_best_path : k => {
-  #      annotation                = v.annotation != null ? v.annotation : ""
-  #      description               = v.description != null ? v.description : ""
-  #      relax_as_path_restriction = v.relax_as_path_restriction != null ? v.relax_as_path_restriction : false
-  #      tenant                    = v.tenant != null ? v.tenant : local.first_tenant
-  #    }
-  #  }
-  #
-  #  policies_bgp_peer_prefix = {
-  #    for k, v in var.policies_bgp_peer_prefix : k => {
-  #      action                     = v.action != null ? v.action : "reject"
-  #      annotation                 = v.annotation != null ? v.annotation : ""
-  #      description                = v.description != null ? v.description : ""
-  #      maximum_number_of_prefixes = v.maximum_number_of_prefixes != null ? v.maximum_number_of_prefixes : 20000
-  #      name                       = v.name != null ? v.name : "default"
-  #      restart_time               = v.restart_time != null ? v.restart_time : 65535
-  #      tenant                     = v.tenant != null ? v.tenant : local.first_tenant
-  #      threshold                  = v.threshold != null ? v.threshold : 75
-  #    }
-  #  }
-  #
-  #  policies_bgp_route_summarization = {
-  #    for k, v in var.policies_bgp_route_summarization : k => {
-  #      annotation                  = v.annotation != null ? v.annotation : ""
-  #      description                 = v.description != null ? v.description : ""
-  #      generate_as_set_information = v.generate_as_set_information != null ? v.generate_as_set_information : false
-  #      name                        = v.name != null ? v.name : "default"
-  #      tenant                      = v.tenant != null ? v.tenant : local.first_tenant
-  #    }
-  #  }
-  #
-  #  policies_bgp_timers = {
-  #    for k, v in var.policies_bgp_timers : k => {
-  #      annotation              = v.annotation != null ? v.annotation : ""
-  #      description             = v.description != null ? v.description : ""
-  #      graceful_restart_helper = v.graceful_restart_helper != null ? v.graceful_restart_helper : true
-  #      hold_interval           = v.hold_interval != null ? v.hold_interval : 180
-  #      keepalive_interval      = v.keepalive_interval != null ? v.keepalive_interval : 60
-  #      maximum_as_limit        = v.maximum_as_limit != null ? v.maximum_as_limit : 0
-  #      name                    = v.name != null ? v.name : "default"
-  #      stale_interval          = v.stale_interval != null ? v.stale_interval : 300
-  #      tenant                  = v.tenant != null ? v.tenant : local.first_tenant
-  #    }
-  #  }
-  #
-  #
-  #  #__________________________________________________________
-  #  #
-  #  # Policies - DHCP Variables
-  #  #__________________________________________________________
-  #
-  #  policies_dhcp_option = {
-  #    for k, v in var.policies_dhcp_option : k => {
-  #      annotation  = v.annotation != null ? v.annotation : ""
-  #      description = v.description != null ? v.description : ""
-  #      options = v.options != null ? { for key, value in v.options : v.name =>
-  #        {
-  #          alias          = value.alias != null ? value.alias : ""
-  #          annotation     = value.annotation != null ? value.annotation : ""
-  #          data           = value.data
-  #          dhcp_option_id = value.dhcp_option_id
-  #          name           = value.name
-  #        }
-  #      } : {}
-  #      tenant = v.tenant != null ? v.tenant : local.first_tenant
-  #    }
-  #  }
-  #
-  #  policies_dhcp_relay = {
-  #    for k, v in var.policies_dhcp_relay : k => {
-  #      annotation  = v.annotation != null ? v.annotation : ""
-  #      description = v.description != null ? v.description : ""
-  #      dhcp_relay_providers = v.dhcp_relay_providers != null ? { for key, value in v.dhcp_relay_providers : key =>
-  #        {
-  #          address             = value.address
-  #          application_profile = value.application_profile != null ? value.application_profile : "default"
-  #          epg                 = value.epg != null ? value.epg : "default"
-  #          epg_type            = value.epg_type != null ? value.epg_type : "epg"
-  #          l3out               = value.l3out != null ? value.l3out : ""
-  #          tenant              = value.tenant != null ? value.tenant : local.first_tenant
-  #        }
-  #      } : {}
-  #      mode   = v.mode != null ? v.mode : "visible"
-  #      tenant = v.tenant != null ? v.tenant : local.first_tenant
-  #    }
-  #  }
-  #
-  #
-  #  #__________________________________________________________
-  #  #
-  #  # Policies - Endpoint Retention Variables
-  #  #__________________________________________________________
-  #
-  #  policies_endpoint_retention = {
-  #    for k, v in var.policies_endpoint_retention : k => {
-  #      annotation                     = v.annotation != null ? v.annotation : ""
-  #      bounce_entry_aging_interval    = v.bounce_entry_aging_interval != null ? v.bounce_entry_aging_interval : 630
-  #      bounce_trigger                 = v.bounce_trigger != null ? v.bounce_trigger : "protocol"
-  #      description                    = v.description != null ? v.description : ""
-  #      hold_interval                  = v.hold_interval != null ? v.hold_interval : 300
-  #      local_endpoint_aging_interval  = v.local_endpoint_aging_interval != null ? v.local_endpoint_aging_interval : 900
-  #      move_frequency                 = v.move_frequency != null ? v.move_frequency : 256
-  #      remote_endpoint_aging_interval = v.remote_endpoint_aging_interval != null ? v.remote_endpoint_aging_interval : 300
-  #      tenant                         = v.tenant != null ? v.tenant : local.first_tenant
-  #    }
-  #  }
-  #
-  #
-  #  #__________________________________________________________
-  #  #
-  #  # Policies - HSRP
-  #  #__________________________________________________________
-  #
-  #  policies_hsrp_group = {
-  #    for k, v in var.policies_hsrp_group : k => {
-  #      annotation                        = v.annotation != null ? v.annotation : ""
-  #      description                       = v.description != null ? v.description : ""
-  #      enable_preemption_for_the_group   = v.enable_preemption_for_the_group != null ? v.enable_preemption_for_the_group : false
-  #      hello_interval                    = v.hello_interval != null ? v.hello_interval : 3000
-  #      hold_interval                     = v.hold_interval != null ? v.hold_interval : 10000
-  #      key                               = v.key != null ? v.key : "cisco"
-  #      max_seconds_to_prevent_preemption = v.max_seconds_to_prevent_preemption != null ? v.max_seconds_to_prevent_preemption : 0
-  #      min_preemption_delay              = v.min_preemption_delay != null ? v.min_preemption_delay : 0
-  #      preemption_delay_after_reboot     = v.preemption_delay_after_reboot != null ? v.preemption_delay_after_reboot : 0
-  #      priority                          = v.priority != null ? v.priority : 100
-  #      tenant                            = v.tenant != null ? v.tenant : local.first_tenant
-  #      timeout                           = v.timeout != null ? v.timeout : 0
-  #      type                              = v.alias != null ? v.type : "simple_authentication"
-  #    }
-  #  }
-  #
-  #  policies_hsrp_interface = {
-  #    for k, v in var.policies_hsrp_interface : k => {
-  #      annotation                                = v.annotation != null ? v.annotation : ""
-  #      delay                                     = v.delay != null ? v.delay : 0
-  #      description                               = v.description != null ? v.description : ""
-  #      enable_bidirectional_forwarding_detection = coalesce(v.control[0].enable_bidirectional_forwarding_detection, false)
-  #      reload_delay                              = v.reload_delay != null ? v.reload_delay : 0
-  #      tenant                                    = v.tenant != null ? v.tenant : local.first_tenant
-  #      use_burnt_in_mac_address_of_the_interface = coalesce(v.control[0].use_burnt_in_mac_address_of_the_interface, false)
-  #    }
-  #  }
-  #
-  #
-  #  #__________________________________________________________
-  #  #
-  #  # Policies - OSPF Variables
-  #  #__________________________________________________________
-  #
-  #  policies_ospf_interface = {
-  #    for k, v in var.policies_ospf_interface : k => {
-  #      annotation        = v.annotation != null ? v.annotation : ""
-  #      cost_of_interface = v.cost_of_interface != null ? v.cost_of_interface : 0
-  #      dead_interval     = v.dead_interval != null ? v.dead_interval : 40
-  #      description       = v.description != null ? v.description : ""
-  #      hello_interval    = v.hello_interval != null ? v.hello_interval : 10
-  #      interface_controls = v.interface_controls != null ? [
-  #        for s in v.interface_controls : {
-  #          advertise_subnet      = s.advertise_subnet != null ? s.advertise_subnet : false
-  #          bfd                   = s.bfd != null ? s.bfd : false
-  #          mtu_ignore            = s.mtu_ignore != null ? s.mtu_ignore : false
-  #          passive_participation = s.passive_participation != null ? s.passive_participation : false
-  #        }
-  #        ] : [
-  #        {
-  #          advertise_subnet      = false
-  #          bfd                   = false
-  #          mtu_ignore            = false
-  #          passive_participation = false
-  #        }
-  #      ]
-  #      network_type        = v.network_type != null ? v.network_type : "bcast"
-  #      priority            = v.priority != null ? v.priority : 1
-  #      retransmit_interval = v.retransmit_interval != null ? v.retransmit_interval : 5
-  #      transmit_delay      = v.transmit_delay != null ? v.transmit_delay : 1
-  #      tenant              = v.tenant != null ? v.tenant : local.first_tenant
-  #    }
-  #  }
-  #
-  #  policies_ospf_route_summarization = {
-  #    for k, v in var.policies_ospf_route_summarization : k => {
-  #      annotation         = v.annotation != null ? v.annotation : ""
-  #      cost               = v.cost != null ? v.cost : 0
-  #      description        = v.description != null ? v.description : ""
-  #      inter_area_enabled = v.inter_area_enabled != null ? v.inter_area_enabled : false
-  #      tenant             = v.tenant != null ? v.tenant : local.first_tenant
-  #    }
-  #  }
-  #
-  #  policies_ospf_timers = {
-  #    for k, v in var.policies_ospf_timers : k => {
-  #      annotation                                  = v.annotation != null ? v.annotation : ""
-  #      bandwidth_reference                         = v.bandwidth_reference != null ? v.bandwidth_reference : 400000
-  #      description                                 = v.description != null ? v.description : ""
-  #      admin_distance_preference                   = v.admin_distance_preference != null ? v.admin_distance_preference : 110
-  #      graceful_restart_helper                     = v.graceful_restart_helper != null ? v.graceful_restart_helper : true
-  #      initial_spf_scheduled_delay_interval        = v.initial_spf_scheduled_delay_interval != null ? v.initial_spf_scheduled_delay_interval : 200
-  #      lsa_group_pacing_interval                   = v.lsa_group_pacing_interval != null ? v.lsa_group_pacing_interval : 10
-  #      lsa_generation_throttle_hold_interval       = v.lsa_generation_throttle_hold_interval != null ? v.lsa_generation_throttle_hold_interval : 5000
-  #      lsa_generation_throttle_maximum_interval    = v.lsa_generation_throttle_maximum_interval != null ? v.lsa_generation_throttle_maximum_interval : 5000
-  #      lsa_generation_throttle_start_wait_interval = v.lsa_generation_throttle_start_wait_interval != null ? v.lsa_generation_throttle_start_wait_interval : 0
-  #      lsa_maximum_action                          = v.lsa_maximum_action != null ? v.lsa_maximum_action : "reject"
-  #      lsa_threshold                               = v.lsa_threshold != null ? v.lsa_threshold : 75
-  #      maximum_ecmp                                = v.maximum_ecmp != null ? v.maximum_ecmp : 8
-  #      maximum_lsa_reset_interval                  = v.maximum_lsa_reset_interval != null ? v.maximum_lsa_reset_interval : 10
-  #      maximum_lsa_sleep_count                     = v.maximum_lsa_sleep_count != null ? v.maximum_lsa_sleep_count : 5
-  #      maximum_lsa_sleep_interval                  = v.maximum_lsa_sleep_interval != null ? v.maximum_lsa_sleep_interval : 5
-  #      maximum_number_of_not_self_generated_lsas   = v.maximum_number_of_not_self_generated_lsas != null ? v.maximum_number_of_not_self_generated_lsas : 20000
-  #      minimum_hold_time_between_spf_calculations  = v.minimum_hold_time_between_spf_calculations != null ? v.minimum_hold_time_between_spf_calculations : 1000
-  #      minimum_interval_between_arrival_of_a_lsa   = v.minimum_interval_between_arrival_of_a_lsa != null ? v.minimum_interval_between_arrival_of_a_lsa : 1000
-  #      maximum_wait_time_between_spf_calculations  = v.maximum_wait_time_between_spf_calculations != null ? v.maximum_wait_time_between_spf_calculations : 5000
-  #      control_knobs = v.control_knobs != null ? [
-  #        for s in v.control_knobs : {
-  #          enable_name_lookup_for_router_ids = length(compact([s.enable_name_lookup_for_router_ids])
-  #          ) > 0 ? s.enable_name_lookup_for_router_ids : false
-  #          prefix_suppress = s.prefix_suppress != null ? s.prefix_suppress : false
-  #        }
-  #        ] : [
-  #        {
-  #          enable_name_lookup_for_router_ids = false
-  #          prefix_suppress                   = false
-  #        }
-  #      ]
-  #      tenant = v.tenant != null ? v.tenant : local.first_tenant
-  #    }
-  #  }
-  #
-  #
-  #  #__________________________________________________________
-  #  #
-  #  # Route Map Match Rule Variables
-  #  #__________________________________________________________
-  #
+  # Route Map Match Rule Variables
+  #__________________________________________________________
+
   #  route_map_match_rules = {
   #    for k, v in var.route_map_match_rules : k => {
   #      annotation  = v.annotation != null ? v.annotation : ""
   #      description = v.description != null ? v.description : ""
   #      rules       = v.rules != null ? v.rules : {}
-  #      tenant      = v.tenant != null ? v.tenant : local.first_tenant
+  #      tenant      = var.tenant
   #    }
   #  }
   #
@@ -1593,7 +1573,7 @@ locals {
   #      annotation  = v.annotation != null ? v.annotation : ""
   #      description = v.description != null ? v.description : ""
   #      rules       = v.rules != null ? v.rules : []
-  #      tenant      = v.tenant != null ? v.tenant : local.first_tenant
+  #      tenant      = var.tenant
   #    }
   #  }
   #
@@ -1666,7 +1646,7 @@ locals {
   #      description        = v.description != null ? v.description : ""
   #      match_rules        = v.match_rules != null ? v.match_rules : {}
   #      route_map_continue = v.route_map_continue != null ? v.route_map_continue : false
-  #      tenant             = v.tenant != null ? v.tenant : local.first_tenant
+  #      tenant             = var.tenant
   #    }
   #  }
   #
@@ -1686,49 +1666,6 @@ locals {
   #    ]
   #  ])
   #  route_maps_context_rules = { for k, v in local.route_maps_context_rules_loop : "${v.route_map}_${v.ctx_name}" => v }
-  #
-  #
-  #  #__________________________________________________________
-  #  #
-  #  # Schema Variables
-  #  #__________________________________________________________
-  #
-  #  schemas = {
-  #    for k, v in var.schemas : k => {
-  #      templates = v.templates != null ? [
-  #        for key, value in v.templates : {
-  #          name   = value.name != null ? value.name : local.first_tenant
-  #          schema = k
-  #          sites  = value.sites
-  #          tenant = value.tenant != null ? value.tenant : local.first_tenant
-  #        }
-  #      ] : []
-  #    }
-  #  }
-  #
-  #  schema_templates_loop = flatten([
-  #    for key, value in local.schemas : [
-  #      for k, v in value.templates : {
-  #        name   = v.name
-  #        schema = key
-  #        sites  = v.sites
-  #        tenant = v.tenant
-  #      }
-  #    ]
-  #  ])
-  #  schema_templates = { for k, v in local.schema_templates_loop : "${v.schema}_${v.name}" => v }
-  #
-  #
-  #  templates_sites_loop = flatten([
-  #    for k, v in local.schema_templates : [
-  #      for s in v.sites : {
-  #        name   = v.name
-  #        schema = v.schema
-  #        site   = s
-  #      }
-  #    ] if v.tenant == local.first_tenant
-  #  ])
-  #  template_sites = { for k, v in local.templates_sites_loop : "${v.schema}_${v.name}_${v.site}" => v }
   #
   #
 }

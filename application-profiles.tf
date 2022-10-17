@@ -41,9 +41,9 @@ resource "aci_rest_managed" "application_profiles_annotations" {
       for a, b in local.application_profiles : [
         for v in b.annotations : {
           application_profile = a
-          key    = v.key
-          tenant = b.tenant
-          value  = v.value
+          key                 = v.key
+          tenant              = b.tenant
+          value               = v.value
         }
       ]
     ]) : "${i.application_profile}-${i.key}" => i if local.controller_type == "apic"
@@ -71,7 +71,7 @@ resource "aci_rest_managed" "application_profiles_global_alias" {
   depends_on = [
     aci_application_profile.application_profiles
   ]
-  for_each   = { for k, v in local.tenants : k => v if v.global_alias != "" && local.controller_type == "apic" }
+  for_each   = { for k, v in local.application_profiles : k => v if v.global_alias != "" && local.controller_type == "apic" }
   class_name = "tagAliasInst"
   dn         = "uni/tn-${each.key}/ap-${each.value.application_profile}/alias"
   content = {
