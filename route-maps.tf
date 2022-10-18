@@ -8,39 +8,54 @@ resource "aci_match_rule" "route_map_match_rules" {
     aci_tenant.tenants
   ]
   for_each    = local.route_map_match_rules
-  annotation  = each.value.annotation != "" ? each.value.annotation : var.annotation
+  annotation  = each.value.annotation
   description = each.value.description
   name        = each.key
-  name_alias  = each.value.name_alias
+  alias  = each.value.alias
   tenant_dn   = aci_tenant.tenants[each.value.tenant].id
 }
 
-resource "aci_rest_managed" "route_map_rules_match_community" {
+resource "aci_rest_managed" "match_community_terms" {
   depends_on = [
     aci_match_rule.route_map_match_rules
   ]
-  for_each   = { for k, v in local.match_rule_rules : k => v if v.type == "match_community" }
-  dn         = "uni/tn-${each.value.tenant}/subj-${each.value.match_rule}/commtrm-${each.value.community}"
+  for_each   = { for k, v in local.match_community_terms : k => v }
+  dn         = "uni/tn-${each.value.tenant}/subj-${each.value.match_rule}/commtrm-${each.value.name}"
   class_name = "rtctrlMatchCommTerm"
   content = {
     descr = each.value.description
-    name  = each.value.community
+    name  = each.value.name
     type  = "community"
   }
 }
 
-resource "aci_rest_managed" "route_map_rules_match_regex_community" {
+resource "aci_rest_managed" "match_community_factors" {
   depends_on = [
     aci_match_rule.route_map_match_rules
   ]
-  for_each   = { for k, v in local.match_rule_rules : k => v if v.type == "match_regex_community" }
+  for_each   = { for k, v in local.match_community_factors : k => v }
+  dn         = "uni/tn-${each.value.tenant}/subj-${each.value.match_rule}/commtrm-${each.value.name}/commfct-${each.value.community}"
+  class_name = "rtctrlMatchCommTerm"
+  content = {
+    descr = each.value.description
+    name  = each.value.name
+    scope = each.value.scope
+    type  = "community"
+  }
+}
+
+resource "aci_rest_managed" "match_regex_community_terms" {
+  depends_on = [
+    aci_match_rule.route_map_match_rules
+  ]
+  for_each   = { for k, v in local.match_regex_community_terms : k => v }
   dn         = "uni/tn-${each.value.tenant}/subj-${each.value.match_rule}/commrxtrm-${each.value.community_type}"
   class_name = "rtctrlMatchCommRegexTerm"
   content = {
     commType = each.value.community_type # regular|extended
     descr    = each.value.description
     name     = each.value.name
-    regex    = each.value.regex
+    regex    = each.value.regular_expression
     type     = "community-regex"
   }
 }
@@ -54,17 +69,17 @@ GUI Location:
  - Tenants > {tenant} > Networking > Policies > Protocol > Match Rules > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_match_route_destination_rule" "route_map_rules_match_prefix" {
+resource "aci_match_route_destination_rule" "match_route_destination_rule" {
   depends_on = [
     aci_match_rule.route_map_match_rules
   ]
-  for_each          = { for k, v in local.match_rule_rules : k => v if v.type == "match_prefix" }
-  aggregate         = each.value.greater_than == 0 && each.value.less_than == 0 ? "no" : "yes"
-  annotation        = each.value.annotation != "" ? each.value.annotation : var.annotation
+  for_each          = { for k, v in local.match_route_destination_rule : k => v }
+  aggregate         = each.value.greater_than_mask == 0 && each.value.less_than_mask == 0 ? "no" : "yes"
+  annotation        = each.value.annotation
   match_rule_dn     = aci_match_rule.route_map_match_rules[each.value.match_rule].id
-  greater_than_mask = each.value.greater_than
-  ip                = each.value.network
-  less_than_mask    = each.value.less_than
+  greater_than_mask = each.value.greater_than_mask
+  ip                = each.value.ip
+  less_than_mask    = each.value.less_than_mask
 }
 /*_____________________________________________________________________________________________________________________
 
@@ -76,24 +91,41 @@ resource "aci_rest_managed" "route_map_set_rules" {
   dn         = "uni/tn-${each.value.tenant}/attr-${each.key}"
   class_name = "rtctrlAttrP"
   content = {
-    # annotation = each.value.annotation != "" ? each.value.annotation : var.annotation
+    # annotation = each.value.annotation
     descr     = each.value.description
     name      = each.key
-    nameAlias = each.value.name_alias
+    nameAlias = each.value.alias
   }
 }
 
-resource "aci_rest_managed" "route_map_rules_additional_communities" {
+resource "aci_rest_managed" "route_map_set_rules_set_community_none" {
   depends_on = [
     aci_rest_managed.route_map_set_rules
   ]
-  for_each   = { for k, v in local.set_rule_communities : k => v if v.type == "additional_communities" }
+  for_each   = { 
+    for k, v in local.set_rule_set_community : k => v if length(regexall("(none|replace)", v.criteria)) > 0 
+    }
+  dn         = "uni/tn-${each.value.tenant}/attr-${each.value.set_rule}/scomm"
+  class_name = "rtctrlSetAddComm"
+  content = {
+    community   = each.value.criteria == "none" ? "unknown:unknown:0:0" : each.value.community
+    descr       = each.value.description
+    setCriteria = each.value.criteria
+    type        = "community"
+  }
+}
+
+resource "aci_rest_managed" "route_map_set_rules_set_community" {
+  depends_on = [
+    aci_rest_managed.route_map_set_rules
+  ]
+  for_each   = { for k, v in local.set_rule_communities : k => v }
   dn         = "uni/tn-${each.value.tenant}/attr-${each.value.set_rule}/saddcomm-${each.value.community}"
   class_name = "rtctrlSetAddComm"
   content = {
     community   = each.value.community
     descr       = each.value.description
-    setCriteria = each.value.set_criteria # append|none|replace
+    setCriteria = each.value.criteria # append|none|replace
     type        = "community"
   }
 }
@@ -265,7 +297,7 @@ resource "aci_rest_managed" "route_maps_for_route_control" {
   dn         = "uni/tn-${each.value.tenant}/prof-${each.key}"
   class_name = "rtctrlProfile"
   content = {
-    # annotation   = each.value.annotation != "" ? each.value.annotation : var.annotation
+    # annotation   = each.value.annotation
     autoContinue = each.value.route_map_continue == true ? "yes" : "no"
     descr        = each.value.description
     name         = each.key
@@ -281,7 +313,7 @@ resource "aci_rest_managed" "route_maps_contexts" {
   class_name = "rtctrlCtxP"
   content = {
     action = each.value.action
-    # annotation = each.value.annotation != "" ? each.value.annotation : var.annotation
+    # annotation = each.value.annotation
     descr = each.value.description
     name  = each.value.name
     order = each.value.order
