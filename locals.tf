@@ -1573,32 +1573,25 @@ locals {
     }
   }
 
-  match_community_terms = { for i in flatten([
+  match_rules_match_community_terms = { for i in flatten([
     for key, value in local.route_map_match_rules : [
       for v in value.match_community_terms : {
-        description             = lookup(v, "description", local.rmmr.match_community_terms.description)
-        match_community_factors = lookup(v, "match_community_factors", [])
-        match_rule              = key
-        name                    = v.name
-        tenant                  = value.tenant
+        description = lookup(v, "description", local.rmmr.match_community_terms.description)
+        match_community_factors = [
+          for i in lookup(v, "match_community_factors", []) : {
+            community   = v.community
+            description = lookup(v, "description", local.rmmr.match_community_terms.match_community_factors.description)
+            scope       = lookup(v, "scope", local.rmmr.match_community_terms.match_community_factors.scope)
+          }
+        ]
+        match_rule = key
+        name       = v.name
+        tenant     = value.tenant
       }
     ]
   ]) : "${i.match_rule}-${i.name}" => i }
 
-  match_community_factors = { for i in flatten([
-    for key, value in local.match_community_terms : [
-      for v in value.match_community_factors : {
-        community   = v.community
-        description = lookup(v, "description", local.rmmr.match_community_terms.match_community_factors.description)
-        match_rule  = key
-        name        = v.name
-        scope       = lookup(v, "description", local.rmmr.match_community_terms.match_community_factors.scope)
-        tenant      = value.tenant
-      }
-    ]
-  ]) : "${i.match_rule}-${i.name}-${i.community}" => i }
-
-  match_regex_community_terms = { for i in flatten([
+  match_rules_match_regex_community_terms = { for i in flatten([
     for key, value in local.route_map_match_rules : [
       for v in value.match_regex_community_terms : {
         community_type     = lookup(v, "community_type", local.rmmr.match_regex_community_terms.community_type)
@@ -1611,7 +1604,7 @@ locals {
     ]
   ]) : "${i.match_rule}-${i.community_type}" => i }
 
-  match_route_destination_rule = { for i in flatten([
+  match_rules_match_route_destination_rule = { for i in flatten([
     for key, value in local.match_route_destination_rule : [
       for v in value.rules : {
         description       = lookup(v, "description", local.rmmr.match_route_destination_rule.description)
@@ -1632,66 +1625,88 @@ locals {
 
   route_map_set_rules = {
     for v in lookup(local.policies, "route_map_set_rules", []) : v.name => {
-      annotation  = lookup(v, "annotation", local.rmsr.annotation)
-      description = lookup(v, "description", local.rmsr.description)
-      rules       = lookup(v, "rules", [])
-      tenant      = var.tenant
+      additional_communities = lookup(v, "additional_communities", [])
+      annotation             = lookup(v, "annotation", local.rmsr.annotation)
+      description            = lookup(v, "description", local.rmsr.description)
+      multipath              = lookup(v, "multipath           ", local.rmsr.multipath)
+      next_hop_propegation   = lookup(v, "next_hop_propegation", local.rmsr.next_hop_propegation)
+      set_as_path            = lookup(v, "set_as_path           ", [])
+      set_communities        = lookup(v, "set_communities         ", [])
+      set_dampening          = lookup(v, "set_dampening         ", [])
+      set_external_epg       = lookup(v, "set_external_epg      ", [])
+      set_metric             = lookup(v, "set_metric          ", local.rmsr.set_metric)
+      set_metric_type        = lookup(v, "set_metric_type     ", local.rmsr.set_metric_type)
+      set_next_hop_address   = lookup(v, "set_next_hop_address", local.rmsr.set_next_hop_address)
+      set_preference         = lookup(v, "set_preference      ", local.rmsr.set_preference)
+      set_route_tag          = lookup(v, "set_route_tag       ", local.rmsr.set_route_tag)
+      set_weight             = lookup(v, "set_weight          ", local.rmsr.set_weight)
+      tenant                 = var.tenant
     }
   }
 
-  set_rule_rules = { for i in flatten([
+  set_rules_additional_communities = { for i in flatten([
     for key, value in local.route_map_set_rules : [
-      for v in value.rules : {
-        address           = lookup(v, "address", local.rmsr.rules.address)
-        asns              = lookup(v, "asns", [])
-        communities       = lookup(v, "communities", {})
-        criteria          = lookup(v, "criteria", local.rmsr.rules.criteria)
+      for v in value.additional_communities : {
+        community   = v.community
+        description = lookup(v, "description", local.rmsr.rules.communites.description)
+        set_rule    = value.set_rule
+        tenant      = value.tenant
+      }
+    ]
+  ]) : "${i.set_rule}-${i.community}" => i }
+
+  set_rules_set_as_path = { for i in flatten([
+    for key, value in local.route_map_set_rules : [
+      for v in value.set_as_path : {
+        autonomous_systems = length(lookup(v, "autonomous_systems", [])) > 0 ? [
+          for s in range(length(v.autonomous_systems)) : {
+            asn   = element(v.autonomous_systems, s)
+            order = s
+          }
+        ] : []
+        criteria      = lookup(v, "criteria     ", local.rmsr.set_as_path.criteria)
+        last_as_count = lookup(v, "last_as_count", local.rmsr.set_as_path.last_as_count)
+        set_rule      = value.set_rule
+        tenant        = value.tenant
+      }
+    ]
+  ]) : "${i.set_rule}-${i.criteria}" => i }
+
+  set_rules_set_communities = { for i in flatten([
+    for key, value in local.route_map_set_rules : [
+      for v in value.set_communities : {
+        community = lookup(v, "community", local.rmsr.set_communities.community)
+        criteria  = lookup(v, "criteria", local.rmsr.set_communities.criteria)
+        set_rule  = key
+        tenant    = var.tenant
+      }
+    ]
+  ]) : "${i.set_rule}-${i.criteria}" => i }
+
+  set_rules_set_dampening = { for i in flatten([
+    for key, value in local.route_map_set_rules : [
+      for v in value.set_dampening : {
         half_life         = lookup(v, "half_life", local.rmsr.rules.half_life)
-        last_as_count     = lookup(v, "last_as_count", local.rmsr.rules.last_as_count)
         max_suprress_time = lookup(v, "max_suprress_time", local.rmsr.rules.max_suprress_time)
-        metric            = lookup(v, "metric", local.rmsr.rules.metric)
-        metric_type       = lookup(v, "metric_type", local.rmsr.rules.metric_type)
-        preference        = lookup(v, "preference", local.rmsr.rules.preference)
         reuse_limit       = lookup(v, "reuse_limit", local.rmsr.rules.reuse_limit)
-        route_tag         = lookup(v, "route_tag", local.rmsr.rules.route_tag)
         set_rule          = key
         suppress_limit    = lookup(v, "suppress_limit", local.rmsr.rules.suppress_limit)
         tenant            = var.tenant
-        type              = v.type
-        weight            = lookup(v, "weight", local.rmsr.rules.weight)
       }
     ]
-  ]) : "${i.set_rule}-${i.type}" => i }
+  ]) : "${i.set_rule}-dampening" => i }
 
-  set_rule_asn_rules = {
-    for k, v in local.set_rule_rules : k => {
-      autonomous_systems = {
-        for s in range(length(v.asns)) : s => {
-          asn   = element(v.asns, s)
-          order = s
-        } if v.criteria == "prepend"
-      }
-      criteria      = v.criteria
-      last_as_count = v.criteria == "prepend-last-as" ? v.last_as_count : 0
-      set_rule      = v.set_rule
-      tenant        = v.tenant
-      type          = v.type
-    } if v.type == "set_as_path"
-  }
-
-  set_rule_communities = { for i in flatten([
-    for key, value in local.set_rule_rules : [
-      for v in value.communities : {
-        community    = v.community
-        description  = lookup(v, "description", local.rmsr.rules.communites.description)
-        index        = k
-        set_criteria = lookup(v, "set_criteria", local.rmsr.rules.communites.set_criteria)
-        set_rule     = value.set_rule
-        type         = value.type
-        tenant       = value.tenant
+  set_rules_set_external_epg = { for i in flatten([
+    for key, value in local.route_map_set_rules : [
+      for v in value.rules : {
+        epg_tenant     = v.tenant
+        external_epg   = v.external_epg
+        l3out          = v.l3out
+        set_rule       = key
+        suppress_limit = lookup(v, "suppress_limit", local.rmsr.rules.suppress_limit)
       }
     ]
-  ]) : "${i.set_rule}-${i.type}-${i.index}" => v }
+  ]) : "${i.set_rule}-external-epg" => i }
 
 
   #__________________________________________________________
@@ -1700,28 +1715,34 @@ locals {
   #__________________________________________________________
 
   route_maps_for_route_control = {
-    for v in var.route_maps_for_route_control : v.name => {
+    for v in lookup(local.policies, "route_maps_for_route_control", []) : v.name => {
       annotation         = lookup(v, "annotation", local.rm.annotation)
+      contexts           = lookup(v, "contexts", [])
       description        = lookup(v, "description", local.rm.description)
-      match_rules        = lookup(v, "match_rules", local.rm.match_rules)
       route_map_continue = lookup(v, "route_map_continue", local.rm.route_map_continue)
       tenant             = var.tenant
+      type               = lookup(v, "type", local.rm.type)
     }
   }
 
-  route_maps_context_rules = { for i in flatten([
+  route_maps_contexts = { for i in flatten([
     for key, value in local.route_maps_for_route_control : [
-      for v in value.match_rules : {
-        action       = v.action
-        annotation   = value.annotation
-        context_name = v.context_name
-        description  = lookup(v, "description", local.rmcr.description)
-        name         = v.name
-        order        = v.order
-        route_map    = key
-        set_rule     = lookup(v, "set_rule", local.rmcr.set_rule)
-        tenant       = value.tenant
+      for k, v in value.contexts : {
+        action      = v.action
+        annotation  = value.annotation
+        description = lookup(v, "description", local.rm.contexts.description)
+        match_rules = [
+          for i in lookup(v, "match_rules", []) : {
+            rule_name = i
+          }
+        ]
+        name      = v.name
+        order     = k
+        route_map = key
+        set_rule  = lookup(v, "set_rule", local.rm.contexts.set_rule)
+        tenant    = value.tenant
       }
     ]
-  ]) : "${i.route_map}-${i.context_name}" => v }
+  ]) : "${i.route_map}-${i.name}" => v }
+
 }
