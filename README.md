@@ -21,8 +21,8 @@ A comprehensive example using this module is available here: https://github.com/
 
 | Name | Version |
 |------|---------|
-| <a name="provider_mso"></a> [mso](#provider\_mso) | >=0.7.0 |
 | <a name="provider_aci"></a> [aci](#provider\_aci) | >= 2.5.2 |
+| <a name="provider_mso"></a> [mso](#provider\_mso) | >=0.7.0 |
 ## Inputs
 
 | Name | Description | Type | Default | Required |
@@ -50,6 +50,7 @@ A comprehensive example using this module is available here: https://github.com/
 
 | Name | Description |
 |------|-------------|
+| <a name="output_ext_epgs"></a> [ext\_epgs](#output\_ext\_epgs) | n/a |
 | <a name="output_application_epgs"></a> [application\_epgs](#output\_application\_epgs) | n/a |
 | <a name="output_application_profiles"></a> [application\_profiles](#output\_application\_profiles) | n/a |
 | <a name="output_bridge_domains"></a> [bridge\_domains](#output\_bridge\_domains) | n/a |
@@ -72,6 +73,7 @@ A comprehensive example using this module is available here: https://github.com/
 | [aci_bfd_interface_policy.bfd_interface](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/bfd_interface_policy) | resource |
 | [aci_bgp_address_family_context.bgp_address_family_context](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/bgp_address_family_context) | resource |
 | [aci_bgp_best_path_policy.bgp_best_path](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/bgp_best_path_policy) | resource |
+| [aci_bgp_peer_connectivity_profile.bgp_peer_connectivity_profiles](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/bgp_peer_connectivity_profile) | resource |
 | [aci_bgp_peer_prefix.bgp_peer_prefix](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/bgp_peer_prefix) | resource |
 | [aci_bgp_route_summarization.bgp_route_summarization](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/bgp_route_summarization) | resource |
 | [aci_bgp_timers.bgp_timers](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/bgp_timers) | resource |
@@ -83,10 +85,25 @@ A comprehensive example using this module is available here: https://github.com/
 | [aci_end_point_retention_policy.endpoint_retention](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/end_point_retention_policy) | resource |
 | [aci_epg_to_domain.epg_to_domains](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/epg_to_domain) | resource |
 | [aci_epgs_using_function.epg_to_aaeps](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/epgs_using_function) | resource |
+| [aci_external_network_instance_profile.l3out_external_epgs](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/external_network_instance_profile) | resource |
 | [aci_filter.filters](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/filter) | resource |
 | [aci_filter_entry.filter_entries](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/filter_entry) | resource |
 | [aci_hsrp_group_policy.hsrp_group](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/hsrp_group_policy) | resource |
 | [aci_hsrp_interface_policy.hsrp_interface](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/hsrp_interface_policy) | resource |
+| [aci_l3_ext_subnet.external_epg_subnets](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3_ext_subnet) | resource |
+| [aci_l3_outside.l3outs](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3_outside) | resource |
+| [aci_l3out_bgp_external_policy.external_bgp](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3out_bgp_external_policy) | resource |
+| [aci_l3out_hsrp_interface_group.hsrp_interface_profile_groups](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3out_hsrp_interface_group) | resource |
+| [aci_l3out_hsrp_interface_profile.hsrp_interface_profile](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3out_hsrp_interface_profile) | resource |
+| [aci_l3out_hsrp_secondary_vip.hsrp_interface_profile_group_secondaries](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3out_hsrp_secondary_vip) | resource |
+| [aci_l3out_ospf_external_policy.l3out_ospf_external_profile](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3out_ospf_external_policy) | resource |
+| [aci_l3out_ospf_interface_profile.l3out_ospf_interface_profiles](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3out_ospf_interface_profile) | resource |
+| [aci_l3out_path_attachment.l3out_path_attachments](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3out_path_attachment) | resource |
+| [aci_l3out_path_attachment_secondary_ip.l3out_paths_secondary_ips](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3out_path_attachment_secondary_ip) | resource |
+| [aci_l3out_vpc_member.l3out_vpc_member](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3out_vpc_member) | resource |
+| [aci_logical_interface_profile.l3out_interface_profiles](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/logical_interface_profile) | resource |
+| [aci_logical_node_profile.l3out_node_profiles](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/logical_node_profile) | resource |
+| [aci_logical_node_to_fabric_node.l3out_node_profiles_nodes](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/logical_node_to_fabric_node) | resource |
 | [aci_match_route_destination_rule.match_rules_match_route_destination_rule](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/match_route_destination_rule) | resource |
 | [aci_match_rule.route_map_match_rules](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/match_rule) | resource |
 | [aci_node_mgmt_epg.mgmt_epgs](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/node_mgmt_epg) | resource |
@@ -104,10 +121,18 @@ A comprehensive example using this module is available here: https://github.com/
 | [aci_rest_managed.contract_to_inb_epgs](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.contract_to_oob_epgs](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.epg_to_static_paths](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
+| [aci_rest_managed.external_epg_contracts](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
+| [aci_rest_managed.external_epg_contracts_taboo](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
+| [aci_rest_managed.external_epg_intra_epg_contracts](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
+| [aci_rest_managed.l3out_consumer_label](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
+| [aci_rest_managed.l3out_multicast](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
+| [aci_rest_managed.l3out_route_profiles_for_redistribution](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.match_rules_match_community_terms](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.match_rules_match_regex_community_terms](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.oob_contract_subjects](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.oob_contracts](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
+| [aci_rest_managed.oob_external_epg_subnets](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
+| [aci_rest_managed.oob_external_epgs](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.rogue_coop_exception_list](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.route_map_set_rules](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.route_map_set_rules_set_communities](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |

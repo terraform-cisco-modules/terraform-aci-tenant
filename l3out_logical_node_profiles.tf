@@ -74,19 +74,19 @@ resource "aci_logical_interface_profile" "l3out_interface_profiles" {
   tag                     = each.value.color_tag
   relation_l3ext_rs_arp_if_pol = length(regexall(
     "[[:alnum:]]+", each.value.arp_policy)
-  ) > 0 ? "uni/tn-${each.value.policy_source_tenant}/arpifpol-${each.value.arp_policy}" : ""
+  ) > 0 ? "uni/tn-${local.policy_tenant}/arpifpol-${each.value.arp_policy}" : ""
   relation_l3ext_rs_egress_qos_dpp_pol = length(regexall(
     "[[:alnum:]]+", each.value.data_plane_policing_egress)
-  ) > 0 ? "uni/tn-${each.value.policy_source_tenant}/qosdpppol-${each.value.data_plane_policing_egress}" : ""
+  ) > 0 ? "uni/tn-${local.policy_tenant}/qosdpppol-${each.value.data_plane_policing_egress}" : ""
   relation_l3ext_rs_ingress_qos_dpp_pol = length(regexall(
     "[[:alnum:]]+", each.value.data_plane_policing_ingress)
-  ) > 0 ? "uni/tn-${each.value.policy_source_tenant}/qosdpppol-${each.value.data_plane_policing_ingress}" : ""
+  ) > 0 ? "uni/tn-${local.policy_tenant}/qosdpppol-${each.value.data_plane_policing_ingress}" : ""
   relation_l3ext_rs_l_if_p_cust_qos_pol = length(regexall(
     "[[:alnum:]]+", each.value.custom_qos_policy)
-  ) > 0 ? "uni/tn-${each.value.policy_source_tenant}/qoscustom-${each.value.custom_qos_policy}" : ""
+  ) > 0 ? "uni/tn-${local.policy_tenant}/qoscustom-${each.value.custom_qos_policy}" : ""
   relation_l3ext_rs_nd_if_pol = length(regexall(
     "[[:alnum:]]+", each.value.nd_policy)
-  ) > 0 ? "uni/tn-${each.value.policy_source_tenant}/ndifpol-${each.value.nd_policy}" : ""
+  ) > 0 ? "uni/tn-${local.policy_tenant}/ndifpol-${each.value.nd_policy}" : ""
   dynamic "relation_l3ext_rs_l_if_p_to_netflow_monitor_pol" {
     for_each = each.value.netflow_monitor_policies
     content {
@@ -216,7 +216,7 @@ resource "aci_bgp_peer_connectivity_profile" "bgp_peer_connectivity_profiles" {
   depends_on = [
     aci_logical_node_profile.l3out_node_profiles,
     aci_logical_interface_profile.l3out_interface_profiles,
-    aci_bgp_peer_prefix.policies_bgp_peer_prefix
+    aci_bgp_peer_prefix.bgp_peer_prefix
   ]
   for_each = local.bgp_peer_connectivity_profiles
   addr     = each.value.peer_address
@@ -289,12 +289,12 @@ resource "aci_bgp_peer_connectivity_profile" "bgp_peer_connectivity_profiles" {
   local_asn = each.value.local_as_number
   # Submit Bug
   local_asn_propagate          = each.value.local_as_number != null ? each.value.local_as_number_config : null
-  relation_bgp_rs_peer_pfx_pol = "uni/tn-${each.value.policy_source_tenant}/bgpPfxP-${each.value.bgp_peer_prefix_policy}"
+  relation_bgp_rs_peer_pfx_pol = "uni/tn-${local.policy_tenant}/bgpPfxP-${each.value.bgp_peer_prefix_policy}"
   dynamic "relation_bgp_rs_peer_to_profile" {
     for_each = each.value.route_control_profiles
     content {
       direction = relation_bgp_rs_peer_to_profile.value.direction
-      target_dn = "uni/tn-${each.value.policy_source_tenant}/prof-${relation_bgp_rs_peer_to_profile.value.route_map}"
+      target_dn = "uni/tn-${local.policy_tenant}/prof-${relation_bgp_rs_peer_to_profile.value.route_map}"
     }
   }
 }
@@ -352,7 +352,7 @@ resource "aci_l3out_hsrp_interface_profile" "hsrp_interface_profile" {
   annotation              = each.value.annotation
   description             = each.value.description
   name_alias              = each.value.alias
-  relation_hsrp_rs_if_pol = "uni/tn-${each.value.policy_source_tenant}/hsrpIfPol-${each.value.hsrp_interface_policy}"
+  relation_hsrp_rs_if_pol = "uni/tn-${local.policy_tenant}/hsrpIfPol-${each.value.hsrp_interface_policy}"
   version                 = each.value.version
 }
 
@@ -381,7 +381,7 @@ resource "aci_l3out_hsrp_interface_group" "hsrp_interface_profile_groups" {
   ip_obtain_mode                  = each.value.ip_obtain_mode
   mac                             = each.value.mac_address
   name                            = each.value.name
-  relation_hsrp_rs_group_pol      = "uni/tn-${each.value.policy_source_tenant}/hsrpGroupPol-${each.value.hsrp_group_policy}"
+  relation_hsrp_rs_group_pol      = "uni/tn-${local.policy_tenant}/hsrpGroupPol-${each.value.hsrp_group_policy}"
 }
 
 /*_____________________________________________________________________________________________________________________
@@ -419,7 +419,7 @@ ________________________________________________________________________________
 resource "aci_l3out_ospf_interface_profile" "l3out_ospf_interface_profiles" {
   depends_on = [
     aci_logical_interface_profile.l3out_interface_profiles,
-    aci_ospf_interface_policy.policies_ospf_interface,
+    aci_ospf_interface_policy.ospf_interface,
   ]
   for_each   = local.l3out_ospf_interface_profiles
   annotation = each.value.annotation
@@ -438,7 +438,7 @@ resource "aci_l3out_ospf_interface_profile" "l3out_ospf_interface_profiles" {
   auth_type                    = each.value.authentication_type
   description                  = each.value.description
   logical_interface_profile_dn = aci_logical_interface_profile.l3out_interface_profiles[each.value.interface_profile].id
-  relation_ospf_rs_if_pol      = "uni/tn-${each.value.policy_source_tenant}/ospfIfPol-${each.value.ospf_interface_policy}"
+  relation_ospf_rs_if_pol      = "uni/tn-${local.policy_tenant}/ospfIfPol-${each.value.ospf_interface_policy}"
 }
 
 /*_____________________________________________________________________________________________________________________

@@ -28,12 +28,12 @@ resource "aci_l3_outside" "l3outs" {
     for_each = each.value.route_control_for_dampening
     content {
       af                     = "${relation_l3ext_rs_dampening_pol.value.address_family}-ucast"
-      tn_rtctrl_profile_name = "uni/tn-${each.value.policy_source_tenant}/prof-${relation_l3ext_rs_dampening_pol.value.route_map}"
+      tn_rtctrl_profile_name = "uni/tn-${local.policy_tenant}/prof-${relation_l3ext_rs_dampening_pol.value.route_map}"
     }
   }
   # Class l3extRsInterleakPol
   relation_l3ext_rs_interleak_pol = length(compact([each.value.route_profile_for_interleak])
-  ) > 0 ? "uni/tn-${each.value.policy_source_tenant}/prof-${each.value.route_profile_for_interleak}" : ""
+  ) > 0 ? "uni/tn-${local.policy_tenant}/prof-${each.value.route_profile_for_interleak}" : ""
   # relation_l3ext_rs_out_to_bd_public_subnet_holder = ["{fvBDPublicSubnetHolder}"]
 }
 
@@ -158,7 +158,7 @@ resource "aci_external_network_instance_profile" "l3out_external_epgs" {
     for_each = each.value.route_control_profiles
     content {
       direction              = each.value.direction
-      tn_rtctrl_profile_name = "uni/tn-${each.value.policy_source_tenant}/prof-${relation_l3ext_rs_inst_p_to_profile.value.route_map}"
+      tn_rtctrl_profile_name = "uni/tn-${local.policy_tenant}/prof-${relation_l3ext_rs_inst_p_to_profile.value.route_map}"
     }
   }
   # relation_l3ext_rs_l3_inst_p_to_dom_p        = each.value.l3_domain
@@ -212,7 +212,7 @@ resource "aci_rest_managed" "external_epg_intra_epg_contracts" {
     aci_rest_managed.oob_external_epgs
   ]
   for_each   = { for k, v in local.l3out_ext_epg_contracts : k => v if local.controller_type == "apic" && v.contract_type == "intra_epg" }
-  dn         = "uni/tn-${each.value.tenant}/out-${each.value.l3out}/instP-${each.value.epg}/rsintraEpg-${each.value.contract}"
+  dn         = "uni/tn-${var.tenant}/out-${each.value.l3out}/instP-${each.value.epg}/rsintraEpg-${each.value.contract}"
   class_name = "fvRsIntraEpg"
   content = {
     tnVzBrCPName = each.value.contract
@@ -239,28 +239,45 @@ resource "aci_rest_managed" "external_epg_contracts" {
     aci_external_network_instance_profile.l3out_external_epgs,
     aci_rest_managed.oob_external_epgs
   ]
-  for_each = { for k, v in local.l3out_ext_epg_contracts : k => v if local.controller_type == "apic" && v.contract_type != "intra_epg" }
+  for_each = {
+    for k, v in local.l3out_ext_epg_contracts : k => v if length(regexall("(intra_epg|taboo)", v.contract_type)
+    ) > 0 && local.controller_type == "apic"
+  }
   dn = length(regexall(
     "consumed", each.value.contract_type)
-    ) > 0 ? "uni/tn-${each.value.tenant}/out-${each.value.l3out}/instP-${each.value.epg}/rscons-${each.value.contract}" : length(regexall(
+    ) > 0 ? "uni/tn-${var.tenant}/out-${each.value.l3out}/instP-${each.value.external_epg}/rscons-${each.value.contract}" : length(regexall(
     "interface", each.value.contract_type)
-    ) > 0 ? "uni/tn-${each.value.tenant}/out-${each.value.l3out}/instP-${each.value.epg}/rsconsIf-${each.value.contract}" : length(regexall(
+    ) > 0 ? "uni/tn-${var.tenant}/out-${each.value.l3out}/instP-${each.value.external_epg}/rsconsIf-${each.value.contract}" : length(regexall(
     "provided", each.value.contract_type)
-    ) > 0 ? "uni/tn-${each.value.tenant}/out-${each.value.l3out}/instP-${each.value.epg}/rsprov-${each.value.contract}" : length(regexall(
-    "taboo", each.value.contract_type)
-  ) > 0 ? "uni/tn-${each.value.tenant}/out-${each.value.l3out}/instP-${each.value.epg}/rsprotBy-${each.value.contract}" : ""
+  ) > 0 ? "uni/tn-${var.tenant}/out-${each.value.l3out}/instP-${each.value.external_epg}/rsprov-${each.value.contract}" : ""
   class_name = length(regexall(
     "consumed", each.value.contract_type)
     ) > 0 ? "fvRsCons" : length(regexall(
     "interface", each.value.contract_type)
     ) > 0 ? "vzRsAnyToConsIf" : length(regexall(
     "provided", each.value.contract_type)
-    ) > 0 ? "fvRsProv" : length(regexall(
-    "taboo", each.value.contract_type)
-  ) > 0 ? "fvRsProtBy" : ""
+  ) > 0 ? "fvRsProv" : ""
   content = {
+    tDn          = "uni/tn-${each.value.tenant}/brc-${each.value.contract}"
     tnVzBrCPName = each.value.contract
     prio         = each.value.qos_class
+  }
+}
+
+resource "aci_rest_managed" "external_epg_contracts_taboo" {
+  depends_on = [
+    aci_external_network_instance_profile.l3out_external_epgs,
+    aci_rest_managed.oob_external_epgs
+  ]
+  for_each = {
+    for k, v in local.l3out_ext_epg_contracts : k => v if length(regexall("taboo", v.contract_type)
+    ) > 0 && local.controller_type == "apic"
+  }
+  dn         = "uni/tn-${var.tenant}/out-${each.value.l3out}/instP-${each.value.external_epg}/rsprotBy-${each.value.contract}"
+  class_name = "fvRsProtBy"
+  content = {
+    tDn           = "uni/tn-${each.value.tenant}/taboo-${each.value.contract}"
+    tnVzTabooName = each.value.contract
   }
 }
 
@@ -323,7 +340,7 @@ resource "aci_l3_ext_subnet" "external_epg_subnets" {
   relation_l3ext_rs_subnet_to_rt_summ = length(
     regexall("[:alnum:]", each.value.route_summarization_policy)) > 0 && length(
     regexall(true, each.value.export_route_control_subnet)
-  ) > 0 ? "uni/tn-${each.value.policy_source_tenant}/bgprtsum-${each.value.route_summarization_policy}" : ""
+  ) > 0 ? "uni/tn-${local.policy_tenant}/bgprtsum-${each.value.route_summarization_policy}" : ""
 }
 
 
@@ -365,11 +382,11 @@ ________________________________________________________________________________
 #------------------------------------------------
 # Assign a OSPF Routing Policy to the L3Out
 #------------------------------------------------
-resource "aci_l3out_ospf_external_policy" "l3out_ospf_external_policies" {
+resource "aci_l3out_ospf_external_policy" "l3out_ospf_external_profile" {
   depends_on = [
     aci_l3_outside.l3outs
   ]
-  for_each   = local.l3out_ospf_external_policies
+  for_each   = local.l3out_ospf_external_profile
   annotation = each.value.annotation
   area_cost  = each.value.ospf_area_cost
   area_ctrl = anytrue([

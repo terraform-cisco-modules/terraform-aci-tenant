@@ -11,7 +11,7 @@ resource "aci_match_rule" "route_map_match_rules" {
   annotation  = each.value.annotation
   description = each.value.description
   name        = each.key
-  alias       = each.value.alias
+  name_alias  = each.value.alias
   tenant_dn   = aci_tenant.tenants[each.value.tenant].id
 }
 
@@ -186,16 +186,14 @@ resource "aci_rest_managed" "route_map_set_rules_set_external_epg" {
     type = "policy-tag"
   }
   child {
-    content {
-      class_name = "rtctrlRsSetPolicyTagToInstP"
-      rn         = "rssetPolicyTagToInstP"
-      content = {
-        # forceResolve = "yes"
-        # rType        = "mo"
-        # tCl          = "l3extInstP"
-        tDn = "uni/tn-${each.value.epg_tenant}/out-${each.value.l3out}/instP-${each.value.external_epg}"
-        # tType        = "mo"
-      }
+    class_name = "rtctrlRsSetPolicyTagToInstP"
+    rn         = "rssetPolicyTagToInstP"
+    content = {
+      # forceResolve = "yes"
+      # rType        = "mo"
+      # tCl          = "l3extInstP"
+      tDn = "uni/tn-${each.value.epg_tenant}/out-${each.value.l3out}/instP-${each.value.external_epg}"
+      # tType        = "mo"
     }
   }
 }
@@ -315,7 +313,7 @@ resource "aci_rest_managed" "route_maps_contexts" {
   depends_on = [
     aci_match_rule.route_map_match_rules
   ]
-  for_each   = local.route_maps_contexts
+  for_each   = local.route_map_contexts
   dn         = "uni/tn-${each.value.tenant}/prof-${each.value.route_map}/ctx-${each.value.ctx_name}"
   class_name = "rtctrlCtxP"
   content = {
@@ -341,7 +339,7 @@ resource "aci_rest_managed" "route_maps_context_set_rules" {
   depends_on = [
     aci_rest_managed.route_maps_contexts
   ]
-  for_each   = { for k, v in local.route_maps_context_rules : k => v if v.set_rule != "" }
+  for_each   = { for k, v in local.route_map_contexts : k => v if v.set_rule != "" }
   dn         = "uni/tn-${each.value.tenant}/prof-${each.value.route_map}/ctx-${each.value.ctx_name}/scp"
   class_name = "rtctrlScope"
   content = {

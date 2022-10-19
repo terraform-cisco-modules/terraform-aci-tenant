@@ -21,6 +21,7 @@ locals {
   bgpa     = local.defaults.tenants.policies.protocol.bgp.bgp_address_family_context
   bgpb     = local.defaults.tenants.policies.protocol.bgp.bgp_best_path
   bgpp     = local.defaults.tenants.policies.protocol.bgp.bgp_peer_prefix
+  bgppeer  = local.lip.bgp_peers
   bgps     = local.defaults.tenants.policies.protocol.bgp.bgp_route_summarization
   bgpt     = local.defaults.tenants.policies.protocol.bgp.bgp_timers
   contract = local.defaults.tenants.contracts.contract
@@ -30,17 +31,23 @@ locals {
   epg      = local.app.application_epgs
   filter   = local.defaults.tenants.contracts.filters
   general  = local.bd.general
+  hip      = local.lip.hsrp_interface_profiles
   hsrpg    = local.defaults.tenants.policies.protocol.hsrp.group_policies
   hsrpi    = local.defaults.tenants.policies.protocol.hsrp.interface_policies
   l3       = local.bd.l3_configurations
+  l3ospf   = local.l3out.ospf_external_profile
   l3out    = local.defaults.tenants.networking.l3outs
+  lnp      = local.l3out.logical_node_profiles
+  lip      = local.lnp.logical_interface_profiles
   ospfi    = local.defaults.tenants.policies.protocol.ospf.ospf_interface
   ospfs    = local.defaults.tenants.policies.protocol.ospf.ospf_route_summarization
   ospft    = local.defaults.tenants.policies.protocol.ospf.ospf_timers
+  ospfip   = local.lnp.logical_interface_profiles.ospf_interface_profile
   subnet   = local.l3.subnets
-  rm       = local.defaults.policies.protocol.route_maps_for_route_control
-  rmmr     = local.defaults.policies.protocol.route_map_match_rules
-  rmsr     = local.defaults.policies.protocol.route_map_set_rules
+  subnets  = local.l3out.external_epgs.subnets
+  rm       = local.defaults.tenants.policies.route_maps_for_route_control
+  rmmr     = local.defaults.tenants.policies.route_map_match_rules
+  rmsr     = local.defaults.tenants.policies.route_map_set_rules
   tnt      = local.defaults.tenants
   vrf      = local.defaults.tenants.networking.vrfs
 
@@ -770,497 +777,442 @@ locals {
   # L3Outs
   #==================================
 
-  #  l3outs = {
-  #    for k, v in var.l3outs : k => {
-  #      alias                 = v.alias != null ? v.alias : ""
-  #      annotation            = v.annotation != null ? v.annotation : ""
-  #      annotations           = v.annotations != null ? v.annotations : []
-  #      consumer_label        = v.consumer_label != null ? v.consumer_label : ""
-  #      controller_type       = v.controller_type != null ? v.controller_type : "apic"
-  #      description           = v.description != null ? v.description : ""
-  #      enable_bgp            = v.enable_bgp != null ? v.enable_bgp : false
-  #      external_epgs         = v.external_epgs != null ? v.external_epgs : []
-  #      import                = coalesce(v.route_control_enforcement[0].import, false)
-  #      global_alias          = v.global_alias != null ? v.global_alias : ""
-  #      l3_domain             = v.l3_domain != null ? v.l3_domain : ""
-  #      pim                   = v.pim != null ? v.pim : false
-  #      pimv6                 = v.pimv6 != null ? v.pimv6 : false
-  #      ospf_external_profile = v.ospf_external_profile != null ? v.ospf_external_profile : []
-  #      policy_source_tenant  = v.policy_source_tenant != null ? v.policy_source_tenant : local.first_tenant
-  #      provider_label        = v.provider_label != null ? v.provider_label : ""
-  #      route_control_for_dampening = v.route_control_for_dampening != null ? [
-  #        for s in v.route_control_for_dampening : {
-  #          address_family = s.address_family != null ? s.address_family : "ipv4"
-  #          route_map      = s.route_map
-  #        }
-  #      ] : []
-  #      route_profile_for_interleak       = v.route_profile_for_interleak != null ? v.route_profile_for_interleak : ""
-  #      route_profiles_for_redistribution = v.route_profiles_for_redistribution != null ? v.route_profiles_for_redistribution : []
-  #      target_dscp                       = v.target_dscp != null ? v.target_dscp : "unspecified"
-  #      schema                            = v.schema != null ? v.schema : local.first_tenant
-  #      sites                             = v.sites != null ? v.sites : []
-  #      template                          = v.template != null ? v.template : local.first_tenant
-  #      tenant                            = v.tenant != null ? v.tenant : local.first_tenant
-  #      vrf                               = v.vrf != null ? v.vrf : "default"
-  #    }
-  #  }
-  #
-  #  l3out_route_profiles = flatten([
-  #    for key, value in local.l3outs : [
-  #      for k, v in value.route_profiles_for_redistribution : {
-  #        annotation = value.annotation
-  #        l3out      = key
-  #        tenant     = value.tenant
-  #        rm_l3out   = v.l3out != null ? v.l3out : ""
-  #        route_map  = v.route_map
-  #        source     = v.source != null ? v.source : "static"
-  #      }
-  #    ]
-  #  ])
-  #  l3out_route_profiles_for_redistribution = {
-  #    for k, v in local.l3out_route_profiles_loop : "${v.l3out}_${v.route_map}_${v.source}" => v
-  #  }
-  #
-  #  #==================================
-  #  # L3Outs - External EPGs
-  #  #==================================
-  #
-  #  external_epgs = flatten([
-  #    for key, value in local.l3outs : [
-  #      for k, v in value.external_epgs : {
-  #        alias                  = v.alias != null ? v.alias : ""
-  #        annotation             = value.annotation
-  #        contract_exception_tag = v.contract_exception_tag != null ? v.contract_exception_tag : 0
-  #        contracts              = v.contracts != null ? v.contracts : []
-  #        controller_type        = value.controller_type
-  #        description            = v.description != null ? v.description : ""
-  #        epg_type               = v.epg_type != null ? v.epg_type : "standard"
-  #        flood_on_encapsulation = v.flood_on_encapsulation != null ? v.flood_on_encapsulation : "disabled"
-  #        l3out                  = key
-  #        l3out_contract_masters = v.l3out_contract_masters != null ? [
-  #          for s in v.l3out_contract_masters : {
-  #            external_epg = s.external_epg
-  #            l3out        = s.l3out
-  #          }
-  #        ] : []
-  #        label_match_criteria   = v.label_match_criteria != null ? v.label_match_criteria : "AtleastOne"
-  #        name                   = v.name != null ? v.name : "default"
-  #        preferred_group_member = v.preferred_group_member != null ? v.preferred_group_member : false
-  #        qos_class              = v.qos_class != null ? v.qos_class : "unspecified"
-  #        subnets                = v.subnets != null ? v.subnets : []
-  #        target_dscp            = v.target_dscp != null ? v.target_dscp : "unspecified"
-  #        tenant                 = value.tenant
-  #        route_control_profiles = v.route_control_profiles != null ? [
-  #          for s in v.route_control_profiles : {
-  #            direction = s.direction
-  #            route_map = s.route_map
-  #          }
-  #        ] : []
-  #        tenant = value.tenant
-  #      }
-  #    ]
-  #  ])
-  #  l3out_external_epgs = { for k, v in local.external_epgs_loop : "${v.l3out}_${v.epg_type}_${v.name}" => v }
-  #
-  #  ext_epg_contracts = flatten([
-  #    for key, value in local.l3out_external_epgs : [
-  #      for k, v in value.contracts : {
-  #        annotation      = value.annotation
-  #        contract        = v.name
-  #        contract_tenant = v.tenant != null ? v.tenant : value.tenant
-  #        contract_type   = v.contract_type != null ? v.contract_type : "consumer"
-  #        controller_type = value.controller_type
-  #        epg             = value.name
-  #        l3out           = value.l3out
-  #        qos_class       = v.qos_class
-  #        tenant          = v.tenant != null ? v.tenant : value.tenant
-  #      }
-  #    ]
-  #  ])
-  #  l3out_ext_epg_contracts = { for k, v in local.ext_epg_contracts_loop : "${v.l3out}_${v.epg}_${v.contract_type}_${v.contract}" => v }
-  #
-  #  l3out_external_epg_subnets = flatten([
-  #    for key, value in local.l3out_external_epgs : [
-  #      for k, v in value.subnets : {
-  #        aggregate_export        = coalesce(v.aggregate[0].aggregate_export, false)
-  #        aggregate_import        = coalesce(v.aggregate[0].aggregate_import, false)
-  #        aggregate_shared_routes = coalesce(v.aggregate[0].aggregate_shared_routes, false)
-  #        annotation              = value.annotation
-  #        controller_type         = value.controller_type
-  #        description             = v.description != null ? v.description : ""
-  #        epg_type                = value.epg_type
-  #        ext_epg                 = key
-  #        key2                    = k
-  #        route_control_profiles = v.route_control_profiles != null ? [
-  #          for s in v.route_control_profiles : {
-  #            direction = s.direction
-  #            route_map = s.route_map
-  #          }
-  #        ] : []
-  #        route_summarization_policy        = v.route_summarization_policy != null ? v.route_summarization_policy : ""
-  #        external_subnets_for_external_epg = coalesce(v.external_epg_classification[0].external_subnets_for_external_epg, true)
-  #        shared_security_import_subnet     = coalesce(v.external_epg_classification[0].shared_security_import_subnet, false)
-  #        export_route_control_subnet       = coalesce(v.route_control[0].export_route_control_subnet, false)
-  #        import_route_control_subnet       = coalesce(v.route_control[0].import_route_control_subnet, false)
-  #        shared_route_control_subnet       = coalesce(v.route_control[0].shared_route_control_subnet, false)
-  #        subnets                           = v.subnets != null ? v.subnets : ["0.0.0.0/1", "128.0.0.0/1"]
-  #      }
-  #    ]
-  #  ])
-  #  external_epg_subnets_loop_2 = { for k, v in local.external_epg_subnets_loop_1 : "${v.ext_epg}_${v.key2}" => v }
-  #  external_epg_subnets_loop_3 = flatten([
-  #    for k, v in local.external_epg_subnets_loop_2 : [
-  #      for s in v.subnets : {
-  #        aggregate_export                  = v.aggregate_export
-  #        aggregate_import                  = v.aggregate_import
-  #        aggregate_shared_routes           = v.aggregate_shared_routes
-  #        annotation                        = v.annotation
-  #        controller_type                   = v.controller_type
-  #        description                       = v.description
-  #        epg_type                          = v.epg_type
-  #        ext_epg                           = v.ext_epg
-  #        route_control_profiles            = v.route_control_profiles
-  #        route_summarization_policy        = v.route_summarization_policy
-  #        export_route_control_subnet       = v.export_route_control_subnet
-  #        external_subnets_for_external_epg = v.external_subnets_for_external_epg
-  #        import_route_control_subnet       = v.import_route_control_subnet
-  #        shared_security_import_subnet     = v.shared_security_import_subnet
-  #        shared_route_control_subnet       = v.shared_route_control_subnet
-  #        subnet                            = s
-  #      }
-  #    ]
-  #  ])
-  #  l3out_external_epg_subnets = { for k, v in local.external_epg_subnets_loop_3 : "${v.ext_epg}_${v.subnet}" => v }
-  #
-  #  #=======================================================================================
-  #  # L3Outs - OSPF External Policies
-  #  #=======================================================================================
-  #
-  #  l3out_ospf_external_policies = flatten([
-  #    for key, value in local.l3outs : [
-  #      for k, v in value.ospf_external_profile : {
-  #        annotation                              = value.annotation
-  #        l3out                                   = key
-  #        ospf_area_cost                          = v.ospf_area_cost != null ? v.ospf_area_cost : 1
-  #        ospf_area_id                            = v.ospf_area_id != null ? v.ospf_area_id : "0.0.0.0"
-  #        ospf_area_type                          = v.ospf_area_type != null ? v.ospf_area_type : "regular"
-  #        originate_summary_lsa                   = coalesce(v.ospf_area_control[0].originate_summary_lsa, true)
-  #        send_redistribution_lsas_into_nssa_area = coalesce(v.ospf_area_control[0].send_redistribution_lsas_into_nssa_area, true)
-  #        suppress_forwarding_address             = coalesce(v.ospf_area_control[0].suppress_forwarding_address, true)
-  #        type                                    = value.type
-  #      }
-  #    ]
-  #  ])
-  #  l3out_ospf_external_policies = { for k, v in local.ospf_process_loop : v.l3out => v }
-  #
-  #  #=======================================================================================
-  #  # L3Outs - Logical Node Profiles
-  #  #=======================================================================================
-  #
-  #  l3out_node_profiles = {
-  #    for k, v in var.l3out_logical_node_profiles : k => {
-  #      alias              = v.alias != null ? v.alias : ""
-  #      annotation         = v.annotation != null ? v.annotation : ""
-  #      color_tag          = v.color_tag != null ? v.color_tag : "yellow-green"
-  #      description        = v.description != null ? v.description : ""
-  #      interface_profiles = v.interface_profiles != null ? v.interface_profiles : []
-  #      l3out              = v.l3out
-  #      name               = v.name
-  #      nodes              = v.nodes != null ? v.nodes : []
-  #      pod_id             = v.pod_id != null ? v.pod_id : 1
-  #      target_dscp        = v.target_dscp != null ? v.target_dscp : "unspecified"
-  #      tenant             = v.tenant != null ? v.tenant : local.first_tenant
-  #    }
-  #  }
-  #
-  #  l3out_node_profiles_nodes = flatten([
-  #    for key, value in local.l3out_node_profiles : [
-  #      for k, v in value.nodes : {
-  #        annotation                = value.annotation
-  #        node_id                   = v.node_id != null ? v.node_id : 201
-  #        node_profile              = key
-  #        pod_id                    = value.pod_id
-  #        router_id                 = v.router_id != null ? v.router_id : "198.18.0.1"
-  #        use_router_id_as_loopback = v.use_router_id_as_loopback != null ? v.use_router_id_as_loopback : true
-  #      }
-  #    ]
-  #  ])
-  #  l3out_node_profiles_nodes = { for k, v in local.nodes_loop : "${v.node_profile}_${v.node_id}" => v }
-  #
-  #  l3out_node_profile_static_routes = {}
-  #
-  #  #=======================================================================================
-  #  # L3Outs - Logical Node Profiles - Logical Interface Profiles
-  #  #=======================================================================================
-  #
-  #  l3out_interface_profiles = flatten([
-  #    for key, value in local.l3out_node_profiles : [
-  #      for k, v in value.interface_profiles : {
-  #        annotation                  = value.annotation
-  #        arp_policy                  = v.arp_policy != null ? v.arp_policy : ""
-  #        auto_state                  = v.auto_state != null ? v.auto_state : "disabled"
-  #        bgp_peers                   = v.bgp_peers != null ? v.bgp_peers : []
-  #        color_tag                   = value.color_tag
-  #        custom_qos_policy           = v.custom_qos_policy != null ? v.custom_qos_policy : ""
-  #        description                 = v.description != null ? v.description : ""
-  #        data_plane_policing_egress  = v.data_plane_policing_egress != null ? v.data_plane_policing_egress : ""
-  #        data_plane_policing_ingress = v.data_plane_policing_ingress != null ? v.data_plane_policing_ingress : ""
-  #        encap_scope                 = v.encap_scope != null ? v.encap_scope : "local"
-  #        encap_vlan                  = v.encap_vlan != null ? v.encap_vlan : 1
-  #        hsrp_interface_profile = v.hsrp_interface_profile != null ? [
-  #          for s in v.hsrp_interface_profile : {
-  #            alias       = s.alias != null ? s.alias : ""
-  #            annotation  = s.annotation != null ? s.annotation : ""
-  #            description = s.description != null ? s.description : ""
-  #            groups = s.groups != null ? [
-  #              for a in s.groups : {
-  #                alias                 = a.alias != null ? a.alias : ""
-  #                annotation            = a.annotation != null ? a.annotation : ""
-  #                description           = a.description != null ? a.description : ""
-  #                group_id              = a.group_id != null ? a.group_id : 0
-  #                group_name            = a.group_name != null ? a.group_name : ""
-  #                group_type            = a.group_type != null ? a.group_type : "ipv4"
-  #                hsrp_group_policy     = a.hsrp_group_policy != null ? a.hsrp_group_policy : ""
-  #                ip_address            = a.ip_address != null ? a.ip_address : ""
-  #                ip_obtain_mode        = a.ip_obtain_mode != null ? a.ip_obtain_mode : "admin"
-  #                mac_address           = a.mac_address != null ? a.mac_address : ""
-  #                name                  = a.name != null ? a.name : "default"
-  #                secondary_virtual_ips = a.secondary_virtual_ips != null ? a.secondary_virtual_ips : []
-  #              }
-  #            ] : []
-  #            hsrp_interface_policy = s.hsrp_interface_policy != null ? s.hsrp_interface_policy : "default"
-  #            policy_source_tenant  = s.policy_source_tenant != null ? s.policy_source_tenant : local.first_tenant
-  #            version               = s.version != null ? s.version : "v1"
-  #          }
-  #        ] : []
-  #        interface_or_policy_group = v.interface_or_policy_group != null ? v.interface_or_policy_group : "eth1/1"
-  #        interface_type            = v.interface_type != null ? v.interface_type : "l3-port"
-  #        ipv6_dad                  = v.ipv6_dad != null ? v.ipv6_dad : "enabled"
-  #        l3out                     = value.l3out
-  #        link_local_address        = v.link_local_address != null ? v.link_local_address : "::"
-  #        mac_address               = v.mac_address != null ? v.mac_address : "00:22:BD:F8:19:FF"
-  #        mode                      = v.mode != null ? v.mode : "regular"
-  #        mtu                       = v.mtu != null ? v.mtu : "inherit" # 576 to 9216
-  #        name                      = v.name != null ? v.name : "default"
-  #        nd_policy                 = v.nd_policy != null ? v.nd_policy : ""
-  #        netflow_monitor_policies = v.netflow_monitor_policies != null ? [
-  #          for s in v.netflow_monitor_policies : {
-  #            filter_type    = s.filter_type != null ? s.filter_type : "ipv4"
-  #            netflow_policy = s.netflow_policy
-  #          }
-  #        ] : []
-  #        node_profile = key
-  #        nodes        = [for keys, values in value.nodes : value.nodes[keys]["node_id"]]
-  #        ospf_interface_profile = v.ospf_interface_profile != null ? [
-  #          for s in v.ospf_interface_profile : {
-  #            description           = s.description != null ? s.description : ""
-  #            authentication_type   = s.authentication_type != null ? s.authentication_type : "none"
-  #            name                  = s.name != null ? s.name : "default"
-  #            ospf_key              = s.ospf_key != null ? s.ospf_key : 0
-  #            ospf_interface_policy = s.ospf_interface_policy != null ? s.ospf_interface_policy : "default"
-  #            policy_source_tenant  = s.policy_source_tenant != null ? s.policy_source_tenant : value.tenant
-  #          }
-  #        ] : []
-  #        pod_id                    = value.pod_id
-  #        primary_preferred_address = v.primary_preferred_address != null ? v.primary_preferred_address : "198.18.1.1/24"
-  #        qos_class                 = v.qos_class != null ? v.qos_class : "unspecified"
-  #        secondary_addresses       = v.secondary_addresses != null ? v.secondary_addresses : []
-  #        secondaries_keys          = v.secondary_addresses != null ? range(length(v.secondary_addresses)) : []
-  #        svi_addresses = v.svi_addresses != null ? [
-  #          for s in v.svi_addresses : {
-  #            link_local_address        = s.link_local_address != null ? s.link_local_address : "::"
-  #            primary_preferred_address = s.primary_preferred_address
-  #            secondary_addresses       = s.secondary_addresses != null ? s.secondary_addresses : []
-  #            side                      = s.side
-  #          }
-  #        ] : []
-  #        target_dscp = value.target_dscp
-  #        tenant      = value.tenant
-  #      }
-  #    ]
-  #  ])
-  #  l3out_interface_profiles = { for k, v in local.interface_profiles_loop : "${v.node_profile}_${v.name}" => v }
-  #
-  #  l3out_paths_svi_addressing = flatten([
-  #    for key, value in local.l3out_interface_profiles : [
-  #      for s in value.svi_addresses : {
-  #        annotation                = value.annotation
-  #        ipv6_dad                  = value.ipv6_dad
-  #        link_local_address        = s.link_local_address
-  #        path                      = key
-  #        primary_preferred_address = s.primary_preferred_address
-  #        secondary_addresses       = s.secondary_addresses
-  #        secondaries_keys          = s.secondary_addresses != null ? range(length(s.secondary_addresses)) : []
-  #        side                      = s.side
-  #        interface_type            = value.interface_type
-  #      }
-  #    ] if value.interface_type == "ext-svi"
-  #  ])
-  #  l3out_paths_svi_addressing = { for k, v in local.svi_addressing_loop : "${v.path}_${v.side}" => v }
-  #
-  #  l3out_paths_secondary_ips = flatten([
-  #    for k, v in local.l3out_interface_profiles : [
-  #      for s in v.secondaries_keys : {
-  #        annotation           = v.annotation
-  #        controller_type      = v.controller_type
-  #        ipv6_dad             = v.ipv6_dad != null ? v.ipv6_dad : "enabled"
-  #        key1                 = "${k}-${s}"
-  #        l3out_path           = k
-  #        secondary_ip_address = element(v.secondary_addresses, s)
-  #      }
-  #    ]
-  #  ])
-  #  interface_secondaries = { for k, v in local.secondaries_loop_1 : "${v.key1}" => v }
-  #  secondaries_loop_2 = flatten([
-  #    for k, v in local.l3out_paths_svi_addressing : [
-  #      for s in v.secondaries_keys : {
-  #        annotation           = v.annotation
-  #        ipv6_dad             = v.ipv6_dad != null ? v.ipv6_dad : "enabled"
-  #        key1                 = "${k}-${s}"
-  #        l3out_path           = k
-  #        secondary_ip_address = element(v.secondary_addresses, s)
-  #      }
-  #    ]
-  #  ])
-  #  svi_secondaries           = { for k, v in local.secondaries_loop_2 : "${v.key1}" => v }
-  #  l3out_paths_secondary_ips = merge(local.interface_secondaries, local.svi_secondaries)
-  #
-  #  #=======================================================================================
-  #  # L3Outs - Logical Node Profiles - Logical Interface Profiles - BGP Peers
-  #  #=======================================================================================
-  #
-  #  bgp_peer_connectivity_profiles = {
-  #    for i in flatten([
-  #    for key, value in local.l3out_interface_profiles : [
-  #      for k, v in value.bgp_peers : {
-  #        address_type_controls = {
-  #            af_mcast = s.af_mcast != null ? s.af_mcast : false
-  #            af_ucast = s.af_ucast != null ? s.af_ucast : true
-  #          }
-  #        admin_state           = v.admin_state != null ? v.admin_state : "enabled"
-  #        allowed_self_as_count = v.allowed_self_as_count != null ? v.allowed_self_as_count : 3
-  #        annotation            = value.annotation
-  #        bgp_controls = {
-  #            allow_self_as           = s.allow_self_as != null ? s.allow_self_as : false
-  #            as_override             = s.as_override != null ? s.as_override : false
-  #            disable_peer_as_check   = s.disable_peer_as_check != null ? s.disable_peer_as_check : false
-  #            next_hop_self           = s.next_hop_self != null ? s.next_hop_self : false
-  #            send_community          = s.send_community != null ? s.send_community : false
-  #            send_domain_path        = s.send_domain_path != null ? s.send_domain_path : false
-  #            send_extended_community = s.send_extended_community != null ? s.send_extended_community : false
-  #          }
-  #        bgp_peer_prefix_policy = v.bgp_peer_prefix_policy != null ? v.bgp_peer_prefix_policy : ""
-  #        description            = v.description != null ? v.description : ""
-  #        ebgp_multihop_ttl      = v.ebgp_multihop_ttl != null ? v.ebgp_multihop_ttl : 1
-  #        local_as_number        = v.local_as_number != null ? v.local_as_number : null
-  #        local_as_number_config = v.local_as_number_config != null ? v.local_as_number_config : "none"
-  #        password               = v.password != null ? v.password : 0
-  #        path_profile           = "${key}"
-  #        peer_address           = v.peer_address != null ? v.peer_address : "**REQUIRED**"
-  #        peer_asn               = v.peer_asn
-  #        peer_controls = {
-  #            bidirectional_forwarding_detection = s.bidirectional_forwarding_detection != null ? s.bidirectional_forwarding_detection : false
-  #            disable_connected_check            = s.disable_connected_check != null ? s.disable_connected_check : false
-  #          }
-  #        peer_level           = v.peer_level != null ? v.peer_level : "interface"
-  #        policy_source_tenant = v.policy_source_tenant != null ? v.policy_source_tenant : "common"
-  #        private_as_control = {
-  #            remove_all_private_as            = s.remove_all_private_as != null ? s.remove_all_private_as : false
-  #            remove_private_as                = s.remove_private_as != null ? s.remove_private_as : false
-  #            replace_private_as_with_local_as = s.replace_private_as_with_local_as != null ? s.replace_private_as_with_local_as : false
-  #          }
-  #        route_control_profiles = v.route_control_profiles != null ? [
-  #          for s in v.route_control_profiles : {
-  #            direction = s.direction
-  #            route_map = s.route_map
-  #          }
-  #        ] : []
-  #        weight_for_routes_from_neighbor = v.weight_for_routes_from_neighbor != null ? v.weight_for_routes_from_neighbor : 0
-  #      }
-  #    ]
-  #  ]) : "${i.path_profile}_${i.peer_address}" => i
-  #  }
-  #
-  #
-  #  #=======================================================================================
-  #  # L3Outs - Logical Node Profiles - Logical Interface Profiles - HSRP Interface Profiles
-  #  #=======================================================================================
-  #
-  #  hsrp_interface_profile_loop = flatten([
-  #    for key, value in local.l3out_interface_profiles : [
-  #      for k, v in value.hsrp_interface_profile : {
-  #        alias                 = v.alias
-  #        annotation            = v.annotation
-  #        description           = v.description
-  #        groups                = v.groups
-  #        hsrp_interface_policy = v.hsrp_interface_policy
-  #        interface_profile     = key
-  #        policy_source_tenant  = v.policy_source_tenant
-  #        version               = v.version
-  #      }
-  #    ]
-  #  ])
-  #  hsrp_interface_profile = {
-  #    for k, v in local.hsrp_interface_profile_loop : "${v.interface_profile}" => v
-  #  }
-  #
-  #  hsrp_interface_profile_groups_loop = flatten([
-  #    for key, value in local.hsrp_interface_profile : [
-  #      for k, v in value.groups : {
-  #        alias                 = v.alias != null ? v.alias : ""
-  #        annotation            = v.annotation != null ? v.annotation : ""
-  #        description           = v.description != null ? v.description : ""
-  #        group_id              = v.group_id != null ? v.group_id : 0
-  #        group_name            = v.group_name != null ? v.group_name : ""
-  #        group_type            = v.group_type != null ? v.group_type : "ipv4"
-  #        hsrp_group_policy     = v.hsrp_group_policy != null ? v.hsrp_group_policy : ""
-  #        ip_address            = v.ip_address != null ? v.ip_address : ""
-  #        ip_obtain_mode        = v.ip_obtain_mode != null ? v.ip_obtain_mode : "admin"
-  #        key1                  = key
-  #        mac_address           = v.mac_address != null ? v.mac_address : ""
-  #        name                  = v.name != null ? v.name : "default"
-  #        policy_source_tenant  = value.policy_source_tenant
-  #        secondary_virtual_ips = v.secondary_virtual_ips != null ? v.secondary_virtual_ips : []
-  #      }
-  #    ]
-  #  ])
-  #  hsrp_interface_profile_groups = {
-  #    for k, v in local.hsrp_interface_profile_groups_loop : "${v.key1}_${v.name}" => v
-  #  }
-  #
-  #  hsrp_interface_profile_group_secondaries_loop = flatten([
-  #    for key, value in local.hsrp_interface_profile_groups : [
-  #      for s in value.secondary_virtual_ips : {
-  #        key1         = "${value.key1}_${value.name}"
-  #        secondary_ip = s
-  #      }
-  #    ]
-  #  ])
-  #  hsrp_interface_profile_group_secondaries = {
-  #    for k, v in local.hsrp_interface_profile_group_secondaries_loop : "${v.key1}_${v.name}" => v
-  #  }
-  #
-  #  #=======================================================================================
-  #  # L3Outs - Logical Node Profiles - Logical Interface Profiles - OSPF Interface Policies
-  #  #=======================================================================================
-  #
-  #  ospf_profiles_loop = flatten([
-  #    for key, value in local.l3out_interface_profiles : [
-  #      for k, v in value.ospf_interface_profile : {
-  #        annotation            = value.annotation
-  #        authentication_type   = v.authentication_type != null ? v.authentication_type : "none"
-  #        description           = v.description != null ? v.description : ""
-  #        interface_profile     = key
-  #        l3out                 = value.l3out
-  #        name                  = v.name != null ? v.name : "default"
-  #        ospf_key              = v.ospf_key != null ? v.ospf_key : 0
-  #        ospf_interface_policy = v.ospf_interface_policy != null ? v.ospf_interface_policy : "default"
-  #        policy_source_tenant  = v.policy_source_tenant != null ? v.policy_source_tenant : local.first_tenant
-  #        tenant                = value.tenant
-  #      }
-  #    ]
-  #  ])
-  #  l3out_ospf_interface_profiles = { for k, v in local.ospf_profiles_loop : "${v.interface_profile}_${v.name}" => v }
+  l3outs = {
+    for v in lookup(local.networking, "l3outs", []) : v.name => {
+      alias      = lookup(v, "alias", local.l3out.alias)
+      annotation = lookup(v, "annotation", local.l3out.annotation)
+      annotations = length(lookup(v, "annotations", local.l3out.annotations)
+      ) > 0 ? lookup(v, "annotations", local.l3out.annotations) : local.defaults.annotations
+      consumer_label = lookup(v, "consumer_label", local.l3out.consumer_label)
+      description    = lookup(v, "description", local.l3out.description)
+      enable_bgp     = lookup(v, "enable_bgp", local.l3out.enable_bgp)
+      external_epgs  = lookup(v, "external_epgs", [])
+      global_alias   = lookup(v, "global_alias", local.l3out.global_alias)
+      l3_domain      = lookup(v, "l3_domain", local.l3out.l3_domain)
+      ndo = {
+        schema   = local.schema
+        sites    = lookup(lookup(v, "ndo", {}), "sites", local.l3out.ndo.sites)
+        template = lookup(lookup(v, "ndo", {}), "template", local.l3out.ndo.template)
+      }
+      ospf_external_profile = lookup(v, "ospf_external_profile", [])
+      pim                   = lookup(v, "pim", local.l3out.pim)
+      pimv6                 = lookup(v, "pimv6", local.l3out.pimv6)
+      provider_label        = lookup(v, "provider_label", local.l3out.provider_label)
+      route_control_enforcement = {
+        export = lookup(lookup(v, "route_control_enforcement", {}), "export", local.l3out.route_control_enforcement.export)
+        import = lookup(lookup(v, "route_control_enforcement", {}), "import", local.l3out.route_control_enforcement.import)
+      }
+      route_control_for_dampening = [
+        for s in lookup(v, "route_control_for_dampening", []) : {
+          address_family = s.address_family != null ? s.address_family : "ipv4"
+          route_map      = s.route_map
+        }
+      ]
+      route_profile_for_interleak       = lookup(v, "route_profile_for_interleak", local.l3out.route_profile_for_interleak)
+      route_profiles_for_redistribution = lookup(v, "route_profiles_for_redistribution", [])
+      target_dscp                       = lookup(v, "target_dscp", local.l3out.target_dscp)
+      tenant                            = var.tenant
+      vrf                               = lookup(v, "vrf", local.l3out.vrf)
+    }
+  }
+
+  l3out_route_profiles_for_redistribution = { for i in flatten([
+    for key, value in local.l3outs : [
+      for v in value.route_profiles_for_redistribution : {
+        annotation = value.annotation
+        l3out      = key
+        tenant     = value.tenant
+        rm_l3out   = lookup(v, "l3out", local.l3out.route_profiles_for_redistribution.l3out)
+        source     = lookup(v, "source", local.l3out.route_profiles_for_redistribution.source)
+        route_map  = v.route_map
+      }
+    ]
+  ]) : "${i.l3out}_${i.route_map}_${i.source}" => i }
+
+  #==================================
+  # L3Outs - External EPGs
+  #==================================
+
+  l3out_external_epgs = { for i in flatten([
+    for key, value in local.l3outs : [
+      for v in value.external_epgs : {
+        annotation             = value.annotation
+        alias                  = lookup(v, "alias", local.l3out.external_epgs.alias)
+        contract_exception_tag = lookup(v, "contract_exception_tag", local.l3out.external_epgs.contract_exception_tag)
+        contracts              = lookup(v, "contracts", [])
+        description            = lookup(v, "description", local.l3out.external_epgs.description)
+        epg_type               = lookup(v, "epg_type", local.l3out.external_epgs.epg_type)
+        flood_on_encapsulation = lookup(v, "flood_on_encapsulation", local.l3out.external_epgs.flood_on_encapsulation)
+        annotation             = value.annotation
+        l3out                  = key
+        l3out_contract_masters = [
+          for s in v.l3out_contract_masters : {
+            external_epg = s.external_epg
+            l3out        = s.l3out
+          }
+        ]
+        label_match_criteria   = lookup(v, "label_match_criteria", local.l3out.external_epgs.label_match_criteria)
+        name                   = lookup(v, "name", local.l3out.external_epgs.name)
+        preferred_group_member = lookup(v, "preferred_group_member", local.l3out.external_epgs.preferred_group_member)
+        qos_class              = lookup(v, "qos_class", local.l3out.external_epgs.qos_class)
+        subnets                = lookup(v, "subnets", local.l3out.external_epgs.subnets)
+        target_dscp            = lookup(v, "target_dscp", local.l3out.external_epgs.target_dscp)
+        route_control_profiles = [
+          for s in v.route_control_profiles : {
+            direction = s.direction
+            route_map = s.route_map
+          }
+        ]
+        tenant = value.tenant
+      }
+    ]
+  ]) : "${i.l3out}-${i.epg_type}-${i.name}" => i }
+
+  l3out_ext_epg_contracts = { for i in flatten([
+    for key, value in local.l3out_external_epgs : [
+      for v in value.contracts : {
+        annotation    = value.annotation
+        contract      = v.name
+        tenant        = lookup(v, "tenant", local.l3out.external_epgs.tenant)
+        contract_type = lookup(v, "contract_type", local.l3out.external_epgs.contract_type)
+        qos_class     = lookup(v, "qos_class", local.l3out.external_epgs.qos_class)
+        external_epg  = value.name
+        l3out         = value.l3out
+        tenant        = value.tenant
+      }
+    ]
+  ]) : "${i.l3out}-${i.external_epg}-${i.contract_type}-${i.contract}" => i }
+
+  l3out_external_epg_subnets = { for i in flatten([
+    for key, value in local.l3out_external_epgs : [
+      for v in value.subnets : [
+        for s in v.subnets : {
+          aggregate = {
+            aggregate_export = lookup(lookup(v, "aggregate", {}), "aggregate_export", local.subnets.aggregate_export)
+            aggregate_import = lookup(lookup(v, "aggregate", {}), "aggregate_import", local.subnets.aggregate_import)
+            aggregate_shared_routes = lookup(lookup(v, "aggregate", {}
+            ), "aggregate_shared_routes", local.subnets.aggregate_shared_routes)
+          }
+          annotation   = value.annotation
+          description  = lookup(v, "description", local.subnets.description)
+          epg_type     = value.epg_type
+          external_epg = key
+          route_control_profiles = [
+            for s in lookup(v, "route_control_profiles", []) : {
+              direction = s.direction
+              route_map = s.route_map
+            }
+          ]
+          route_summarization_policy = lookup(v, "route_summarization_policy", local.subnets.route_summarization_policy)
+          external_epg_classification = {
+            external_subnets_for_external_epg = lookup(lookup(v, "external_epg_classification", {}
+            ), "external_subnets_for_external_epg", local.subnets.external_subnets_for_external_epg)
+            shared_security_import_subnet = lookup(lookup(v, "external_epg_classification", {}
+            ), "shared_security_import_subnet", local.subnets.shared_security_import_subnet)
+          }
+          route_control = {
+            export_route_control_subnet = lookup(lookup(v, "route_control", {}
+            ), "export_route_control_subnet", local.subnets.export_route_control_subnet)
+            import_route_control_subnet = lookup(lookup(v, "route_control", {}
+            ), "import_route_control_subnet", local.subnets.import_route_control_subnet)
+            shared_route_control_subnet = lookup(lookup(v, "route_control", {}
+            ), "shared_route_control_subnet", local.subnets.shared_route_control_subnet)
+          }
+          subnet = s
+        }
+      ]
+    ]
+  ]) : "${i.l3out}-${i.external_epg}-${i.subnet}" => i }
+
+  #=======================================================================================
+  # L3Outs - OSPF External Policies
+  #=======================================================================================
+
+  l3out_ospf_external_profile = { for i in flatten([
+    for key, value in local.l3outs : [
+      for v in value.ospf_external_profile : {
+        annotation     = value.annotation
+        l3out          = key
+        ospf_area_cost = lookup(v, "ospf_area_cost", local.l3ospf.ospf_area_cost)
+        ospf_area_id   = lookup(v, "ospf_area_id", local.l3ospf.ospf_area_id)
+        ospf_area_type = lookup(v, "ospf_area_type", local.l3ospf.ospf_area_type)
+        ospf_area_control = {
+          originate_summary_lsa = lookup(lookup(v, "ospf_area_control", {}
+          ), "originate_summary_lsa", local.l3ospf.originate_summary_lsa)
+          send_redistribution_lsas_into_nssa_area = lookup(lookup(v, "ospf_area_control", {}
+          ), "send_redistribution_lsas_into_nssa_area", local.l3ospf.send_redistribution_lsas_into_nssa_area)
+          suppress_forwarding_address = lookup(lookup(v, "ospf_area_control", {}
+          ), "suppress_forwarding_address", local.l3ospf.suppress_forwarding_address)
+        }
+        tenant = var.tenant
+        type   = value.type
+      }
+    ]
+  ]) : "${i.l3out}-ospf-external-profile" => i }
+
+  #=======================================================================================
+  # L3Outs - Logical Node Profiles
+  #=======================================================================================
+
+  l3out_node_profiles = { for i in flatten([
+    for key, value in local.l3outs : [
+      for v in value.logical_node_profiles : {
+        alias              = lookup(v, "alias", local.lnp.alias)
+        annotation         = lookup(v, "annotation", local.lnp.annotation)
+        color_tag          = lookup(v, "color_tag", local.lnp.color_tag)
+        description        = lookup(v, "description", local.lnp.description)
+        interface_profiles = lookup(v, "interface_profiles", [])
+        l3out              = value.l3out
+        name               = v.name
+        nodes = flatten([for s in lookup(v, "nodes", []) : [
+          for x in range(length(s.node_ids)) : {
+            annotation                = lookup(v, "annotation", local.lnp.annotation)
+            l3out                     = v.l3out
+            node_id                   = element(s.node_id, x)
+            node_profile              = v.name
+            pod_id                    = lookup(v, "pod_id", local.lnp.pod_id)
+            router_id                 = element(s.router_id, x)
+            use_router_id_as_loopback = lookup(s, "use_router_id_as_loopback", local.lnp.nodes.use_router_id_as_loopback)
+          }
+        ]])
+        pod_id      = lookup(v, "pod_id", local.lnp.pod_id)
+        target_dscp = lookup(v, "target_dscp", local.lnp.target_dscp)
+        tenant      = var.tenant
+      }
+    ]
+  ]) : "${i.l3out}-${i.name}" => i }
+
+  l3out_node_profiles_nodes = { for i in flatten([
+    for key, value in local.l3out_node_profiles : [for v in value.nodes : v]
+  ]) : "${i.node_profile}-${i.node_id}" => i }
+
+  l3out_node_profile_static_routes = {}
+
+  #=======================================================================================
+  # L3Outs - Logical Node Profiles - Logical Interface Profiles
+  #=======================================================================================
+
+  l3out_interface_profiles = { for i in flatten([
+    for key, value in local.l3out_node_profiles : [
+      for v in value.interface_profiles : {
+        annotation                  = value.annotation
+        color_tag                   = value.color_tag
+        l3out                       = value.l3out
+        arp_policy                  = lookup(v, "arp_policy", local.lip.arp_policy)
+        auto_state                  = lookup(v, "auto_state", local.lip.auto_state)
+        bgp_peers                   = lookup(v, "bgp_peers", [])
+        custom_qos_policy           = lookup(v, "custom_qos_policy", local.lip.custom_qos_policy)
+        description                 = lookup(v, "description", local.lip.description)
+        data_plane_policing_egress  = lookup(v, "data_plane_policing_egress", local.lip.data_plane_policing_egress)
+        data_plane_policing_ingress = lookup(v, "data_plane_policing_ingress", local.lip.data_plane_policing_ingress)
+        encap_scope                 = lookup(v, "encap_scope", local.lip.encap_scope)
+        encap_vlan                  = lookup(v, "encap_vlan", local.lip.encap_vlan)
+        hsrp_interface_profile      = lookup(v, "hsrp_interface_profile", [])
+        interface_or_policy_group   = lookup(v, "interface_or_policy_group", local.lip.interface_or_policy_group)
+        interface_type              = lookup(v, "interface_type", local.lip.interface_type)
+        ipv6_dad                    = lookup(v, "ipv6_dad", local.lip.ipv6_dad)
+        link_local_address          = lookup(v, "link_local_address", local.lip.link_local_address)
+        mac_address                 = lookup(v, "mac_address", local.lip.mac_address)
+        mode                        = lookup(v, "mode", local.lip.mode)
+        mtu                         = lookup(v, "mtu", local.lip.mtu)
+        name                        = v.name
+        nd_policy                   = lookup(v, "nd_policy", local.lip.nd_policy)
+        netflow_monitor_policies = [
+          for s in lookup(v, "netflow_monitor_policies", []) : {
+            filter_type    = s.filter_type != null ? s.filter_type : "ipv4"
+            netflow_policy = s.netflow_policy
+          }
+        ]
+        node_profile              = key
+        nodes                     = [for keys, values in value.nodes : value.nodes[keys]["node_id"]]
+        ospf_interface_profile    = lookup(v, "ospf_interface_profile", [])
+        pod_id                    = value.pod_id
+        primary_preferred_address = lookup(v, "primary_preferred_address", local.lip.primary_preferred_address)
+        qos_class                 = lookup(v, "qos_class", local.lip.qos_class)
+        secondary_addresses       = lookup(v, "secondary_addresses", [])
+        svi_addresses             = lookup(v, "svi_addresses", [])
+        target_dscp               = value.target_dscp
+        tenant                    = value.tenant
+      }
+    ]
+  ]) : "${i.node_profile}-${i.name}" => i }
+
+  l3out_paths_svi_addressing = { for i in flatten([
+    for key, value in local.l3out_interface_profiles : [
+      for v in value.svi_addresses : [
+        for s in range(length(v.primary_preferred_addresses)) : {
+          annotation = value.annotation
+          ipv6_dad   = value.ipv6_dad
+          link_local_address = length(lookup(v, "link_local_addresses", [])
+          ) == 2 ? element(v.link_local_addresses, s) : "::"
+          l3out_interface_profile   = key
+          primary_preferred_address = element(v.primary_preferred_addresses, s)
+          secondary_addresses       = lookup(v, "secondary_addresses", [])
+          side                      = length(regexall("false", string(s % 2 == 0))) ? "A" : "B"
+          interface_type            = value.interface_type
+        }
+      ]
+    ] if value.interface_type == "ext-svi"
+  ]) : "${i.l3out_interface_profile}-${i.side}" => i }
+
+  interface_secondaries_ips = { for i in flatten([
+    for k, v in local.l3out_interface_profiles : [
+      for s in range(length(v.secondary_addresses)) : {
+        annotation              = v.annotation
+        ipv6_dad                = v.ipv6_dad
+        secondary_ip            = "${k}-${s}"
+        l3out_interface_profile = k
+        secondary_ip_address    = element(v.secondary_addresses, s)
+      }
+    ]
+  ]) : "${i.l3out_interface_profile}-${i.secondary_ip_address}" => i }
+
+  svi_secondaries_ips = { for i in flatten([
+    for k, v in local.l3out_paths_svi_addressing : [
+      for s in v.secondaries_keys : {
+        annotation              = v.annotation
+        ipv6_dad                = v.ipv6_dad
+        l3out_interface_profile = k
+        secondary_ip_address    = element(v.secondary_addresses, s)
+      }
+    ]
+  ]) : "${i.l3out_interface_profile}-${i.secondary_ip_address}" => i }
+  l3out_paths_secondary_ips = merge(local.interface_secondaries_ips, local.svi_secondaries_ips)
+
+  #=======================================================================================
+  # L3Outs - Logical Node Profiles - Logical Interface Profiles - BGP Peers
+  #=======================================================================================
+
+  bgp_peer_connectivity_profiles = {
+    for i in flatten([
+      for key, value in local.l3out_interface_profiles : [
+        for v in value.bgp_peers : [
+          for s in range(length(value.peer_addresses)) : {
+            address_type_controls = {
+              af_mcast = lookup(lookup(v, "address_type_controls", {}), "af_mcast", local.bgppeer.address_type_controls.af_mcast)
+              af_ucast = lookup(lookup(v, "address_type_controls", {}), "af_ucast", local.bgppeer.address_type_controls.af_ucast)
+            }
+            admin_state           = lookup(v, "admin_state", local.bgppeer.admin_state)
+            allowed_self_as_count = lookup(v, "allowed_self_as_count", local.bgppeer.allowed_self_as_count)
+            annotation            = value.annotation
+            bgp_controls = {
+              allow_self_as = lookup(lookup(v, "bgp_controls", {}), "allow_self_as", local.bgppeer.bgp_controls.allow_self_as)
+              as_override   = lookup(lookup(v, "bgp_controls", {}), "as_override", local.bgppeer.bgp_controls.as_override)
+              disable_peer_as_check = lookup(lookup(v, "bgp_controls", {}
+              ), "disable_peer_as_check", local.bgppeer.bgp_controls.disable_peer_as_check)
+              next_hop_self  = lookup(lookup(v, "bgp_controls", {}), "next_hop_self", local.bgppeer.bgp_controls.next_hop_self)
+              send_community = lookup(lookup(v, "bgp_controls", {}), "send_community", local.bgppeer.bgp_controls.send_community)
+              send_domain_path = lookup(lookup(v, "bgp_controls", {}
+              ), "send_domain_path", local.bgppeer.bgp_controls.send_domain_path)
+              send_extended_community = lookup(lookup(v, "bgp_controls", {}
+              ), "send_extended_community", local.bgppeer.bgp_controls.send_extended_community)
+            }
+            bgp_peer_prefix_policy  = lookup(v, "bgp_peer_prefix_policy", local.bgppeer.bgp_peer_prefix_policy)
+            description             = lookup(v, "description", local.bgppeer.description)
+            ebgp_multihop_ttl       = lookup(v, "ebgp_multihop_ttl", local.bgppeer.ebgp_multihop_ttl)
+            local_as_number         = lookup(v, "local_as_number", local.bgppeer.local_as_number)
+            local_as_number_config  = lookup(v, "local_as_number_config", local.bgppeer.local_as_number_config)
+            password                = lookup(v, "password", local.bgppeer.password)
+            l3out_interface_profile = key
+            peer_address            = element(v.peer_addresses, s)
+            peer_asn                = v.peer_asn
+            peer_controls = {
+              bidirectional_forwarding_detection = lookup(lookup(v, "peer_controls", {}
+              ), "bidirectional_forwarding_detection", local.bgppeer.peer_controls.bidirectional_forwarding_detection)
+              disable_connected_check = lookup(lookup(v, "peer_controls", {}
+              ), "disable_connected_check", local.bgppeer.peer_controls.disable_connected_check)
+            }
+            peer_level = lookup(v, "peer_level", local.bgppeer.peer_level)
+            private_as_control = {
+              remove_all_private_as = lookup(lookup(v, "private_as_control", {}
+              ), "remove_all_private_as", local.bgppeer.private_as_control.remove_all_private_as)
+              remove_private_as = lookup(lookup(v, "private_as_control", {}
+              ), "remove_private_as", local.bgppeer.private_as_control.remove_private_as)
+              replace_private_as_with_local_as = lookup(lookup(v, "private_as_control", {}
+              ), "replace_private_as_with_local_as", local.bgppeer.private_as_control.replace_private_as_with_local_as)
+            }
+            route_control_profiles = [
+              for s in v.route_control_profiles : {
+                direction = s.direction
+                route_map = s.route_map
+              }
+            ]
+            weight_for_routes_from_neighbor = lookup(
+              v, "weight_for_routes_from_neighbor", local.bgppeer.weight_for_routes_from_neighbor
+            )
+          }
+        ]
+      ]
+    ]) : "${i.l3out_interface_profile}-bgp-${i.peer_address}" => i
+  }
+
+
+  #=======================================================================================
+  # L3Outs - Logical Node Profiles - Logical Interface Profiles - HSRP Interface Profiles
+  #=======================================================================================
+
+  hsrp_interface_profile = { for i in flatten([
+    for key, value in local.l3out_interface_profiles : [
+      for v in value.hsrp_interface_profile : {
+        alias                   = lookup(v, "alias", local.hip.alias)
+        annotation              = lookup(v, "annotation", local.hip.annotation)
+        description             = lookup(v, "description", local.hip.description)
+        groups                  = lookup(v, "groups", local.hip.groups)
+        hsrp_interface_policy   = lookup(v, "hsrp_interface_policy", local.hip.hsrp_interface_policy)
+        l3out_interface_profile = key
+        version                 = lookup(v, "version", local.hip.version)
+      }
+    ]
+  ]) : "${i.l3out_interface_profile}-hsrp" => i }
+
+  hsrp_interface_profile_groups = { for i in flatten([
+    for key, value in local.hsrp_interface_profile : [
+      for v in value.groups : {
+        alias                  = lookup(v, "alias", local.hip.groups.alias)
+        annotation             = lookup(v, "annotation", local.hip.groups.annotation)
+        description            = lookup(v, "description", local.hip.groups.description)
+        group_id               = lookup(v, "group_id", local.hip.groups.group_id)
+        group_name             = lookup(v, "group_name", local.hip.groups.group_name)
+        group_type             = lookup(v, "group_type", local.hip.groups.group_type)
+        hsrp_group_policy      = lookup(v, "hsrp_group_policy", local.hip.groups.hsrp_group_policy)
+        hsrp_interface_profile = key
+        ip_address             = lookup(v, "ip_address", local.hip.groups.ip_address)
+        ip_obtain_mode         = lookup(v, "ip_obtain_mode", local.hip.groups.ip_obtain_mode)
+        mac_address            = lookup(v, "mac_address", local.hip.groups.mac_address)
+        name                   = v.name
+        secondary_virtual_ips  = lookup(v, "secondary_virtual_ips", local.hip.groups.secondary_virtual_ips)
+      }
+    ]
+  ]) : "${i.hsrp_interface_profile}-${i.name}" => i }
+
+  hsrp_interface_profile_group_secondaries = { for i in flatten([
+    for key, value in local.hsrp_interface_profile_groups : [
+      for s in value.secondary_virtual_ips : {
+        hsrp_interface_profile_group = key
+        secondary_ip                 = s
+      }
+    ]
+  ]) : "${i.hsrp_interface_profile_group}-${i.secondary_ip}" => i }
+
+  #=======================================================================================
+  # L3Outs - Logical Node Profiles - Logical Interface Profiles - OSPF Interface Policies
+  #=======================================================================================
+
+  l3out_ospf_interface_profiles = { for i in flatten([
+    for key, value in local.l3out_interface_profiles : [
+      for v in value.ospf_interface_profile : {
+        annotation              = value.annotation
+        authentication_type     = lookup(v, "authentication_type", local.ospfip.authentication_type)
+        description             = lookup(v, "description", local.ospfip.description)
+        l3out_interface_profile = key
+        l3out                   = value.l3out
+        name                    = v.name
+        ospf_key                = lookup(v, "ospf_key", local.ospfip.ospf_key)
+        ospf_interface_policy   = lookup(v, "ospf_interface_policy", local.ospfip.ospf_interface_policy)
+        tenant                  = value.tenant
+      }
+    ]
+  ]) : "${i.l3out_interface_profile}-ospf-${i.name}" => i }
 
 
   #__________________________________________________________
@@ -1605,7 +1557,7 @@ locals {
   ]) : "${i.match_rule}-${i.community_type}" => i }
 
   match_rules_match_route_destination_rule = { for i in flatten([
-    for key, value in local.match_route_destination_rule : [
+    for key, value in local.route_map_match_rules : [
       for v in value.rules : {
         description       = lookup(v, "description", local.rmmr.match_route_destination_rule.description)
         greater_than_mask = lookup(v, "greater_than", local.rmmr.match_route_destination_rule.greater_than_mask)
@@ -1628,18 +1580,18 @@ locals {
       additional_communities = lookup(v, "additional_communities", [])
       annotation             = lookup(v, "annotation", local.rmsr.annotation)
       description            = lookup(v, "description", local.rmsr.description)
-      multipath              = lookup(v, "multipath           ", local.rmsr.multipath)
+      multipath              = lookup(v, "multipath", local.rmsr.multipath)
       next_hop_propegation   = lookup(v, "next_hop_propegation", local.rmsr.next_hop_propegation)
-      set_as_path            = lookup(v, "set_as_path           ", [])
-      set_communities        = lookup(v, "set_communities         ", [])
-      set_dampening          = lookup(v, "set_dampening         ", [])
-      set_external_epg       = lookup(v, "set_external_epg      ", [])
-      set_metric             = lookup(v, "set_metric          ", local.rmsr.set_metric)
-      set_metric_type        = lookup(v, "set_metric_type     ", local.rmsr.set_metric_type)
+      set_as_path            = lookup(v, "set_as_path", [])
+      set_communities        = lookup(v, "set_communities", [])
+      set_dampening          = lookup(v, "set_dampening", [])
+      set_external_epg       = lookup(v, "set_external_epg", [])
+      set_metric             = lookup(v, "set_metric", local.rmsr.set_metric)
+      set_metric_type        = lookup(v, "set_metric_type", local.rmsr.set_metric_type)
       set_next_hop_address   = lookup(v, "set_next_hop_address", local.rmsr.set_next_hop_address)
-      set_preference         = lookup(v, "set_preference      ", local.rmsr.set_preference)
-      set_route_tag          = lookup(v, "set_route_tag       ", local.rmsr.set_route_tag)
-      set_weight             = lookup(v, "set_weight          ", local.rmsr.set_weight)
+      set_preference         = lookup(v, "set_preference", local.rmsr.set_preference)
+      set_route_tag          = lookup(v, "set_route_tag", local.rmsr.set_route_tag)
+      set_weight             = lookup(v, "set_weight", local.rmsr.set_weight)
       tenant                 = var.tenant
     }
   }
@@ -1664,7 +1616,7 @@ locals {
             order = s
           }
         ] : []
-        criteria      = lookup(v, "criteria     ", local.rmsr.set_as_path.criteria)
+        criteria      = lookup(v, "criteria", local.rmsr.set_as_path.criteria)
         last_as_count = lookup(v, "last_as_count", local.rmsr.set_as_path.last_as_count)
         set_rule      = value.set_rule
         tenant        = value.tenant
@@ -1725,7 +1677,7 @@ locals {
     }
   }
 
-  route_maps_contexts = { for i in flatten([
+  route_map_contexts = { for i in flatten([
     for key, value in local.route_maps_for_route_control : [
       for k, v in value.contexts : {
         action      = v.action
@@ -1743,6 +1695,5 @@ locals {
         tenant    = value.tenant
       }
     ]
-  ]) : "${i.route_map}-${i.name}" => v }
-
+  ]) : "${i.route_map}-${i.name}" => i }
 }
