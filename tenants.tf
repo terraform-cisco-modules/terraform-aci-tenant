@@ -38,7 +38,7 @@ resource "aci_rest_managed" "tenant_annotations" {
           value  = v.value
         }
       ]
-    ]) : "${i.tenant}-${i.key}" => i if local.controller_type == "apic"
+    ]) : "${i.tenant}:${i.key}" => i if local.controller_type == "apic"
   }
   dn         = "uni/tn-${each.value.tenant}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"

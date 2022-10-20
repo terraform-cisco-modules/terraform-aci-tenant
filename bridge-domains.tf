@@ -167,7 +167,7 @@ resource "aci_rest_managed" "bridge_domain_annotations" {
           value         = v.value
         }
       ]
-    ]) : "${i.bridge_domain}-${i.key}" => i if local.controller_type == "apic"
+    ]) : "${i.bridge_domain}:${i.key}" => i if local.controller_type == "apic"
   }
   dn         = "uni/tn-${each.value.tenant}/BD-${each.value.bridge_domain}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"

@@ -105,7 +105,7 @@ resource "aci_rest_managed" "application_epgs_annotations" {
           value               = v.value
         }
       ]
-    ]) : "${i.application_profile}-${i.key}" => i if local.controller_type == "apic"
+    ]) : "${i.application_profile}:${i.application_epg}:${i.key}" => i if local.controller_type == "apic"
   }
   dn         = "uni/tn-${each.value.tenant}/ap-${each.value.application_profile}/epg-${each.value.application_epg}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
@@ -219,13 +219,13 @@ resource "aci_epg_to_domain" "epg_to_domains" {
   switching_mode = "native"
   vmm_allow_promiscuous = length(
     regexall("vmm", each.value.domain_type)
-  ) > 0 ? each.value.security[0]["allow_promiscuous"] : ""
+  ) > 0 ? each.value.security["allow_promiscuous"] : ""
   vmm_forged_transmits = length(
     regexall("vmm", each.value.domain_type)
-  ) > 0 ? each.value.security[0]["forged_transmits"] : ""
+  ) > 0 ? each.value.security["forged_transmits"] : ""
   vmm_mac_changes = length(
     regexall("vmm", each.value.domain_type)
-  ) > 0 ? each.value.security[0]["mac_changes"] : ""
+  ) > 0 ? each.value.security["mac_changes"] : ""
 }
 
 
@@ -384,7 +384,7 @@ resource "aci_epgs_using_function" "epg_to_aaeps" {
   instr_imedcy      = each.value.instrumentation_immediacy == "on-demand" ? "lazy" : each.value.instrumentation_immediacy
   mode              = each.value.mode == "trunk" ? "regular" : each.value.mode == "access" ? "untagged" : "native"
   primary_encap     = length(each.value.vlans) > 1 ? "vlan-${element(each.value.vlans, 1)}" : "unknown"
-  tdn               = aci_application_epg.application_epgs[each.value.epg].id
+  tdn               = aci_application_epg.application_epgs[each.value.application_epg].id
 }
 
 

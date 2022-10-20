@@ -127,7 +127,7 @@ resource "aci_rest_managed" "vrf_annotations" {
           value  = v.value
         }
       ]
-    ]) : "${i.tenant}-${i.key}" => i if local.controller_type == "apic"
+    ]) : "${i.tenant}:${i.vrf}:${i.key}" => i if local.controller_type == "apic"
   }
   dn         = "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
@@ -199,7 +199,7 @@ resource "aci_snmp_community" "vrf_communities" {
         vrf                = k
       }
     ]
-    ]) : "${i.vrf}-${i.community_variable}" => i if local.controller_type == "apic"
+    ]) : "${i.vrf}:${i.community_variable}" => i if local.controller_type == "apic"
   }
   annotation  = each.value.annotation
   description = each.value.description

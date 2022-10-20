@@ -1,7 +1,9 @@
 output "application_epgs" {
-  value = length(local.application_epgs) > 0 && local.controller_type == "apic" ? {
+  value = length(local.application_epgs) > 0 && local.controller_type == "apic" ? merge({
     for v in sort(keys(aci_application_epg.application_epgs)
-    ) : v => aci_application_epg.application_epgs[v].id } : length(local.application_epgs
+    ) : v => aci_application_epg.application_epgs[v].id },
+    { for v in sort(keys(aci_node_mgmt_epg.mgmt_epgs)
+    ) : v => aci_node_mgmt_epg.mgmt_epgs[v].id }) : length(local.application_epgs
     ) > 0 && local.controller_type == "ndo" ? {
     for v in sort(keys(mso_schema_template_anp_epg.application_epgs)
     ) : v => mso_schema_template_anp_epg.application_epgs[v].id
@@ -104,4 +106,3 @@ output "vrfs" {
     ) : v => mso_schema_template_vrf.vrfs[v].id
   } : {}
 }
-

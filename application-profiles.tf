@@ -46,7 +46,7 @@ resource "aci_rest_managed" "application_profiles_annotations" {
           value               = v.value
         }
       ]
-    ]) : "${i.application_profile}-${i.key}" => i if local.controller_type == "apic"
+    ]) : "${i.application_profile}:${i.key}" => i if local.controller_type == "apic"
   }
   dn         = "uni/tn-${each.value.tenant}/ap-${each.value.application_profile}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"

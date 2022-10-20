@@ -50,7 +50,6 @@ A comprehensive example using this module is available here: https://github.com/
 
 | Name | Description |
 |------|-------------|
-| <a name="output_ext_epgs"></a> [ext\_epgs](#output\_ext\_epgs) | n/a |
 | <a name="output_application_epgs"></a> [application\_epgs](#output\_application\_epgs) | n/a |
 | <a name="output_application_profiles"></a> [application\_profiles](#output\_application\_profiles) | n/a |
 | <a name="output_bridge_domains"></a> [bridge\_domains](#output\_bridge\_domains) | n/a |
@@ -124,7 +123,9 @@ A comprehensive example using this module is available here: https://github.com/
 | [aci_rest_managed.external_epg_contracts](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.external_epg_contracts_taboo](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.external_epg_intra_epg_contracts](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
+| [aci_rest_managed.l3out_annotations](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.l3out_consumer_label](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
+| [aci_rest_managed.l3out_global_alias](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.l3out_multicast](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.l3out_route_profiles_for_redistribution](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.match_rules_match_community_terms](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
