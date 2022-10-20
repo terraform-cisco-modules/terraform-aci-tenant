@@ -686,8 +686,8 @@ locals {
           s.filters
         ]
       ])
-      global_alias = v.global_alias != null ? v.global_alias : ""
-      log          = v.log != null ? v.log : false
+      global_alias = lookup(v, "global_alias", local.contract.global_alias)
+      log          = lookup(v, "log", local.contract.log)
       ndo = {
         schema   = local.schema
         sites    = local.sites
@@ -707,6 +707,7 @@ locals {
       for v in value.subjects : {
         action                = lookup(v, "action", local.contract.subjects.action)
         apply_both_directions = lookup(v, "apply_both_directions", local.contract.subjects.apply_both_directions)
+        annotation            = value.annotation
         contract              = key
         contract_type         = value.contract_type
         description           = lookup(v, "description", local.contract.subjects.description)
@@ -718,7 +719,7 @@ locals {
         target_dscp           = lookup(v, "target_dscp", value.target_dscp)
         tenant                = value.tenant
       }
-    ] if value.controller_type == "apic"
+    ] if local.controller_type == "apic"
   ]) : "${i.contract}_${i.name}" => i }
 
   subject_filters = { for i in flatten([
@@ -729,8 +730,8 @@ locals {
         contract_type = v.contract_type
         directives = {
           enable_policy_compression = lookup(lookup(v, "directives"
-          ), "enable_policy_compression", local.contract.subject.directives.enable_policy_compression)
-          log = lookup(lookup(v, "directives"), "log", local.contract.subject.directives.log)
+          ), "enable_policy_compression", local.contract.subjects.directives.enable_policy_compression)
+          log = lookup(lookup(v, "directives"), "log", local.contract.subjects.directives.log)
         }
         filter  = s
         subject = v.name
@@ -764,35 +765,35 @@ locals {
   filter_entries = { for i in flatten([
     for key, value in local.filters : [
       for k, v in value.filter_entries : {
-        alias                 = lookup(v, "alias", local.filter.alias)
-        annotation            = lookup(v, "annotation", local.filter.annotation)
-        arp_flag              = lookup(v, "arp_flag", local.filter.arp_flag)
-        description           = lookup(v, "description", local.filter.description)
-        destination_port_from = lookup(v, "destination_port_from", local.filter.destination_port_from)
-        destination_port_to   = lookup(v, "destination_port_to", local.filter.destination_port_to)
-        ethertype             = lookup(v, "ethertype", local.filter.ethertype)
+        alias                 = lookup(v, "alias", local.filter.filter_entries.alias)
+        annotation            = lookup(v, "annotation", local.filter.filter_entries.annotation)
+        arp_flag              = lookup(v, "arp_flag", local.filter.filter_entries.arp_flag)
+        description           = lookup(v, "description", local.filter.filter_entries.description)
+        destination_port_from = lookup(v, "destination_port_from", local.filter.filter_entries.destination_port_from)
+        destination_port_to   = lookup(v, "destination_port_to", local.filter.filter_entries.destination_port_to)
+        ethertype             = lookup(v, "ethertype", local.filter.filter_entries.ethertype)
         filter_name           = key
-        icmpv4_type           = lookup(v, "icmpv4_type", local.filter.icmpv4_type)
-        icmpv6_type           = lookup(v, "icmpv6_type", local.filter.icmpv6_type)
-        ip_protocol           = lookup(v, "ip_protocol", local.filter.ip_protocol)
-        match_dscp            = lookup(v, "match_dscp", local.filter.match_dscp)
-        match_only_fragments  = lookup(v, "match_only_fragments", local.filter.match_only_fragments)
+        icmpv4_type           = lookup(v, "icmpv4_type", local.filter.filter_entries.icmpv4_type)
+        icmpv6_type           = lookup(v, "icmpv6_type", local.filter.filter_entries.icmpv6_type)
+        ip_protocol           = lookup(v, "ip_protocol", local.filter.filter_entries.ip_protocol)
+        match_dscp            = lookup(v, "match_dscp", local.filter.filter_entries.match_dscp)
+        match_only_fragments  = lookup(v, "match_only_fragments", local.filter.filter_entries.match_only_fragments)
         name                  = v.name
         ndo                   = value.ndo
-        source_port_from      = lookup(v, "source_port_from", local.filter.source_port_from)
-        source_port_to        = lookup(v, "source_port_to", local.filter.source_port_to)
-        stateful              = lookup(v, "stateful", local.filter.stateful)
+        source_port_from      = lookup(v, "source_port_from", local.filter.filter_entries.source_port_from)
+        source_port_to        = lookup(v, "source_port_to", local.filter.filter_entries.source_port_to)
+        stateful              = lookup(v, "stateful", local.filter.filter_entries.stateful)
         tcp_session_rules = {
           acknowledgement = lookup(lookup(
-            v, "tcp_session_rules", {}), "acknowledgement", local.filter.tcp_session_rules.acknowledgement
+            v, "tcp_session_rules", {}), "acknowledgement", local.filter.filter_entries.tcp_session_rules.acknowledgement
           )
           established = lookup(lookup(
-            v, "tcp_session_rules", {}), "established", local.filter.tcp_session_rules.established
+            v, "tcp_session_rules", {}), "established", local.filter.filter_entries.tcp_session_rules.established
           )
-          finish = lookup(lookup(v, "tcp_session_rules", {}), "finish", local.filter.tcp_session_rules.finish)
-          reset  = lookup(lookup(v, "tcp_session_rules", {}), "reset", local.filter.tcp_session_rules.reset)
+          finish = lookup(lookup(v, "tcp_session_rules", {}), "finish", local.filter.filter_entries.tcp_session_rules.finish)
+          reset  = lookup(lookup(v, "tcp_session_rules", {}), "reset", local.filter.filter_entries.tcp_session_rules.reset)
           synchronize = lookup(lookup(
-            v, "tcp_session_rules", {}), "synchronize", local.filter.tcp_session_rules.synchronize
+            v, "tcp_session_rules", {}), "synchronize", local.filter.filter_entries.tcp_session_rules.synchronize
           )
         }
         tenant = value.tenant
@@ -874,7 +875,6 @@ locals {
         contract_exception_tag = lookup(v, "contract_exception_tag", local.l3out.external_epgs.contract_exception_tag)
         contracts              = lookup(v, "contracts", [])
         description            = lookup(v, "description", local.l3out.external_epgs.description)
-        epg_type               = lookup(v, "epg_type", local.l3out.external_epgs.epg_type)
         flood_on_encapsulation = lookup(v, "flood_on_encapsulation", local.l3out.external_epgs.flood_on_encapsulation)
         annotation             = value.annotation
         l3out                  = key
@@ -888,7 +888,7 @@ locals {
         name                   = lookup(v, "name", local.l3out.external_epgs.name)
         preferred_group_member = lookup(v, "preferred_group_member", local.l3out.external_epgs.preferred_group_member)
         qos_class              = lookup(v, "qos_class", local.l3out.external_epgs.qos_class)
-        subnets                = lookup(v, "subnets", local.l3out.external_epgs.subnets)
+        subnets                = lookup(v, "subnets", [])
         target_dscp            = lookup(v, "target_dscp", local.l3out.external_epgs.target_dscp)
         route_control_profiles = [
           for s in lookup(v, "route_control_profiles", []) : {
@@ -899,7 +899,7 @@ locals {
         tenant = value.tenant
       }
     ]
-  ]) : "${i.l3out}:${i.epg_type}:${i.name}" => i }
+  ]) : "${i.l3out}:${i.name}" => i }
 
   l3out_ext_epg_contracts = { for i in flatten([
     for key, value in local.l3out_external_epgs : [
@@ -918,7 +918,7 @@ locals {
 
   l3out_external_epg_subnets = { for i in flatten([
     for key, value in local.l3out_external_epgs : [
-      for v in value.subnets : [
+      for v in lookup(value, "subnets", []) : [
         for s in v.subnets : {
           aggregate = {
             aggregate_export = lookup(lookup(v, "aggregate", {}), "aggregate_export", local.subnets.aggregate.aggregate_export)
@@ -928,7 +928,6 @@ locals {
           }
           annotation   = value.annotation
           description  = lookup(v, "description", local.subnets.description)
-          epg_type     = value.epg_type
           external_epg = key
           l3out        = value.l3out
           route_control_profiles = [
@@ -955,8 +954,8 @@ locals {
           subnet = s
         }
       ]
-    ]
-  ]) : "${i.l3out}:${i.external_epg}:${i.subnet}" => i }
+    ] if length(lookup(value, "subnets", [])) > 0
+  ]) : "${i.external_epg}:${i.subnet}" => i }
 
   #=======================================================================================
   # L3Outs - OSPF External Policies
@@ -972,17 +971,16 @@ locals {
         ospf_area_type = lookup(v, "ospf_area_type", local.l3ospf.ospf_area_type)
         ospf_area_control = {
           originate_summary_lsa = lookup(lookup(v, "ospf_area_control", {}
-          ), "originate_summary_lsa", local.l3ospf.originate_summary_lsa)
+          ), "originate_summary_lsa", local.l3ospf.ospf_area_control.originate_summary_lsa)
           send_redistribution_lsas_into_nssa_area = lookup(lookup(v, "ospf_area_control", {}
-          ), "send_redistribution_lsas_into_nssa_area", local.l3ospf.send_redistribution_lsas_into_nssa_area)
+          ), "send_redistribution_lsas_into_nssa_area", local.l3ospf.ospf_area_control.send_redistribution_lsas_into_nssa_area)
           suppress_forwarding_address = lookup(lookup(v, "ospf_area_control", {}
-          ), "suppress_forwarding_address", local.l3ospf.suppress_forwarding_address)
+          ), "suppress_forwarding_address", local.l3ospf.ospf_area_control.suppress_forwarding_address)
         }
         tenant = var.tenant
-        type   = value.type
       }
     ]
-  ]) : "${i.l3out}-ospf-external-profile" => i }
+  ]) : "${i.l3out}:ospf-external-profile" => i }
 
   #=======================================================================================
   # L3Outs - Logical Node Profiles
@@ -1245,7 +1243,7 @@ locals {
         tenant                  = value.tenant
       }
     ]
-  ]) : "${i.l3out_interface_profile}-ospf:${i.name}" => i }
+  ]) : "${i.l3out_interface_profile}:ospf:${i.name}" => i }
 
 
   #__________________________________________________________

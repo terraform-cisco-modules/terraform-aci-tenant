@@ -67,7 +67,10 @@ resource "aci_node_mgmt_epg" "mgmt_epgs" {
   depends_on = [
     aci_bridge_domain.bridge_domains,
   ]
-  for_each                 = { for k, v in local.application_epgs : k => v if length(regexall("(inb|oob)", v.epg_type)) > 0 && local.controller_type == "apic" }
+  for_each = {
+    for k, v in local.application_epgs : k => v if length(regexall("(inb|oob)", v.epg_type)
+    ) > 0 && local.controller_type == "apic"
+  }
   management_profile_dn    = "uni/tn-mgmt/mgmtp-default"
   name                     = each.key
   annotation               = each.value.annotation
@@ -78,6 +81,33 @@ resource "aci_node_mgmt_epg" "mgmt_epgs" {
   prio                     = each.value.qos_class
   type                     = each.value.epg_type == "inb" ? "in_band" : "out_of_band"
   relation_mgmt_rs_mgmt_bd = each.value.epg_type == "inb" ? "uni/tn-mgmt/BD-${each.value.bridge_domain}" : ""
+}
+
+
+#---------------------------------------------------------
+# Configure External Management Network Instance Profiles
+#---------------------------------------------------------
+
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "mgmtInstP"
+ - Distinguished Name: "uni/tn-mgmt/extmgmt-default/instp-{name}"
+GUI Location:
+ - tenants > mgmt > External Management Network Instance Profiles > {name}
+_______________________________________________________________________________________________________________________
+*/
+resource "aci_rest_managed" "external_management_network_instance_profiles" {
+  depends_on = [
+    aci_l3_outside.l3outs
+  ]
+  for_each   = { for k, v in local.application_epgs : k => v if v.epg_type == "oob" }
+  dn         = "uni/tn-mgmt/extmgmt-default/instp-${each.value.name}"
+  class_name = "mgmtInstP"
+  content = {
+    annotation = each.value.annotation
+    name       = each.value.name
+  }
 }
 
 
@@ -103,9 +133,11 @@ resource "aci_rest_managed" "application_epgs_annotations" {
           key                 = v.key
           tenant              = b.tenant
           value               = v.value
+          epg_type            = b.epg_type
         }
       ]
-    ]) : "${i.application_profile}:${i.application_epg}:${i.key}" => i if local.controller_type == "apic"
+      ]) : "${i.application_profile}:${i.application_epg}:${i.key}" => i if length(regexall("standard", i.epg_type)
+    ) > 0 && local.controller_type == "apic"
   }
   dn         = "uni/tn-${each.value.tenant}/ap-${each.value.application_profile}/epg-${each.value.application_epg}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
@@ -152,7 +184,9 @@ resource "aci_epg_to_domain" "epg_to_domains" {
   depends_on = [
     aci_application_epg.application_epgs
   ]
-  for_each           = { for k, v in local.epg_to_domains : k => v if local.controller_type == "apic" && v.epg_type == "standard" }
+  for_each = {
+    for k, v in local.epg_to_domains : k => v if local.controller_type == "apic" && v.epg_type == "standard"
+  }
   application_epg_dn = aci_application_epg.application_epgs[each.value.application_epg].id
   tdn = length(
     regexall("physical", each.value.domain_type)
@@ -309,6 +343,32 @@ resource "aci_rest_managed" "contract_to_inb_epgs" {
     prio = each.value.qos_class
   }
 }
+
+
+#------------------------------------------------
+# Assign a Subnet to an Out-of-Band External EPG
+#------------------------------------------------
+
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "mgmtSubnet"
+ - Distinguished Name: "uni/tn-mgmt/extmgmt-default/instp-{ext_epg}/subnet-[{subnet}]"
+GUI Location:
+ - tenants > mgmt > External Management Network Instance Profiles > {ext_epg}: Subnets:{subnet}
+_______________________________________________________________________________________________________________________
+*/
+# resource "aci_rest_managed" "oob_external_epg_subnets" {
+#   depends_on = [
+#     aci_rest_managed.oob_external_epgs
+#   ]
+#   for_each   = { for k, v in local.oob_epg_subnets : k => v if v.epg_type == "oob" }
+#   dn         = "uni/tn-mgmt/extmgmt-default/instp-${each.value.epg}/subnet-[${each.value.subnet}]"
+#   class_name = "mgmtSubnet"
+#   content = {
+#     ip = each.value.subnet
+#   }
+# }
 
 
 /*_____________________________________________________________________________________________________________________

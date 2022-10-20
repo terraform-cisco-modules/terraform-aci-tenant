@@ -62,11 +62,11 @@ resource "aci_filter_entry" "filter_entries" {
       each.value.tcp_session_rules.synchronize
     ]
     ) ? compact(concat([
-      length(regexall(true, each.value.tcp_session_rules.acknowledgement)) > 0 ? "acknowledgement" : ""], [
-      length(regexall(true, each.value.tcp_session_rules.established)) > 0 ? "established" : ""], [
-      length(regexall(true, each.value.tcp_session_rules.finish)) > 0 ? "finish" : ""], [
-      length(regexall(true, each.value.tcp_session_rules.reset)) > 0 ? "reset" : ""], [
-      length(regexall(true, each.value.tcp_session_rules.synchronize)) > 0 ? "synchronize" : ""]
+      length(regexall(true, each.value.tcp_session_rules.acknowledgement)) > 0 ? "ack" : ""], [
+      length(regexall(true, each.value.tcp_session_rules.established)) > 0 ? "est" : ""], [
+      length(regexall(true, each.value.tcp_session_rules.finish)) > 0 ? "fin" : ""], [
+      length(regexall(true, each.value.tcp_session_rules.reset)) > 0 ? "rst" : ""], [
+      length(regexall(true, each.value.tcp_session_rules.synchronize)) > 0 ? "syn" : ""]
   )) : ["unspecified"]
 }
 

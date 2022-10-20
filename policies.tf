@@ -323,16 +323,16 @@ resource "aci_ospf_interface_policy" "ospf_interface" {
   cost        = each.value.cost_of_interface == 0 ? "unspecified" : each.value.cost_of_interface
   ctrl = anytrue(
     [
-      each.value.interface_controls[0].advertise_subnet,
-      each.value.interface_controls[0].bfd,
-      each.value.interface_controls[0].mtu_ignore,
-      each.value.interface_controls[0].passive_participation
+      each.value.interface_controls.advertise_subnet,
+      each.value.interface_controls.bfd,
+      each.value.interface_controls.mtu_ignore,
+      each.value.interface_controls.passive_participation
     ]
     ) ? compact(concat([
-      length(regexall(true, each.value.interface_controls[0].advertise_subnet)) > 0 ? "advert-subnet" : ""], [
-      length(regexall(true, each.value.interface_controls[0].bfd)) > 0 ? "bfd" : ""], [
-      length(regexall(true, each.value.interface_controls[0].mtu_ignore)) > 0 ? "mtu-ignore" : ""], [
-      length(regexall(true, each.value.interface_controls[0].passive_participation)) > 0 ? "passive" : ""]
+      length(regexall(true, each.value.interface_controls.advertise_subnet)) > 0 ? "advert-subnet" : ""], [
+      length(regexall(true, each.value.interface_controls.bfd)) > 0 ? "bfd" : ""], [
+      length(regexall(true, each.value.interface_controls.mtu_ignore)) > 0 ? "mtu-ignore" : ""], [
+      length(regexall(true, each.value.interface_controls.passive_participation)) > 0 ? "passive" : ""]
   )) : ["unspecified"]
   dead_intvl  = each.value.dead_interval
   hello_intvl = each.value.hello_interval
@@ -386,13 +386,13 @@ resource "aci_ospf_timers" "ospf_timers" {
   bw_ref     = each.value.bandwidth_reference
   ctrl = anytrue(
     [
-      each.value.control_knobs[0].enable_name_lookup_for_router_ids,
-      each.value.control_knobs[0].prefix_suppress
+      each.value.control_knobs.enable_name_lookup_for_router_ids,
+      each.value.control_knobs.prefix_suppress
     ]
     ) ? compact(concat([
-      length(regexall(true, each.value.control_knobs[0].enable_name_lookup_for_router_ids)
+      length(regexall(true, each.value.control_knobs.enable_name_lookup_for_router_ids)
       ) > 0 ? "name-lookup" : ""], [
-      length(regexall(true, each.value.control_knobs[0].prefix_suppress)
+      length(regexall(true, each.value.control_knobs.prefix_suppress)
       ) > 0 ? "pfx-suppress" : ""]
   )) : []
   description         = each.value.description

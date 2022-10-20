@@ -191,7 +191,7 @@ resource "aci_external_network_instance_profile" "l3out_external_epgs" {
   depends_on = [
     aci_l3_outside.l3outs
   ]
-  for_each       = { for k, v in local.l3out_external_epgs : k => v if v.epg_type != "oob" }
+  for_each       = { for k, v in local.l3out_external_epgs : k => v }
   l3_outside_dn  = aci_l3_outside.l3outs[each.value.l3out].id
   annotation     = each.value.annotation
   description    = each.value.description
@@ -219,32 +219,6 @@ resource "aci_external_network_instance_profile" "l3out_external_epgs" {
   # relation_l3ext_rs_inst_p_to_nat_mapping_epg = "aci_bridge_domain.{NAT_fvEPg}.id"
 }
 
-#------------------------------------------
-# Create an Out-of-Band External EPG
-#------------------------------------------
-
-/*_____________________________________________________________________________________________________________________
-
-API Information:
- - Class: "mgmtInstP"
- - Distinguished Name: "uni/tn-mgmt/extmgmt-default/instp-{name}"
-GUI Location:
- - tenants > mgmt > External Management Network Instance Profiles > {name}
-_______________________________________________________________________________________________________________________
-*/
-resource "aci_rest_managed" "oob_external_epgs" {
-  depends_on = [
-    aci_l3_outside.l3outs
-  ]
-  for_each   = { for k, v in local.l3out_external_epgs : k => v if v.epg_type == "oob" }
-  dn         = "uni/tn-mgmt/extmgmt-default/instp-{name}"
-  class_name = "mgmtInstP"
-  content = {
-    annotation = each.value.annotation
-    name       = each.value.name
-  }
-}
-
 #------------------------------------------------
 # Assign Contracts to an External EPG
 #------------------------------------------------
@@ -253,15 +227,14 @@ resource "aci_rest_managed" "oob_external_epgs" {
 
 API Information:
  - Class: "fvRsIntraEpg"
- - Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{ext_epg}/rsintraEpg-{contract}"
+ - Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/rsintraEpg-{contract}"
 GUI Location:
- - tenants > {tenant} > Networking > L3Outs > {l3out} > External EPGs > {ext_epg}: Contracts
+ - tenants > {tenant} > Networking > L3Outs > {l3out} > External EPGs > {external_epg}: Contracts
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "external_epg_intra_epg_contracts" {
   depends_on = [
     aci_external_network_instance_profile.l3out_external_epgs,
-    aci_rest_managed.oob_external_epgs
   ]
   for_each = {
     for k, v in local.l3out_ext_epg_contracts : k => v if local.controller_type == "apic" && v.contract_type == "intra_epg"
@@ -280,18 +253,17 @@ API Information:
  - Interface Class: "vzRsAnyToConsIf"
  - Provider Class: "fvRsProv"
  - Taboo Class: "fvRsProtBy"
- - Consumer Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{ext_epg}/rsintraEpg-{contract}"
- - Interface Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{ext_epg}/rsconsIf-{contract}"
- - Provider Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{ext_epg}/rsprov-{contract}"
- - Taboo Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{ext_epg}/rsprotBy-{contract}"
+ - Consumer Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/rsintraEpg-{contract}"
+ - Interface Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/rsconsIf-{contract}"
+ - Provider Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/rsprov-{contract}"
+ - Taboo Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/rsprotBy-{contract}"
 GUI Location:
- - All Contracts: tenants > {tenant} > Networking > L3Outs > {l3out} > External EPGs > {ext_epg}: Contracts
+ - All Contracts: tenants > {tenant} > Networking > L3Outs > {l3out} > External EPGs > {external_epg}: Contracts
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "external_epg_contracts" {
   depends_on = [
     aci_external_network_instance_profile.l3out_external_epgs,
-    aci_rest_managed.oob_external_epgs
   ]
   for_each = {
     for k, v in local.l3out_ext_epg_contracts : k => v if length(regexall("(intra_epg|taboo)", v.contract_type)
@@ -321,7 +293,6 @@ resource "aci_rest_managed" "external_epg_contracts" {
 resource "aci_rest_managed" "external_epg_contracts_taboo" {
   depends_on = [
     aci_external_network_instance_profile.l3out_external_epgs,
-    aci_rest_managed.oob_external_epgs
   ]
   for_each = {
     for k, v in local.l3out_ext_epg_contracts : k => v if length(regexall("taboo", v.contract_type)
@@ -344,16 +315,16 @@ resource "aci_rest_managed" "external_epg_contracts_taboo" {
 
 API Information:
  - Class: "l3extSubnet"
- - Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{ext_epg}/extsubnet-[{subnet}]"
+ - Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/extsubnet-[{subnet}]"
 GUI Location:
- - tenants > {tenant} > Networking > L3Outs > {l3out} > External EPGs > {ext_epg}
+ - tenants > {tenant} > Networking > L3Outs > {l3out} > External EPGs > {external_epg}
 _______________________________________________________________________________________________________________________
 */
 resource "aci_l3_ext_subnet" "external_epg_subnets" {
   depends_on = [
     aci_external_network_instance_profile.l3out_external_epgs
   ]
-  for_each = { for k, v in local.l3out_external_epg_subnets : k => v if v.epg_type != "oob" }
+  for_each = { for k, v in local.l3out_external_epg_subnets : k => v }
   aggregate = anytrue(
     [
       each.value.aggregate.aggregate_export,
@@ -400,32 +371,6 @@ resource "aci_l3_ext_subnet" "external_epg_subnets" {
 }
 
 
-#------------------------------------------------
-# Assign a Subnet to an Out-of-Band External EPG
-#------------------------------------------------
-
-/*_____________________________________________________________________________________________________________________
-
-API Information:
- - Class: "mgmtSubnet"
- - Distinguished Name: "uni/tn-mgmt/extmgmt-default/instp-{ext_epg}/subnet-[{subnet}]"
-GUI Location:
- - tenants > mgmt > External Management Network Instance Profiles > {ext_epg}: Subnets:{subnet}
-_______________________________________________________________________________________________________________________
-*/
-resource "aci_rest_managed" "oob_external_epg_subnets" {
-  depends_on = [
-    aci_rest_managed.oob_external_epgs
-  ]
-  for_each   = { for k, v in local.l3out_external_epg_subnets : k => v if v.epg_type == "oob" }
-  dn         = "uni/tn-mgmt/extmgmt-default/instp-${each.value.epg}/subnet-[${each.value.subnet}]"
-  class_name = "mgmtSubnet"
-  content = {
-    ip = each.value.subnet
-  }
-}
-
-
 /*_____________________________________________________________________________________________________________________
 
 API Information:
@@ -446,13 +391,13 @@ resource "aci_l3out_ospf_external_policy" "l3out_ospf_external_profile" {
   annotation = each.value.annotation
   area_cost  = each.value.ospf_area_cost
   area_ctrl = anytrue([
-    each.value.send_redistribution_lsas_into_nssa_area,
-    each.value.originate_summary_lsa,
-    each.value.suppress_forwarding_address
+    each.value.ospf_area_control.send_redistribution_lsas_into_nssa_area,
+    each.value.ospf_area_control.originate_summary_lsa,
+    each.value.ospf_area_control.suppress_forwarding_address
     ]) ? compact(concat([
-      length(regexall(true, each.value.send_redistribution_lsas_into_nssa_area)) > 0 ? "redistribute" : ""], [
-      length(regexall(true, each.value.originate_summary_lsa)) > 0 ? "summary" : ""], [
-    length(regexall(true, each.value.suppress_forwarding_address)) > 0 ? "suppress-fa" : ""]
+      length(regexall(true, each.value.ospf_area_control.send_redistribution_lsas_into_nssa_area)) > 0 ? "redistribute" : ""], [
+      length(regexall(true, each.value.ospf_area_control.originate_summary_lsa)) > 0 ? "summary" : ""], [
+    length(regexall(true, each.value.ospf_area_control.suppress_forwarding_address)) > 0 ? "suppress-fa" : ""]
   )) : ["redistribute", "summary"]
   area_id       = each.value.ospf_area_id
   area_type     = each.value.ospf_area_type
@@ -900,7 +845,7 @@ resource "aci_l3out_ospf_interface_profile" "l3out_ospf_interface_profiles" {
   auth_key_id                  = each.value.authentication_type == "md5" ? each.value.ospf_key : ""
   auth_type                    = each.value.authentication_type
   description                  = each.value.description
-  logical_interface_profile_dn = aci_logical_interface_profile.l3out_interface_profiles[each.value.interface_profile].id
+  logical_interface_profile_dn = aci_logical_interface_profile.l3out_interface_profiles[each.value.l3out_interface_profile].id
   relation_ospf_rs_if_pol      = "uni/tn-${local.policy_tenant}/ospfIfPol-${each.value.ospf_interface_policy}"
 }
 
