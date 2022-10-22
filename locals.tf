@@ -52,7 +52,7 @@ locals {
   vrf      = local.defaults.tenants.networking.vrfs
 
   # Local Values
-  controller_type = local.tenants[var.tenant].controller_type
+  controller_type = var.controller_type
   policy_tenant   = local.tenants[var.tenant].policy_tenant
   schema = length([for i in local.schemas : i.name]
   ) > 0 ? [for i in local.schemas : i.name][0] : ""
@@ -69,7 +69,7 @@ locals {
       alias      = lookup(v, "alias", local.tnt.alias)
       annotation = lookup(v, "annotation", local.tnt.annotation)
       annotations = length(lookup(v, "annotations", local.tnt.annotations)
-      ) > 0 ? lookup(v, "annotations", local.tnt.annotations) : local.defaults.annotations
+      ) > 0 ? lookup(v, "annotations", local.tnt.annotations) : var.annotations
       controller_type   = length(lookup(v, "schema", [])) > 0 ? "ndo" : "apic"
       description       = lookup(v, "description", local.tnt.description)
       global_alias      = lookup(v, "global_alias", local.tnt.global_alias)
@@ -136,7 +136,7 @@ locals {
       alias      = lookup(v, "alias", local.vrf.alias)
       annotation = lookup(v, "annotation", local.vrf.annotation)
       annotations = length(lookup(v, "annotations", local.vrf.annotations)
-      ) > 0 ? lookup(v, "annotations", local.vrf.annotations) : local.defaults.annotations
+      ) > 0 ? lookup(v, "annotations", local.vrf.annotations) : var.annotations
       bd_enforcement_status = lookup(v, "bd_enforcement_status", local.vrf.bd_enforcement_status)
       bgp_timers_per_address_family = lookup(
       v, "bgp_timers_per_address_family", local.vrf.bgp_timers_per_address_family)
@@ -278,7 +278,7 @@ locals {
         annotation = lookup(lookup(v, "general", {}), "annotation", local.general.annotation)
         annotations = length(lookup(lookup(v, "general", {}), "annotations", local.general.annotations)
           ) > 0 ? lookup(lookup(v, "general", {}), "annotations", local.general.annotations
-        ) : local.defaults.annotations
+        ) : var.annotations
         arp_flooding = lookup(lookup(v, "general", {}), "arp_flooding", local.general.arp_flooding)
         description  = lookup(lookup(v, "general", {}), "description", local.general.description)
         endpoint_retention_policy = lookup(lookup(v, "general", {}
@@ -430,7 +430,7 @@ locals {
       alias      = lookup(v, "alias", local.app.alias)
       annotation = lookup(v, "annotation", local.app.annotation)
       annotations = length(lookup(v, "annotations", local.app.annotations)
-      ) > 0 ? lookup(v, "annotations", local.app.annotations) : local.defaults.annotations
+      ) > 0 ? lookup(v, "annotations", local.app.annotations) : var.annotations
       application_epgs  = lookup(v, "application_epgs", [])
       description       = lookup(v, "description", local.app.description)
       global_alias      = lookup(v, "global_alias", local.app.global_alias)
@@ -497,7 +497,7 @@ locals {
       alias      = lookup(v, "alias", local.epg.alias)
       annotation = lookup(v, "annotation", local.epg.annotation)
       annotations = length(lookup(v, "annotations", local.epg.annotations)
-      ) > 0 ? lookup(v, "annotations", local.epg.annotations) : local.defaults.annotations
+      ) > 0 ? lookup(v, "annotations", local.epg.annotations) : var.annotations
       application_profile    = v.application_profile
       bridge_domain          = lookup(v, "bridge_domain", "")
       contract_exception_tag = lookup(v, "contract_exception_tag", local.epg.contract_exception_tag)
@@ -675,7 +675,7 @@ locals {
       alias      = lookup(v, "alias", local.contract.alias)
       annotation = lookup(v, "annotation", local.contract.annotation)
       annotations = length(lookup(v, "annotations", local.contract.annotations)
-      ) > 0 ? lookup(v, "annotations", local.contract.annotations) : local.defaults.annotations
+      ) > 0 ? lookup(v, "annotations", local.contract.annotations) : var.annotations
       apply_both_directions = lookup(lookup(
         v, "subjects", {})[0], "apply_both_directions", local.contract.subjects.apply_both_directions
       )
@@ -751,7 +751,7 @@ locals {
       alias      = lookup(v, "alias", local.filter.alias)
       annotation = lookup(v, "annotation", local.filter.annotation)
       annotations = length(lookup(v, "annotations", local.filter.annotations)
-      ) > 0 ? lookup(v, "annotations", local.filter.annotations) : local.defaults.annotations
+      ) > 0 ? lookup(v, "annotations", local.filter.annotations) : var.annotations
       description    = lookup(v, "description", local.filter.description)
       filter_entries = lookup(v, "filter_entries", [])
       ndo = {
@@ -816,7 +816,7 @@ locals {
       alias      = lookup(v, "alias", local.l3out.alias)
       annotation = lookup(v, "annotation", local.l3out.annotation)
       annotations = length(lookup(v, "annotations", local.l3out.annotations)
-      ) > 0 ? lookup(v, "annotations", local.l3out.annotations) : local.defaults.annotations
+      ) > 0 ? lookup(v, "annotations", local.l3out.annotations) : var.annotations
       consumer_label        = lookup(v, "consumer_label", local.l3out.consumer_label)
       description           = lookup(v, "description", local.l3out.description)
       enable_bgp            = lookup(v, "enable_bgp", local.l3out.enable_bgp)
@@ -998,13 +998,15 @@ locals {
         name               = v.name
         nodes = flatten([for s in lookup(v, "nodes", []) : [
           for x in range(length(s.node_ids)) : {
-            annotation                = lookup(v, "annotation", local.lnp.annotation)
-            l3out                     = key
-            node_id                   = element(s.node_ids, x)
-            node_profile              = "${key}:${v.name}"
-            pod_id                    = lookup(v, "pod_id", local.lnp.pod_id)
-            router_id                 = element(s.router_ids, x)
-            use_router_id_as_loopback = lookup(s, "use_router_id_as_loopback", local.lnp.nodes.use_router_id_as_loopback)
+            annotation   = lookup(v, "annotation", local.lnp.annotation)
+            l3out        = key
+            node_id      = element(s.node_ids, x)
+            node_profile = "${key}:${v.name}"
+            pod_id       = lookup(v, "pod_id", local.lnp.pod_id)
+            router_id    = element(s.router_ids, x)
+            use_router_id_as_loopback = lookup(
+              s, "use_router_id_as_loopback", local.lnp.nodes.use_router_id_as_loopback
+            )
           }
         ]])
         pod_id      = lookup(v, "pod_id", local.lnp.pod_id)
@@ -1120,8 +1122,12 @@ locals {
       for v in value.bgp_peers : [
         for s in range(length(v.peer_addresses)) : {
           address_type_controls = {
-            af_mcast = lookup(lookup(v, "address_type_controls", {}), "af_mcast", local.bgppeer.address_type_controls.af_mcast)
-            af_ucast = lookup(lookup(v, "address_type_controls", {}), "af_ucast", local.bgppeer.address_type_controls.af_ucast)
+            af_mcast = lookup(lookup(
+              v, "address_type_controls", {}), "af_mcast", local.bgppeer.address_type_controls.af_mcast
+            )
+            af_ucast = lookup(lookup(
+              v, "address_type_controls", {}), "af_ucast", local.bgppeer.address_type_controls.af_ucast
+            )
           }
           admin_state           = lookup(v, "admin_state", local.bgppeer.admin_state)
           allowed_self_as_count = lookup(v, "allowed_self_as_count", local.bgppeer.allowed_self_as_count)

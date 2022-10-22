@@ -1,8 +1,0 @@
-r142b-core01(config)# ip community-list standard BLAH seq 1 permit ?
-  graceful-shutdown  Graceful Shutdown (well-known community)
-  internet           Internet (well-known community)
-  local-AS           Do not send outside local AS (well-known community)
-  no-advertise       Do not advertise to any peer (well-known community)
-  no-export          Do not export to next AS (well-known community)
-  ASN2:NN            Community number aa:nn format
-
