@@ -97,7 +97,9 @@ resource "mso_tenant" "tenants" {
     data.mso_site.sites,
     data.mso_user.users
   ]
-  for_each     = { for k, v in local.tenants : k => v if local.controller_type == "ndo" }
+  for_each = {
+    for k, v in local.tenants : k => v if local.controller_type == "ndo" && v.create_tenant == true
+  }
   description  = each.value.description
   name         = each.key
   display_name = each.key
