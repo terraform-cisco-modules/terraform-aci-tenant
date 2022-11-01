@@ -5,13 +5,13 @@ locals {
   #__________________________________________________________
 
   defaults          = lookup(var.model, "defaults", {})
-  networking        = lookup(local.tenant[index(local.tenant[*].name, var.tenant)], "networking", {})
-  policies          = lookup(local.tenant[index(local.tenant[*].name, var.tenant)], "policies", {})
+  networking        = lookup(local.tenant[var.tenant], "networking", {})
+  policies          = lookup(local.tenant[var.tenant], "policies", {})
   templates_bds     = lookup(lookup(var.model, "templates", {}), "bridge_domains", {})
   templates_epgs    = lookup(lookup(var.model, "templates", {}), "application_epgs", {})
   templates_subnets = lookup(lookup(var.model, "templates", {}), "subnets", {})
   tenant            = lookup(var.model, "tenants", {})
-  tenant_contracts  = lookup(local.tenant[index(local.tenant[*].name, var.tenant)], "contracts", {})
+  tenant_contracts  = lookup(local.tenant[var.tenant], "contracts", {})
 
   # Defaults
   app      = local.defaults.tenants.application_profiles
@@ -24,7 +24,7 @@ locals {
   bgppeer  = local.lip.bgp_peers
   bgps     = local.defaults.tenants.policies.protocol.bgp.bgp_route_summarization
   bgpt     = local.defaults.tenants.policies.protocol.bgp.bgp_timers
-  contract = local.defaults.tenants.contracts.contract
+  contract = local.defaults.tenants.contracts.contracts
   dhcpo    = local.defaults.tenants.policies.protocol.dhcp.option_policies
   dhcpr    = local.defaults.tenants.policies.protocol.dhcp.relay_policies
   ep       = local.defaults.tenants.policies.protocol.endpoint_retention
@@ -71,6 +71,7 @@ locals {
       annotations = length(lookup(v, "annotations", local.tnt.annotations)
       ) > 0 ? lookup(v, "annotations", local.tnt.annotations) : var.annotations
       controller_type   = length(lookup(v, "schema", [])) > 0 ? "ndo" : "apic"
+      create_tenant     = lookup(v, "create_tenant", local.tnt.create_tenant)
       description       = lookup(v, "description", local.tnt.description)
       global_alias      = lookup(v, "global_alias", local.tnt.global_alias)
       monitoring_policy = lookup(v, "monitoring_policy", local.tnt.monitoring_policy)
@@ -263,8 +264,8 @@ locals {
       }
       application_epg = lookup(v, "application_epg", [])
       dhcp_relay_labels = flatten([
-        for s in lookup(v, "dhcp_relay_labels", []) : [
-          for i in s.names : {
+        for s in lookup(v, "dhcp_relay_labels", {}) : [
+          for i in lookup(s, "names", []) : {
             dhcp_option_policy = lookup(s, "dhcp_option_policy", local.bd.dhcp_relay_labels.dhcp_option_policy)
             scope              = lookup(s, "scope", local.bd.dhcp_relay_labels.scope)
             name               = i
@@ -371,7 +372,7 @@ locals {
       for v in value.l3_configurations.subnets : {
         bridge_domain          = key
         description            = lookup(v, "description", local.subnet.description)
-        gateway_ip             = v.address
+        gateway_ip             = v.gateway_ip
         ip_data_plane_learning = lookup(v, "ip_data_plane_learning", local.subnet.ip_data_plane_learning)
         make_this_ip_address_primary = lookup(
           v, "make_this_ip_address_primary", local.subnet.make_this_ip_address_primary
@@ -403,7 +404,6 @@ locals {
         }
         treat_as_virtual_ip_address = lookup(
         v, "treat_as_virtual_ip_address", local.subnet.treat_as_virtual_ip_address)
-
       }
     ]
   ]) : "${i.bridge_domain}:${i.gateway_ip}" => i }
@@ -425,7 +425,7 @@ locals {
   #__________________________________________________________
 
   application_profiles = {
-    for v in lookup(local.tenant[index(local.tenant[*].name, var.tenant)], "application_profiles", {}
+    for v in lookup(local.tenant[var.tenant], "application_profiles", {}
       ) : v.name => {
       alias      = lookup(v, "alias", local.app.alias)
       annotation = lookup(v, "annotation", local.app.annotation)
@@ -433,6 +433,7 @@ locals {
       ) > 0 ? lookup(v, "annotations", local.app.annotations) : var.annotations
       application_epgs  = lookup(v, "application_epgs", [])
       description       = lookup(v, "description", local.app.description)
+      create_app        = lookup(v, "create_app", local.app.create_app)
       global_alias      = lookup(v, "global_alias", local.app.global_alias)
       monitoring_policy = lookup(v, "monitoring_policy", local.app.monitoring_policy)
       name              = v.name
@@ -463,13 +464,13 @@ locals {
       template = lookup(lookup(v, "application_epg", ), "template", "")
     } if length(v.application_epg) > 0
   ]
-  bd_to_epg = length(local.bd_with_epgs) > 0 ? { for i in flatten([
+  bd_to_epg = { for i in flatten([
     for v in local.bd_with_epgs : [
       merge(local.networking.bridge_domains[index(local.networking.bridge_domains[*].name, v.name)
-        ].application_epg, local.templates_epgs[index(local.templates_epgs[*].template_name, v.template)],
+        ], local.templates_epgs[index(local.templates_epgs[*].template_name, v.template)],
       { name = v.name })
     ]
-  ]) : i.name => i } : {}
+  ]) : i.name => i }
 
   epgs = { for i in flatten([
     for value in local.application_profiles : [
@@ -513,7 +514,7 @@ locals {
           application_epg     = s.application_epg
         }
       ]
-      epg_to_aaeps = [
+      epg_to_aaeps = length(lookup(v, "epg_to_aaep_vlans", [])) > 0 ? [
         for s in lookup(v, "epg_to_aaeps", []) : {
           aaep = s.aaep
           instrumentation_immediacy = lookup(
@@ -523,7 +524,7 @@ locals {
           vlans = length(lookup(v, "epg_to_aaep_vlans", [])
           ) > 0 ? v.epg_to_aaep_vlans : lookup(s, "vlans", [])
         }
-      ]
+      ] : []
       epg_type                 = lookup(v, "epg_type", local.epg.epg_type)
       fhs_trust_control_policy = lookup(v, "fhs_trust_control_policy", local.epg.fhs_trust_control_policy)
       flood_in_encapsulation   = lookup(v, "flood_in_encapsulation", local.epg.flood_in_encapsulation)
@@ -610,20 +611,21 @@ locals {
     ]
   ]) : "${i.application_profile}:${i.application_epg}:${i.name}" => i }
 
-  epg_to_aaeps = { for i in flatten([
-    for key, value in local.application_epgs : [
-      for v in value.epg_to_aaeps : {
-        application_epg     = key
-        application_profile = value.application_profile
-        aaep                = v.aaep
-        instrumentation_immediacy = lookup(
-          v, "instrumentation_immediacy", local.epg.epg_to_aaeps.instrumentation_immediacy
-        )
-        mode  = lookup(v, "mode", local.epg.epg_to_aaeps.mode)
-        vlans = v.vlans
-      }
-    ]
-  ]) : "${i.application_profile}:${i.application_epg}:${i.aaep}" => i }
+  epg_to_aaeps = {}
+  #epg_to_aaeps = { for i in flatten([
+  #  for key, value in local.application_epgs : [
+  #    for v in value.epg_to_aaeps : {
+  #      application_epg     = key
+  #      application_profile = value.application_profile
+  #      aaep                = v.aaep
+  #      instrumentation_immediacy = lookup(
+  #        v, "instrumentation_immediacy", local.epg.epg_to_aaeps.instrumentation_immediacy
+  #      )
+  #      mode  = lookup(v, "mode", local.epg.epg_to_aaeps.mode)
+  #      vlans = v.vlans
+  #    }
+  #  ]
+  #]) : "${i.application_profile}:${i.application_epg}:${i.aaep}" => i }
 
   contract_to_epgs = { for i in flatten([
     for key, value in local.application_epgs : [
@@ -996,19 +998,19 @@ locals {
         interface_profiles = lookup(v, "interface_profiles", [])
         l3out              = key
         name               = v.name
-        nodes = flatten([for s in lookup(v, "nodes", []) : [
-          for x in range(length(s.node_ids)) : {
+        nodes = [
+          for s in lookup(v, "nodes", []) : {
             annotation   = lookup(v, "annotation", local.lnp.annotation)
             l3out        = key
-            node_id      = element(s.node_ids, x)
+            node_id      = s.node_id
             node_profile = "${key}:${v.name}"
             pod_id       = lookup(v, "pod_id", local.lnp.pod_id)
-            router_id    = element(s.router_ids, x)
+            router_id    = s.router_id
             use_router_id_as_loopback = lookup(
               s, "use_router_id_as_loopback", local.lnp.nodes.use_router_id_as_loopback
             )
           }
-        ]])
+        ]
         pod_id      = lookup(v, "pod_id", local.lnp.pod_id)
         target_dscp = lookup(v, "target_dscp", local.lnp.target_dscp)
         tenant      = var.tenant

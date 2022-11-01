@@ -8,7 +8,9 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_tenant" "tenants" {
-  for_each                      = { for k, v in local.tenants : k => v if local.controller_type == "apic" }
+  for_each = {
+    for k, v in local.tenants : k => v if local.controller_type == "apic" && v.create_tenant == true
+  }
   annotation                    = each.value.annotation
   description                   = each.value.description
   name                          = each.key

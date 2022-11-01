@@ -11,7 +11,9 @@ resource "aci_application_profile" "application_profiles" {
   depends_on = [
     aci_tenant.tenants
   ]
-  for_each    = { for k, v in local.application_profiles : k => v if local.controller_type == "apic" }
+  for_each = {
+    for k, v in local.application_profiles : k => v if local.controller_type == "apic" && v.create_app == true
+  }
   tenant_dn   = aci_tenant.tenants[each.value.tenant].id
   annotation  = each.value.annotation
   description = each.value.description

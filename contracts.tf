@@ -201,10 +201,10 @@ resource "aci_rest_managed" "taboo_subject_filter" {
   class_name = "vzRsDenyRule"
   content = {
     directives = anytrue(
-      [each.value.directives[0].enable_policy_compression, each.value.directives[0].log]
+      [each.value.directives.enable_policy_compression, each.value.directives.log]
       ) ? replace(trim(join(",", concat([
-        length(regexall(true, each.value.directives[0].enable_policy_compression)) > 0 ? "no_stats" : ""], [
-        length(regexall(true, each.value.directives[0].log)) > 0 ? "log" : ""]
+        length(regexall(true, each.value.directives.enable_policy_compression)) > 0 ? "no_stats" : ""], [
+        length(regexall(true, each.value.directives.log)) > 0 ? "log" : ""]
     )), ","), ",,", ",") : ""
     # tDn            = each.value.filter
     tnVzFilterName = each.value.filter
