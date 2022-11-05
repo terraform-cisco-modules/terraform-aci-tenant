@@ -468,7 +468,8 @@ locals {
     for v in local.bd_with_epgs : [
       merge(local.networking.bridge_domains[index(local.networking.bridge_domains[*].name, v.name)
         ], local.templates_epgs[index(local.templates_epgs[*].template_name, v.template)],
-      { name = v.name })
+      { name = v.name },
+      {bridge_domain = v.name})
     ]
   ]) : i.name => i }
 
@@ -544,7 +545,7 @@ locals {
       static_paths           = lookup(v, "static_paths", [])
       tenant                 = var.tenant
       useg_epg               = lookup(v, "useg_epg", local.epg.useg_epg)
-      vlan                   = lookup(v, "vlan", local.epg.vlan)
+      vlans                  = lookup(v, "vlans", local.epg.vlans)
       vrf = {
         name = length(compact([lookup(v, "bridge_domain", "")])
         ) > 0 ? local.bridge_domains["${v.bridge_domain}"].general.vrf.name : ""
@@ -611,21 +612,20 @@ locals {
     ]
   ]) : "${i.application_profile}:${i.application_epg}:${i.name}" => i }
 
-  epg_to_aaeps = {}
-  #epg_to_aaeps = { for i in flatten([
-  #  for key, value in local.application_epgs : [
-  #    for v in value.epg_to_aaeps : {
-  #      application_epg     = key
-  #      application_profile = value.application_profile
-  #      aaep                = v.aaep
-  #      instrumentation_immediacy = lookup(
-  #        v, "instrumentation_immediacy", local.epg.epg_to_aaeps.instrumentation_immediacy
-  #      )
-  #      mode  = lookup(v, "mode", local.epg.epg_to_aaeps.mode)
-  #      vlans = v.vlans
-  #    }
-  #  ]
-  #]) : "${i.application_profile}:${i.application_epg}:${i.aaep}" => i }
+  epg_to_aaeps = { for i in flatten([
+    for key, value in local.application_epgs : [
+      for v in value.epg_to_aaeps : {
+        application_epg     = key
+        application_profile = value.application_profile
+        aaep                = v.aaep
+        instrumentation_immediacy = lookup(
+          v, "instrumentation_immediacy", local.epg.epg_to_aaeps.instrumentation_immediacy
+        )
+        mode  = lookup(v, "mode", local.epg.epg_to_aaeps.mode)
+        vlans = v.vlans
+      }
+    ]
+  ]) : "${i.application_profile}:${i.application_epg}:${i.aaep}" => i }
 
   contract_to_epgs = { for i in flatten([
     for key, value in local.application_epgs : [

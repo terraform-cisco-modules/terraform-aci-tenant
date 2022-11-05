@@ -74,7 +74,7 @@ resource "aci_node_mgmt_epg" "mgmt_epgs" {
   management_profile_dn    = "uni/tn-mgmt/mgmtp-default"
   name                     = each.key
   annotation               = each.value.annotation
-  encap                    = each.value.epg_type == "inb" ? "vlan-${each.value.vlan}" : ""
+  encap                    = each.value.epg_type == "inb" ? "vlan-${element(each.value.vlans, 0)}" : ""
   match_t                  = each.value.epg_type == "inb" ? each.value.label_match_criteria : "AtleastOne"
   name_alias               = each.value.alias
   pref_gr_memb             = "exclude"
@@ -105,7 +105,7 @@ resource "aci_rest_managed" "external_management_network_instance_profiles" {
   dn         = "uni/tn-mgmt/extmgmt-default/instp-${each.value.name}"
   class_name = "mgmtInstP"
   content = {
-    annotation = each.value.annotation
+    # annotation = each.value.annotation
     name       = each.value.name
   }
 }
@@ -203,9 +203,9 @@ resource "aci_epg_to_domain" "epg_to_domains" {
   allow_micro_seg = length(
     regexall("vmm", each.value.domain_type)
   ) > 0 ? each.value.allow_micro_segmentation : false
-  delimiter = length(
-    regexall("vmm", each.value.domain_type)
-  ) > 0 ? each.value.delimiter : ""
+  #delimiter = length(
+  #  regexall("vmm", each.value.domain_type)
+  #) > 0 ? each.value.delimiter : ""
   encap = each.value.vlan_mode != "dynamic" && length(
     regexall("vmm", each.value.domain_type)
   ) > 0 ? "vlan-${element(each.value.vlans, 0)}" : "unknown"
@@ -299,6 +299,7 @@ ________________________________________________________________________________
 
 resource "aci_rest_managed" "contract_to_epgs" {
   depends_on = [
+    aci_application_epg.application_epgs,
     aci_contract.contracts,
     aci_taboo_contract.contracts,
   ]
@@ -314,6 +315,7 @@ resource "aci_rest_managed" "contract_to_epgs" {
 
 resource "aci_rest_managed" "contract_to_oob_epgs" {
   depends_on = [
+    aci_node_mgmt_epg.mgmt_epgs,
     aci_contract.contracts,
     aci_rest_managed.oob_contracts,
     aci_taboo_contract.contracts,
@@ -330,6 +332,7 @@ resource "aci_rest_managed" "contract_to_oob_epgs" {
 
 resource "aci_rest_managed" "contract_to_inb_epgs" {
   depends_on = [
+    aci_node_mgmt_epg.mgmt_epgs,
     aci_contract.contracts,
     aci_rest_managed.oob_contracts,
     aci_taboo_contract.contracts,

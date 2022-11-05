@@ -11,7 +11,7 @@ resource "aci_bridge_domain" "bridge_domains" {
   depends_on = [
     aci_tenant.tenants,
     aci_vrf.vrfs,
-    # aci_l3_outside.l3outs
+    aci_l3_outside.l3outs
   ]
   for_each = { for k, v in local.bridge_domains : k => v if local.controller_type == "apic" }
   # General
@@ -114,7 +114,7 @@ ________________________________________________________________________________
 resource "aci_subnet" "bridge_domain_subnets" {
   depends_on = [
     aci_bridge_domain.bridge_domains,
-    # aci_l3_outside.l3outs
+    aci_l3_outside.l3outs
   ]
   for_each  = { for k, v in local.bridge_domain_subnets : k => v if local.controller_type == "apic" }
   parent_dn = aci_bridge_domain.bridge_domains[each.value.bridge_domain].id
@@ -232,7 +232,9 @@ resource "mso_schema_template_bd" "bridge_domains" {
   provider = mso
   depends_on = [
     mso_schema.schemas,
-    mso_schema_site.template_sites
+    mso_schema_site.template_sites,
+    mso_schema_site_vrf.vrfs,
+    mso_schema_template_vrf.vrfs
   ]
   for_each     = { for k, v in local.bridge_domains : k => v if local.controller_type == "ndo" }
   arp_flooding = each.value.general.arp_flooding

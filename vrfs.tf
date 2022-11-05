@@ -217,6 +217,9 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "vzany_provider_contracts" {
+  depends_on = [
+    aci_contract.contracts
+  ]
   for_each   = { for k, v in local.vzany_contracts : k => v if local.controller_type == "apic" && v.contract_type == "provided" }
   dn         = "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/any/rsanyToProv-${each.value.contract}"
   class_name = "vzRsAnyToProv"
@@ -229,6 +232,9 @@ resource "aci_rest_managed" "vzany_provider_contracts" {
 }
 
 resource "aci_rest_managed" "vzany_contracts" {
+  depends_on = [
+    aci_contract.contracts
+  ]
   for_each = { for k, v in local.vzany_contracts : k => v if local.controller_type == "apic" && v.contract_type != "provided" }
   dn = length(regexall(
     "consumed", each.value.contract_type)
