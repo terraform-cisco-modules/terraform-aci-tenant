@@ -260,14 +260,14 @@ resource "mso_schema_template_bd" "bridge_domains" {
   layer2_stretch             = each.value.advanced_troubleshooting.intersite_l2_stretch
   layer3_multicast           = each.value.general.pim
   optimize_wan_bandwidth     = each.value.advanced_troubleshooting.optimize_wan_bandwidth
-  schema_id                  = mso_schema.schemas[each.value.schema].id
-  template_name              = each.value.template
+  schema_id                  = data.mso_schema.schemas[each.value.ndo.schema].id
+  template_name              = each.value.ndo.template
   unknown_multicast_flooding = each.value.general.l3_unknown_multicast_flooding
   unicast_routing            = each.value.l3_configurations.unicast_routing
   virtual_mac_address        = each.value.l3_configurations.virtual_mac_address
   vrf_name                   = each.value.general.vrf.name
-  vrf_schema_id = length(each.value.vrf
-  ) > 0 ? data.mso_schema.schemas[each.value.general.vrf.schema].id : ""
+  vrf_schema_id = length(compact([each.value.general.vrf.schema])
+  ) > 0 ? data.mso_schema.schemas[each.value.general.vrf.schema].id : data.mso_schema.schemas[each.value.ndo.schema].id
   vrf_template_name = each.value.general.vrf.template
 }
 
@@ -279,7 +279,7 @@ resource "mso_schema_site_bd" "bridge_domains" {
   for_each      = { for k, v in local.ndo_bd_sites : k => v if local.controller_type == "ndo" }
   bd_name       = each.value.bridge_domain
   host_route    = each.value.advertise_host_routes
-  schema_id     = mso_schema.schemas[each.value.schema].id
+  schema_id     = data.mso_schema.schemas[each.value.schema].id
   site_id       = data.mso_site.sites[each.value.site].id
   template_name = each.value.template
 }
@@ -290,9 +290,9 @@ resource "mso_schema_site_bd_l3out" "bridge_domain_l3outs" {
     mso_schema_site_bd.bridge_domains
   ]
   for_each      = { for k, v in local.ndo_bd_sites : k => v if local.controller_type == "ndo" }
-  bd_name       = each.key
+  bd_name       = each.value.bridge_domain
   l3out_name    = each.value.l3out
-  schema_id     = mso_schema.schemas[each.value.schema].id
+  schema_id     = data.mso_schema.schemas[each.value.schema].id
   site_id       = data.mso_site.sites[each.value.site].id
   template_name = each.value.template
 }
@@ -300,16 +300,17 @@ resource "mso_schema_site_bd_l3out" "bridge_domain_l3outs" {
 resource "mso_schema_template_bd_subnet" "bridge_domain_subnets" {
   provider = mso
   depends_on = [
-    mso_schema_template_bd.bridge_domains
+    mso_schema_template_bd.bridge_domains,
+    mso_schema_site_bd.bridge_domains
   ]
   for_each           = { for k, v in local.bridge_domain_subnets : k => v if local.controller_type == "ndo" }
   bd_name            = each.value.bridge_domain
   description        = each.value.description
   ip                 = each.value.gateway_ip
   no_default_gateway = each.value.subnet_control.no_default_svi_gateway
-  schema_id          = mso_schema.schemas[each.value.schema].id
+  schema_id          = data.mso_schema.schemas[each.value.ndo.schema].id
   scope              = each.value.scope.advertise_externally == true ? "public" : "private"
-  template_name      = each.value.template
+  template_name      = each.value.ndo.template
   shared             = each.value.scope.shared_between_vrfs
   querier            = each.value.subnet_control.querier_ip
 }

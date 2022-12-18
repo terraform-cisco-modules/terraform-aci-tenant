@@ -12,7 +12,7 @@ resource "aci_application_profile" "application_profiles" {
     aci_tenant.tenants
   ]
   for_each = {
-    for k, v in local.application_profiles : k => v if local.controller_type == "apic" && v.create_app == true
+    for k, v in local.application_profiles : k => v if local.controller_type == "apic" && v.create == true
   }
   tenant_dn   = aci_tenant.tenants[each.value.tenant].id
   annotation  = each.value.annotation
@@ -93,21 +93,32 @@ resource "mso_schema_template_anp" "application_profiles" {
     mso_schema.schemas,
     mso_schema_site.template_sites
   ]
-  for_each     = { for k, v in local.application_profiles : k => v if local.controller_type == "ndo" }
+  for_each     = { for k, v in local.application_profiles : k => v if local.controller_type == "ndo" && v.create == true }
   display_name = each.key
   name         = each.key
-  schema_id    = mso_schema.schemas[each.value.ndo.schema].id
+  schema_id    = data.mso_schema.schemas[each.value.ndo.schema].id
   template     = each.value.ndo.template
 }
 
-resource "mso_schema_site_anp" "application_profiles" {
-  provider = mso
+#resource "mso_schema_site_anp" "application_profiles" {
+#  provider = mso
+#  depends_on = [
+#    mso_schema_template_anp.application_profiles
+#  ]
+#  for_each      = { for k, v in local.application_sites : k => v if local.controller_type == "ndo" && v.create == true }
+#  anp_name      = each.value.application_profile
+#  schema_id     = data.mso_schema.schemas[each.value.schema].id
+#  site_id       = data.mso_site.sites[each.value.site].id
+#  template_name = each.value.template
+#}
+data "mso_schema_template_anp" "application_profiles" {
   depends_on = [
     mso_schema_template_anp.application_profiles
   ]
-  for_each      = { for k, v in local.application_sites : k => v if local.controller_type == "ndo" }
-  anp_name      = each.value.application_profile
-  schema_id     = mso_schema.schemas[each.value.schema].id
-  site_id       = data.mso_site.sites[each.value.site].id
-  template_name = each.value.template
+  provider     = mso
+  for_each     = { for k, v in local.application_profiles : k => v if local.controller_type == "ndo" }
+  display_name = lookup(each.value, "display_name", each.key)
+  name         = each.key
+  schema_id    = data.mso_schema.schemas[each.value.ndo.schema].id
+  template     = each.value.ndo.template
 }

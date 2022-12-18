@@ -9,7 +9,7 @@ ________________________________________________________________________________
 */
 resource "aci_tenant" "tenants" {
   for_each = {
-    for k, v in local.tenants : k => v if local.controller_type == "apic" && v.create_tenant == true
+    for k, v in local.tenants : k => v if local.controller_type == "apic" && v.create == true
   }
   annotation                    = each.value.annotation
   description                   = each.value.description
@@ -81,14 +81,24 @@ ________________________________________________________________________________
 */
 data "mso_site" "sites" {
   provider = mso
-  for_each = { for v in local.sites : v => v if local.controller_type == "ndo" }
-  name     = each.key
+  for_each = { for k, v in local.sites : v => v if local.controller_type == "ndo" }
+  name     = each.value
 }
 
 data "mso_user" "users" {
   provider = mso
   for_each = { for v in local.users : v => v if local.controller_type == "ndo" }
-  username = each.key
+  username = each.value
+}
+
+data "mso_tenant" "tenants" {
+  depends_on = [
+    mso_tenant.tenants
+  ]
+  provider     = mso
+  for_each     = { for v in local.tenants : v.name => v if local.controller_type == "ndo" }
+  display_name = lookup(each.value, "display_name", each.key)
+  name         = each.key
 }
 
 resource "mso_tenant" "tenants" {
@@ -98,7 +108,7 @@ resource "mso_tenant" "tenants" {
     data.mso_user.users
   ]
   for_each = {
-    for k, v in local.tenants : k => v if local.controller_type == "ndo" && v.create_tenant == true
+    for k, v in local.tenants : k => v if local.controller_type == "ndo" && v.create == true
   }
   description  = each.value.description
   name         = each.key

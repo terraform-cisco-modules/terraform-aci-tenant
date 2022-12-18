@@ -265,8 +265,8 @@ resource "mso_schema_template_vrf" "vrfs" {
     mso_tenant.tenants,
     mso_schema.schemas
   ]
-  for_each         = { for k, v in local.vrfs : k => v if local.controller_type == "ndo" }
-  schema_id        = mso_schema.schemas[each.value.schema].id
+  for_each         = { for k, v in local.vrfs : k => v if local.controller_type == "ndo" && v.create == true }
+  schema_id        = data.mso_schema.schemas[each.value.schema].id
   template         = each.value.template
   name             = each.key
   display_name     = each.key
@@ -279,8 +279,8 @@ resource "mso_schema_site_vrf" "vrfs" {
   depends_on = [
     mso_schema_template_vrf.vrfs,
   ]
-  for_each      = { for k, v in local.vrf_sites : k => v if local.controller_type == "ndo" }
-  schema_id     = mso_schema.schemas[each.value.schema].id
+  for_each      = { for k, v in local.vrf_sites : k => v if local.controller_type == "ndo" && v.create == true }
+  schema_id     = data.mso_schema.schemas[each.value.schema].id
   site_id       = data.mso_site.sites[each.value.site].id
   template_name = each.value.template
   vrf_name      = each.value.vrf
@@ -291,14 +291,14 @@ resource "mso_schema_template_vrf_contract" "vzany_contracts" {
     mso_schema_template_vrf.vrfs
   ]
   for_each          = { for k, v in local.vzany_contracts : k => v if local.controller_type == "ndo" }
-  schema_id         = mso_schema.schemas[each.value.schema].id
+  schema_id         = data.mso_schema.schemas[each.value.schema].id
   template_name     = each.value.template
   vrf_name          = each.value.vrf
   relationship_type = each.value.contract_type
   contract_name     = each.value.contract
   contract_schema_id = length(regexall(
     each.value.tenant, each.value.contract_tenant)
-    ) > 0 ? mso_schema.schemas[each.value.contract_schema].id : length(regexall(
+    ) > 0 ? data.mso_schema.schemas[each.value.contract_schema].id : length(regexall(
     "[[:alnum:]]+", each.value.contract_tenant)
   ) > 0 ? data.mso_schema.schemas[each.value.contract_schema].id : ""
   contract_template_name = each.value.contract_template

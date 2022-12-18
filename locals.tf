@@ -54,10 +54,6 @@ locals {
   # Local Values
   controller_type = var.controller_type
   policy_tenant   = local.tenants[var.tenant].policy_tenant
-  schema = length([for i in local.schemas : i.name]
-  ) > 0 ? [for i in local.schemas : i.name][0] : ""
-  sites = [for i in local.tenants[var.tenant].sites : i.name]
-  users = local.tenants[var.tenant].users
 
   #__________________________________________________________
   #
@@ -70,49 +66,52 @@ locals {
       annotation = lookup(v, "annotation", local.tnt.annotation)
       annotations = length(lookup(v, "annotations", local.tnt.annotations)
       ) > 0 ? lookup(v, "annotations", local.tnt.annotations) : var.annotations
-      controller_type   = length(lookup(v, "schema", [])) > 0 ? "ndo" : "apic"
-      create_tenant     = lookup(v, "create_tenant", local.tnt.create_tenant)
+      controller_type   = local.controller_type
+      create            = lookup(v, "create", local.tnt.create)
       description       = lookup(v, "description", local.tnt.description)
       global_alias      = lookup(v, "global_alias", local.tnt.global_alias)
       monitoring_policy = lookup(v, "monitoring_policy", local.tnt.monitoring_policy)
       name              = v.name
       policy_tenant     = lookup(v, "policy_tenant", local.tnt.policy_tenant)
-      schema            = lookup(v, "schema", [])
-      sites = [
-        for i in lookup(lookup(v, "ndo", {}), "sites", []) : {
-          aws_access_key_id = lookup(i, "aws_access_key_id", local.tnt.site.aws_access_key_id)
-          aws_account_id    = lookup(i, "aws_account_id", local.tnt.site.aws_account_id)
-          azure_access_type = lookup(i, "azure_access_type", local.tnt.site.azure_access_type)
-          azure_active_directory_id = lookup(
-            i, "azure_active_directory_id", local.tnt.site.azure_active_directory_id
-          )
-          azure_application_id    = lookup(i, "azure_application_id", local.tnt.site.azure_application_id)
-          azure_shared_account_id = lookup(i, "azure_shared_account_id", local.tnt.site.azure_shared_account_id)
-          azure_subscription_id   = lookup(i, "azure_subscription_id", local.tnt.site.azure_subscription_id)
-          is_aws_account_trusted  = lookup(i, "is_aws_account_trusted", local.tnt.site.is_aws_account_trusted)
-          name                    = i.name
-          vendor                  = lookup(i, "vendor", local.tnt.site.vendor)
+      sites = [for i in lookup(lookup(v, "ndo", {}), "sites", []) : {
+        aws_access_key_id = lookup(i, "aws_access_key_id", local.tnt.ndo.sites.aws_access_key_id)
+        aws_account_id    = lookup(i, "aws_account_id", local.tnt.ndo.sites.aws_account_id)
+        azure_access_type = lookup(i, "azure_access_type", local.tnt.ndo.sites.azure_access_type)
+        azure_active_directory_id = lookup(
+          i, "azure_active_directory_id", local.tnt.ndo.sites.azure_active_directory_id
+        )
+        azure_application_id    = lookup(i, "azure_application_id", local.tnt.ndo.sites.azure_application_id)
+        azure_shared_account_id = lookup(i, "azure_shared_account_id", local.tnt.ndo.sites.azure_shared_account_id)
+        azure_subscription_id   = lookup(i, "azure_subscription_id", local.tnt.ndo.sites.azure_subscription_id)
+        is_aws_account_trusted  = lookup(i, "is_aws_account_trusted", local.tnt.ndo.sites.is_aws_account_trusted)
+        name                    = i.name
+        vendor                  = lookup(i, "vendor", local.tnt.ndo.sites.vendor)
         }
       ]
-      users = lookup(lookup(v, "ndo", {}), "users", [])
+      schemas = lookup(lookup(v, "ndo", {}), "schemas", [])
+      users   = lookup(lookup(v, "ndo", {}), "users", [])
     } if v.name == var.tenant
   }
 
   schemas = { for i in flatten([
-    for k, v in local.tenants : [
-      for s in v.schema : {
-        name = s.name
+    for key, value in local.tenants : [
+      for v in value.schemas : {
+        create      = lookup(v, "create", true)
+        description = lookup(v, "description", "")
+        name        = v.name
         templates = [
-          for t in lookup(s, "templates", []) : {
-            name  = t.name
-            sites = lookup(t, "sites", [])
+          for t in lookup(v, "templates", []) : {
+            name   = t.name
+            sites  = lookup(t, "sites", [])
+            tenant = key
           }
         ]
-        tenant = k
-
       }
     ]
   ]) : i.name => i }
+  #schema = length(local.schemas) > 0 ? flatten([for k, v in local.schemas : k])[0] : ""
+  sites = [for i in local.tenants[var.tenant].sites : i.name]
+  users = local.tenants[var.tenant].users
 
   template_sites = { for i in flatten([
     for value in local.schemas : [
@@ -124,7 +123,7 @@ locals {
         }
       ]
     ]
-  ]) : "${i.schema}_${i.template}_${i.site}" => i }
+  ]) : "${i.schema}:${i.template}:${i.site}" => i }
 
   apics_inband_mgmt_addresses = {}
   #__________________________________________________________
@@ -143,6 +142,7 @@ locals {
       v, "bgp_timers_per_address_family", local.vrf.bgp_timers_per_address_family)
       bgp_timers  = lookup(v, "bgp_timers", local.vrf.bgp_timers)
       communities = lookup(v, "communities", local.vrf.communities)
+      create      = lookup(v, "create", local.vrf.create)
       description = lookup(v, "description", local.vrf.description)
       eigrp_timers_per_address_family = lookup(
         v, "eigrp_timers_per_address_family", local.vrf.eigrp_timers_per_address_family
@@ -175,8 +175,8 @@ locals {
       )
       policy_tenant            = local.policy_tenant
       preferred_group          = lookup(v, "preferred_group", local.vrf.preferred_group)
-      sites                    = lookup(lookup(v, "ndo", {}), "sites", [])
-      schema                   = local.schema
+      sites                    = lookup(lookup(v, "ndo", {}), "sites", local.sites)
+      schema                   = lookup(lookup(v, "ndo", {}), "schema", "")
       template                 = lookup(lookup(v, "ndo", {}), "template", "")
       tenant                   = var.tenant
       transit_route_tag_policy = lookup(v, "transit_route_tag_policy", local.vrf.transit_route_tag_policy)
@@ -200,18 +200,19 @@ locals {
         vrf                  = key
       }
     ]
-  ]) : "${i.vrf}_${i.contract}_${i.contract_type}" => i }
+  ]) : "${i.vrf}:${i.contract}:${i.contract_type}" => i }
 
   vrf_sites = { for i in flatten([
     for k, v in local.vrfs : [
       for s in v.sites : {
+        create   = v.create
         schema   = v.schema
         site     = s
         template = v.template
         vrf      = k
       }
     ] if local.controller_type == "ndo"
-  ]) : "${i.vrf}_${i.site}" => i }
+  ]) : "${i.vrf}:${i.site}" => i }
 
   #__________________________________________________________
   #
@@ -305,9 +306,9 @@ locals {
         type   = lookup(lookup(v, "general", {}), "type", local.general.type)
         vrf = {
           name   = lookup(lookup(lookup(v, "general", {}), "vrf", {}), "name", "")
-          schema = lookup(lookup(lookup(v, "general", {}), "vrf", {}), "schema", local.schema)
+          schema = lookup(lookup(lookup(v, "general", {}), "vrf", {}), "schema", "")
           template = lookup(lookup(lookup(v, "general", {}
-          ), "vrf", {}), "name", lookup(lookup(v, "ndo", {}), "template", ""))
+          ), "vrf", {}), "template", lookup(lookup(v, "ndo", {}), "template", ""))
           tenant = lookup(lookup(lookup(v, "general", {}), "vrf", {}), "tenant", local.tenant)
         }
       }
@@ -333,22 +334,26 @@ locals {
         virtual_mac_address = lookup(lookup(v, "l3_configurations", {}
         ), "virtual_mac_address", local.l3.virtual_mac_address)
       }
+      name = v.name
       ndo = {
-        schema   = local.schema
-        sites    = lookup(lookup(v, "ndo", {}), "sites", [])
+        schema   = lookup(lookup(v, "ndo", {}), "schema", "")
+        sites    = lookup(lookup(v, "ndo", {}), "sites", local.sites)
         template = lookup(lookup(v, "ndo", {}), "template", "")
       }
       tenant = var.tenant
     }
   }
+  #ndo_bd_sites = {}
   ndo_bd_sites = { for i in flatten([
     for k, v in local.bridge_domains : [
       for s in range(length(v.ndo.sites)) : {
-        advertise_host_routes = s == s + 1 ? false : v.general.advertise_host_routes
+        advertise_host_routes = s % 2 != 0 ? false : v.general.advertise_host_routes
         bridge_domain         = k
-        l3out                 = element(v.l3_configurations.associated_l3outs.l3out, s + 1)
+        l3out                 = element(v.l3_configurations.associated_l3outs[0].l3outs, s + 1)
+        l3out_schema          = v.general.vrf.schema
+        l3out_template        = v.general.vrf.template
         schema                = v.ndo.schema
-        site                  = element(v.sites, s + 1)
+        site                  = element(v.ndo.sites, s + 1)
         template              = v.ndo.template
       }
     ]
@@ -416,7 +421,7 @@ locals {
         tenant        = v.tenant
       }
     ] if local.controller_type == "apic"
-  ]) : "${i.bridge_domain}_${i.mac_address}" => i }
+  ]) : "${i.bridge_domain}:${i.mac_address}" => i }
 
 
   #__________________________________________________________
@@ -433,15 +438,15 @@ locals {
       ) > 0 ? lookup(v, "annotations", local.app.annotations) : var.annotations
       application_epgs  = lookup(v, "application_epgs", [])
       description       = lookup(v, "description", local.app.description)
-      create_app        = lookup(v, "create_app", local.app.create_app)
+      create            = lookup(v, "create", local.app.create)
       global_alias      = lookup(v, "global_alias", local.app.global_alias)
       monitoring_policy = lookup(v, "monitoring_policy", local.app.monitoring_policy)
       name              = v.name
       qos_class         = lookup(v, "qos_class", local.app.qos_class)
       ndo = {
-        schema   = local.schema
-        sites    = local.sites
-        template = lookup(v, "template", "")
+        schema   = lookup(lookup(v, "ndo", {}), "schema", "")
+        sites    = lookup(lookup(v, "ndo", {}), "sites", local.sites)
+        template = lookup(lookup(v, "ndo", {}), "template", "")
       }
       tenant = var.tenant
     }
@@ -451,6 +456,7 @@ locals {
     for k, v in local.application_profiles : [
       for s in v.ndo.sites : {
         application_profile = k
+        create              = v.create
         schema              = v.ndo.schema
         site                = s
         template            = v.ndo.template
@@ -468,8 +474,8 @@ locals {
     for v in local.bd_with_epgs : [
       merge(local.networking.bridge_domains[index(local.networking.bridge_domains[*].name, v.name)
         ], local.templates_epgs[index(local.templates_epgs[*].template_name, v.template)],
-      { name = v.name },
-      {bridge_domain = v.name})
+        { name = v.name },
+      { bridge_domain = v.name })
     ]
   ]) : i.name => i }
 
@@ -500,10 +506,19 @@ locals {
       annotation = lookup(v, "annotation", local.epg.annotation)
       annotations = length(lookup(v, "annotations", local.epg.annotations)
       ) > 0 ? lookup(v, "annotations", local.epg.annotations) : var.annotations
-      application_profile    = v.application_profile
+      application_profile = v.application_profile
+      bd = {
+        name = length(compact([lookup(v, "bridge_domain", "")])
+        ) > 0 ? local.bridge_domains["${v.bridge_domain}"].name : ""
+        schema = length(compact([lookup(v, "bridge_domain", "")])
+        ) > 0 ? local.bridge_domains["${v.bridge_domain}"].ndo.schema : ""
+        template = length(compact([lookup(v, "bridge_domain", "")])
+        ) > 0 ? local.bridge_domains["${v.bridge_domain}"].ndo.template : ""
+      }
       bridge_domain          = lookup(v, "bridge_domain", "")
       contract_exception_tag = lookup(v, "contract_exception_tag", local.epg.contract_exception_tag)
       contracts              = lookup(v, "contracts", [])
+      controller_type        = local.controller_type
       custom_qos_policy      = lookup(v, "custom_qos_policy", local.epg.custom_qos_policy)
       data_plane_policer     = lookup(v, "data_plane_policer", local.epg.data_plane_policer)
       description            = lookup(v, "description", local.epg.description)
@@ -536,9 +551,9 @@ locals {
       monitoring_policy        = lookup(v, "monitoring_policy", local.epg.monitoring_policy)
       name                     = v.name
       ndo = {
-        schema   = local.schema
+        schema   = lookup(lookup(v, "ndo", {}), "schema", "")
         sites    = local.sites
-        template = lookup(v, "template", "")
+        template = lookup(lookup(v, "ndo", {}), "template", "")
       }
       preferred_group_member = lookup(v, "preferred_group_member", local.epg.preferred_group_member)
       qos_class              = lookup(v, "qos_class", local.epg.qos_class)
@@ -569,12 +584,14 @@ locals {
         )
         application_profile  = value.application_profile
         application_epg      = value.name
+        controller_type      = value.controller_type
         delimiter            = lookup(v, "delimiter", local.epg.domains.delimiter)
         deploy_immediacy     = lookup(v, "deploy_immediacy", local.epg.domains.deploy_immediacy)
         domain               = v.name
         domain_type          = lookup(v, "domain_type", local.epg.domains.domain_type)
         enhanced_lag_policy  = lookup(v, "enhanced_lag_policy", local.epg.domains.enhanced_lag_policy)
         epg_type             = value.epg_type
+        ndo                  = value.ndo
         number_of_ports      = lookup(v, "number_of_ports", local.epg.domains.number_of_ports)
         port_allocation      = lookup(v, "port_allocation", local.epg.domains.port_allocation)
         port_binding         = lookup(v, "port_binding", local.epg.domains.port_binding)
@@ -586,12 +603,41 @@ locals {
           ), "forged_transmits", local.epg.domains.security.forged_transmits)
           mac_changes = lookup(lookup(v, "security", {}), "mac_changes", local.epg.domains.security.mac_changes)
         }
+        sites           = lookup(v, "sites", local.epg.domains.sites)
         switch_provider = lookup(v, "switch_provider", local.epg.domains.switch_provider)
         vlan_mode       = lookup(v, "vlan_mode", local.epg.domains.vlan_mode)
         vlans           = lookup(v, "vlans", local.epg.domains.vlans)
       }
     ]
   ]) : "${i.application_profile}:${i.application_epg}:${i.domain}" => i }
+  ndo_epg_to_domains = { for i in flatten([
+    for k, v in local.epg_to_domains : [
+      for s in range(length(v.sites)) : {
+        annotation               = v.annotation
+        allow_micro_segmentation = v.allow_micro_segmentation
+        application_profile      = v.application_profile
+        application_epg          = v.application_epg
+        controller_type          = v.controller_type
+        delimiter                = v.delimiter
+        deploy_immediacy         = v.deploy_immediacy
+        domain                   = v.domain
+        domain_type              = v.domain_type
+        enhanced_lag_policy      = v.enhanced_lag_policy
+        epg_type                 = v.epg_type
+        number_of_ports          = v.number_of_ports
+        port_allocation          = v.port_allocation
+        port_binding             = v.port_binding
+        resolution_immediacy     = v.resolution_immediacy
+        schema                   = v.ndo.schema
+        security                 = v.security
+        site                     = element(v.sites, s)
+        switch_provider          = v.switch_provider
+        template                 = v.ndo.template
+        vlan_mode                = v.vlan_mode
+        vlans                    = v.vlans
+      }
+    ]
+  ]) : "${i.application_profile}:${i.application_epg}:${i.domain}:${i.site}" => i if i.controller_type == "ndo" }
 
   epg_to_static_paths = { for i in flatten([
     for key, value in local.application_epgs : [
@@ -691,7 +737,7 @@ locals {
       global_alias = lookup(v, "global_alias", local.contract.global_alias)
       log          = lookup(v, "log", local.contract.log)
       ndo = {
-        schema   = local.schema
+        schema   = lookup(lookup(v, "ndo", {}), "schema", "")
         sites    = local.sites
         template = lookup(v, "template", "")
       }
@@ -722,7 +768,7 @@ locals {
         tenant                = value.tenant
       }
     ] if local.controller_type == "apic"
-  ]) : "${i.contract}_${i.name}" => i }
+  ]) : "${i.contract}:${i.name}" => i }
 
   subject_filters = { for i in flatten([
     for k, v in local.contract_subjects : [
@@ -740,7 +786,7 @@ locals {
         tenant  = v.tenant
       }
     ]
-  ]) : "${i.contract}_${i.subject}_${i.filter}" => i }
+  ]) : "${i.contract}:${i.subject}:${i.filter}" => i }
 
 
   #__________________________________________________________
@@ -757,8 +803,8 @@ locals {
       description    = lookup(v, "description", local.filter.description)
       filter_entries = lookup(v, "filter_entries", [])
       ndo = {
-        schema   = local.schema
-        template = lookup(v, "template", "")
+        schema   = lookup(lookup(v, "ndo", {}), "schema", "")
+        template = lookup(lookup(v, "ndo", {}), "template", "")
       }
       tenant = var.tenant
     }
@@ -801,7 +847,7 @@ locals {
         tenant = value.tenant
       }
     ]
-  ]) : "${i.filter_name}_${i.name}" => i }
+  ]) : "${i.filter_name}:${i.name}" => i }
 
 
   #__________________________________________________________
@@ -827,7 +873,7 @@ locals {
       l3_domain             = lookup(v, "l3_domain", local.l3out.l3_domain)
       logical_node_profiles = lookup(v, "logical_node_profiles", [])
       ndo = {
-        schema   = local.schema
+        schema   = lookup(lookup(v, "ndo", {}), "schema", "")
         sites    = lookup(lookup(v, "ndo", {}), "sites", local.l3out.ndo.sites)
         template = lookup(lookup(v, "ndo", {}), "template", local.l3out.ndo.template)
       }
@@ -863,7 +909,7 @@ locals {
         route_map  = v.route_map
       }
     ]
-  ]) : "${i.l3out}_${i.route_map}_${i.source}" => i }
+  ]) : "${i.l3out}:${i.route_map}:${i.source}" => i }
 
   #==================================
   # L3Outs - External EPGs
