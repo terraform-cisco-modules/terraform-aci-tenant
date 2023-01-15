@@ -12,7 +12,7 @@ resource "aci_match_rule" "route_map_match_rules" {
   description = each.value.description
   name        = each.key
   name_alias  = each.value.alias
-  tenant_dn   = aci_tenant.tenants[each.value.tenant].id
+  tenant_dn   = "uni/tn-${each.value.tenant}"
 }
 
 resource "aci_rest_managed" "match_rules_match_community_terms" {
@@ -62,7 +62,7 @@ resource "aci_rest_managed" "match_rules_match_regex_community_terms" {
 
 API Information:
  - Class: "rtctrlMatchRtDest"
- - Distinguished Name: "/uni/tn-{tenant}/subj-{match_rule}/dest-[{network}]"
+ - Distinguished Name: "uni/tn-{tenant}/subj-{match_rule}/dest-[{network}]"
 GUI Location:
  - Tenants > {tenant} > Networking > Policies > Protocol > Match Rules > {name}
 _______________________________________________________________________________________________________________________

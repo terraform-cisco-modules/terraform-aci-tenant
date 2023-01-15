@@ -78,7 +78,7 @@ resource "aci_vrf" "vrfs" {
     "[[:alnum:]]", each.value.transit_route_tag_policy)
   ) > 0 ? "uni/tn-${each.value.policy_tenant}/rttag-${each.value.transit_route_tag_policy}" : ""
   # relation_fv_rs_ctx_mcast_to             = ["{vzFilter}"]
-  tenant_dn = aci_tenant.tenants[each.value.tenant].id
+  tenant_dn = "uni/tn-${each.value.tenant}"
 }
 
 

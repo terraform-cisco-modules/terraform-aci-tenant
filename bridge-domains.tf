@@ -2,7 +2,7 @@
 
 API Information:
  - Class: "fvBD"
- - Distinguised Name: "/uni/tn-{Tenant}/BD-{bridge_domain}"
+ - Distinguised Name: "uni/tn-{Tenant}/BD-{bridge_domain}"
 GUI Location:
  - Tenants > {tenant} > Networking > Bridge Domains > {bridge_domain}
 _______________________________________________________________________________________________________________________
@@ -34,7 +34,7 @@ resource "aci_bridge_domain" "bridge_domains" {
   ) > 0 ? "uni/tn-${local.policy_tenant}/snPol-${each.value.general.igmp_snooping_policy}" : ""
   relation_fv_rs_mldsn = length(compact([each.value.general.mld_snoop_policy])
   ) > 0 ? "uni/tn-${local.policy_tenant}/mldsnoopPol-${each.value.general.mld_snoop_policy}" : ""
-  tenant_dn         = aci_tenant.tenants[each.value.general.tenant].id
+  tenant_dn         = "uni/tn-${each.value.general.tenant}"
   unk_mac_ucast_act = each.value.general.l2_unknown_unicast
   unk_mcast_act     = each.value.general.l3_unknown_multicast_flooding
   v6unk_mcast_act   = each.value.general.ipv6_l3_unknown_multicast
@@ -84,7 +84,7 @@ resource "aci_bridge_domain" "bridge_domains" {
 
 API Information:
  - Class: "dhcpLbl"
- - Distinguished Name: "/uni/tn-{tenant}/BD-{bridge_domain}/dhcplbl-{name}"
+ - Distinguished Name: "uni/tn-{tenant}/BD-{bridge_domain}/dhcplbl-{name}"
 GUI Location:
  - Tenants > {tenant} > Networking > Bridge Domains > {bridge_domain} > DHCP Relay > {name}
 _______________________________________________________________________________________________________________________
@@ -106,7 +106,7 @@ resource "aci_bd_dhcp_label" "bridge_domain_dhcp_labels" {
 
 API Information:
  - Class: "fvSubnet"
- - Distinguished Name: "/uni/tn-{tenant}/BD-{bridge_domain}/subnet-[{subnet}]"
+ - Distinguished Name: "uni/tn-{tenant}/BD-{bridge_domain}/subnet-[{subnet}]"
 GUI Location:
  - Tenants > {tenant} > Networking > Bridge Domains > {bridge_domain} > Subnets
 _______________________________________________________________________________________________________________________

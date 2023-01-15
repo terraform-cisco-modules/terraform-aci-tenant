@@ -2,7 +2,7 @@
 
 API Information:
  - Class: "l3extOut"
- - Distinguished Name: "/uni/tn-{tenant}/out-{l3out}"
+ - Distinguished Name: "uni/tn-{tenant}/out-{l3out}"
 GUI Location:
  - tenants > {tenant} > Networking > L3Outs > {l3out}
 _______________________________________________________________________________________________________________________
@@ -19,7 +19,7 @@ resource "aci_l3_outside" "l3outs" {
   name                   = each.key
   name_alias             = each.value.alias
   target_dscp            = each.value.target_dscp
-  tenant_dn              = aci_tenant.tenants[each.value.tenant].id
+  tenant_dn              = "uni/tn-${each.value.tenant}"
   relation_l3ext_rs_ectx = aci_vrf.vrfs[each.value.vrf].id
   relation_l3ext_rs_l3_dom_att = length(compact([each.value.l3_domain])
   ) > 0 ? "uni/l3dom-${each.value.l3_domain}" : ""
@@ -182,7 +182,7 @@ resource "aci_rest_managed" "l3out_consumer_label" {
 
 API Information:
  - Class: "l3extInstP"
- - Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{Ext_EPG}"
+ - Distinguised Name: "uni/tn-{tenant}/out-{l3out}/instP-{Ext_EPG}"
 GUI Location:
  - tenants > {tenant} > Networking > L3Outs > {l3out} > External EPGs > {Ext_EPG}
 _______________________________________________________________________________________________________________________
@@ -227,7 +227,7 @@ resource "aci_external_network_instance_profile" "l3out_external_epgs" {
 
 API Information:
  - Class: "fvRsIntraEpg"
- - Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/rsintraEpg-{contract}"
+ - Distinguised Name: "uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/rsintraEpg-{contract}"
 GUI Location:
  - tenants > {tenant} > Networking > L3Outs > {l3out} > External EPGs > {external_epg}: Contracts
 _______________________________________________________________________________________________________________________
@@ -253,10 +253,10 @@ API Information:
  - Interface Class: "vzRsAnyToConsIf"
  - Provider Class: "fvRsProv"
  - Taboo Class: "fvRsProtBy"
- - Consumer Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/rsintraEpg-{contract}"
- - Interface Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/rsconsIf-{contract}"
- - Provider Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/rsprov-{contract}"
- - Taboo Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/rsprotBy-{contract}"
+ - Consumer Distinguised Name: "uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/rsintraEpg-{contract}"
+ - Interface Distinguised Name: "uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/rsconsIf-{contract}"
+ - Provider Distinguised Name: "uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/rsprov-{contract}"
+ - Taboo Distinguised Name: "uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/rsprotBy-{contract}"
 GUI Location:
  - All Contracts: tenants > {tenant} > Networking > L3Outs > {l3out} > External EPGs > {external_epg}: Contracts
 _______________________________________________________________________________________________________________________
@@ -315,7 +315,7 @@ resource "aci_rest_managed" "external_epg_contracts_taboo" {
 
 API Information:
  - Class: "l3extSubnet"
- - Distinguised Name: "/uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/extsubnet-[{subnet}]"
+ - Distinguised Name: "uni/tn-{tenant}/out-{l3out}/instP-{external_epg}/extsubnet-[{subnet}]"
 GUI Location:
  - tenants > {tenant} > Networking > L3Outs > {l3out} > External EPGs > {external_epg}
 _______________________________________________________________________________________________________________________
@@ -375,7 +375,7 @@ resource "aci_l3_ext_subnet" "external_epg_subnets" {
 
 API Information:
  - Class: "ospfExtP"
- - Distinguished Name: "/uni/tn-{tenant}/out-{l3out}/ospfExtP"
+ - Distinguished Name: "uni/tn-{tenant}/out-{l3out}/ospfExtP"
 GUI Location:
  - tenants > {tenant} > Networking > L3Outs > {l3out}: OSPF
 _______________________________________________________________________________________________________________________
@@ -410,7 +410,7 @@ resource "aci_l3out_ospf_external_policy" "l3out_ospf_external_profile" {
 
 API Information:
  - Class: "l3extLNodeP"
- - Distinguished Name: "/uni/tn-{tenant}/out-{l3out}/lnodep-{node_profile}"
+ - Distinguished Name: "uni/tn-{tenant}/out-{l3out}/lnodep-{node_profile}"
 GUI Location:
 tenants > {tenant} > Networking > L3Outs > {l3out} > Logical Node Profile > {node_profile}
 _______________________________________________________________________________________________________________________
@@ -437,7 +437,7 @@ resource "aci_logical_node_profile" "l3out_node_profiles" {
 
 API Information:
  - Class: "l3extRsNodeL3OutAtt"
- - Distinguished Name: "/uni/tn-{tenant}/out-{l3out}/lnodep-{node_profile}/rsnodeL3OutAtt-[topology/pod-{pod_id}/node-{node_id}]"
+ - Distinguished Name: "uni/tn-{tenant}/out-{l3out}/lnodep-{node_profile}/rsnodeL3OutAtt-[topology/pod-{pod_id}/node-{node_id}]"
 GUI Location:
 tenants > {tenant} > Networking > L3Outs > {l3out} > Logical Node Profile > {node_profile}: Nodes > {node_id}
 _______________________________________________________________________________________________________________________
@@ -461,7 +461,7 @@ resource "aci_logical_node_to_fabric_node" "l3out_node_profiles_nodes" {
 
 API Information:
  - Class: "l3extLIfP"
- - Distinguished Name: "/uni/tn-{tenant}/out-{l3out}/lnodep-{name}"
+ - Distinguished Name: "uni/tn-{tenant}/out-{l3out}/lnodep-{name}"
 GUI Location:
  - tenants > {tenant} > Networking > L3Outs > {l3out} > Logical Node Profile > {node_profile} > Logical Interface Profiles {interface_profile}
 _______________________________________________________________________________________________________________________
@@ -816,7 +816,7 @@ resource "aci_l3out_hsrp_secondary_vip" "hsrp_interface_profile_group_secondarie
 
 API Information:
  - Class: "ospfIfP"
- - Distinguished Name: "/uni/tn-{tenant}/out-{l3out}/nodep-{node_profile}/lifp-{interface_profile}/ospfIfP"
+ - Distinguished Name: "uni/tn-{tenant}/out-{l3out}/nodep-{node_profile}/lifp-{interface_profile}/ospfIfP"
 GUI Location:
  - tenants > {tenant} > Networking > L3Outs > {l3out} > Logical Node Profile {node_profile} > Logical Interface Profile > {interface_profile} > OSPF Interface Profile
 _______________________________________________________________________________________________________________________

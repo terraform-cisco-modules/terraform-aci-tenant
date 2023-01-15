@@ -15,7 +15,7 @@ resource "aci_contract" "contracts" {
     aci_tenant.tenants
   ]
   for_each    = { for k, v in local.contracts : k => v if local.controller_type == "apic" && v.contract_type == "standard" }
-  tenant_dn   = aci_tenant.tenants[each.value.tenant].id
+  tenant_dn   = "uni/tn-${each.value.tenant}"
   annotation  = each.value.annotation
   description = each.value.description
   name        = each.key
@@ -74,7 +74,7 @@ resource "aci_taboo_contract" "contracts" {
     aci_tenant.tenants,
   ]
   for_each    = { for k, v in local.contracts : k => v if local.controller_type == "apic" && v.contract_type == "taboo" }
-  tenant_dn   = aci_tenant.tenants[each.value.tenant].id
+  tenant_dn   = "uni/tn-${each.value.tenant}"
   annotation  = each.value.annotation
   description = each.value.description
   name        = each.key

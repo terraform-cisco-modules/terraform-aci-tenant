@@ -12,7 +12,7 @@ resource "aci_filter" "filters" {
     aci_tenant.tenants
   ]
   for_each                       = { for k, v in local.filters : k => v if local.controller_type == "apic" }
-  tenant_dn                      = aci_tenant.tenants[each.value.tenant].id
+  tenant_dn                      = "uni/tn-${each.value.tenant}"
   annotation                     = each.value.annotation
   description                    = each.value.description
   name                           = each.key

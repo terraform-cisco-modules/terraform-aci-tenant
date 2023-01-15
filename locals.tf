@@ -37,17 +37,20 @@ locals {
   l3       = local.bd.l3_configurations
   l3ospf   = local.l3out.ospf_external_profile
   l3out    = local.defaults.tenants.networking.l3outs
+  l4l7pbr  = local.defaults.tenants.policies.protocol.l4-l7_policy-based_redirect
+  l4l7rhg  = local.defaults.tenants.policies.protocol.l4-l7_redirect_health_groups
   lnp      = local.l3out.logical_node_profiles
   lip      = local.lnp.logical_interface_profiles
   ospfi    = local.defaults.tenants.policies.protocol.ospf.ospf_interface
   ospfs    = local.defaults.tenants.policies.protocol.ospf.ospf_route_summarization
   ospft    = local.defaults.tenants.policies.protocol.ospf.ospf_timers
   ospfip   = local.lnp.logical_interface_profiles.ospf_interface_profile
+  sla      = local.defaults.tenants.policies.protocol.ip_sla.ip_sla_monitoring_policies
   subnet   = local.l3.subnets
   subnets  = local.l3out.external_epgs.subnets
-  rm       = local.defaults.tenants.policies.route_maps_for_route_control
-  rmmr     = local.defaults.tenants.policies.route_map_match_rules
-  rmsr     = local.defaults.tenants.policies.route_map_set_rules
+  rm       = local.defaults.tenants.policies.protocol.route_maps_for_route_control
+  rmmr     = local.defaults.tenants.policies.protocol.route_map_match_rules
+  rmsr     = local.defaults.tenants.policies.protocol.route_map_set_rules
   tnt      = local.defaults.tenants
   vrf      = local.defaults.tenants.networking.vrfs
 
@@ -1505,6 +1508,79 @@ locals {
     }
   }
 
+  #__________________________________________________________
+  #
+  # Policies - IP SLA
+  #__________________________________________________________
+  policies_ip_sla_monitoring = {
+    for v in lookup(lookup(local.policies, "ip_sla", {}), "ip_sla_monitoring_policies", []) : v.name => {
+      annotation          = lookup(v, "annotation", local.sla.annotation)
+      detect_multiplier   = lookup(v, "detect_multiplier", local.sla.detect_multiplier)
+      http_uri            = lookup(v, "http_uri", local.sla.http_uri)
+      http_version        = lookup(v, "http_version", local.sla.http_version)
+      operation_timeout   = lookup(v, "operation_timeout", local.sla.operation_timeout)
+      request_data_size   = lookup(v, "request_data_size", local.sla.request_data_size)
+      sla_frequency       = lookup(v, "sla_frequency", local.sla.sla_frequency)
+      sla_port            = lookup(v, "sla_port", local.sla.sla_port)
+      sla_type            = lookup(v, "sla_type", local.sla.sla_type)
+      threshold           = lookup(v, "threshold", local.sla.threshold)
+      http_uri            = lookup(v, "http_uri", local.sla.http_uri)
+      traffic_class_value = lookup(v, "traffic_class_value", local.sla.traffic_class_value)
+      type_of_service     = lookup(v, "type_of_service", local.sla.type_of_service)
+    }
+  }
+
+  #__________________________________________________________
+  #
+  # Policies - L4-L7 Policy-Based Redirect
+  #__________________________________________________________
+  policies_l4_l7_pbr = {
+    for v in lookup(local.policies, "l4-l7_policy-based_redirect", []) : v.name => {
+      annotation       = lookup(v, "annotation", local.l4l7pbr.annotation)
+      anycast_enabled  = lookup(v, "anycast_enabled", local.l4l7pbr.anycast_enabled)
+      description      = lookup(v, "description", local.l4l7pbr.description)
+      destinations     = lookup(v, "destinations", [])
+      destination_type = lookup(v, "destination_type", local.l4l7pbr.destination_type)
+      enable_pod_id_aware_redirection = lookup(
+        v, "enable_pod_id_aware_redirection", local.l4l7pbr.enable_pod_id_aware_redirection
+      )
+      hashing_algorithm         = lookup(v, "hashing_algorithm", local.l4l7pbr.hashing_algorithm)
+      ip_sla_monitoring_policy   = lookup(v, "ipsla_monitoring_policy", local.l4l7pbr.ip_sla_monitoring_policy)
+      max_threshold_percentage  = lookup(v, "max_threshold_percentage", local.l4l7pbr.max_threshold_percentage)
+      min_threshold_percentage  = lookup(v, "min_threshold_percentage", local.l4l7pbr.min_threshold_percentage)
+      resilient_hashing_enabled = lookup(v, "resilient_hashing_enabled", local.l4l7pbr.resilient_hashing_enabled)
+      threshold_enable          = lookup(v, "threshold_enable", local.l4l7pbr.threshold_enable)
+      threshold_down_action     = lookup(v, "threshold_down_action", local.l4l7pbr.threshold_down_action)
+    }
+  }
+
+  policies_l4_l7_pbr_destinations = { for i in flatten([
+    for key, value in local.policies_l4_l7_pbr : [
+      for k, v in value.destinations : {
+        additional_ipv4_ipv6 = length(regexall("L3", value.destination_type)
+        ) > 0 ? lookup(v, "additional_ipv4_ipv6", local.l4l7pbr.destinations.additional_ipv4_ipv6) : "0.0.0.0"
+        ip       = length(regexall("L3", value.destination_type)) > 0 ? lookup(v, "ip", "0.0.0.0") : "0.0.0.0"
+        dest_key = k
+        mac = length(regexall("^(L1|L2)$", value.destination_type)
+        ) > 0 ? lookup(v, "mac", local.l4l7pbr.destinations.mac) : ""
+        pod_id                = lookup(v, "pod_id", local.l4l7pbr.destinations.pod_id)
+        redirect_health_group = length(regexall("L3", value.destination_type)
+        ) > 0 ? lookup(v, "redirect_health_group", local.l4l7pbr.destinations.redirect_health_group) : ""
+      }
+    ]
+  ]) : "${i.l4_l7_pbr_policy}:${i.dest_key}" => i }
+
+  #__________________________________________________________
+  #
+  # Policies - L4-L7 Redirect Health Groups
+  #__________________________________________________________
+  policies_l4_l7_redirect_health_groups = {
+    for v in lookup(local.policies, "l4-l7_redirect_health_groups", []) : v.name => {
+      annotation  = lookup(v, "annotation", local.l4l7rhg.annotation)
+      description = lookup(v, "description", local.l4l7rhg.description)
+    }
+  }
+
 
   #__________________________________________________________
   #
@@ -1600,7 +1676,7 @@ locals {
   #__________________________________________________________
 
   route_map_match_rules = {
-    for v in lookup(local.policies, "route_map_match_rules", []) : v.name => {
+    for v in lookup(lookup(local.policies, "protocol", {}), "route_map_match_rules", []) : v.name => {
       annotation                   = lookup(v, "annotation", local.rmsr.annotation)
       description                  = lookup(v, "description", local.rmsr.description)
       match_community_terms        = lookup(v, "match_community_terms", [])
@@ -1661,7 +1737,7 @@ locals {
   #__________________________________________________________
 
   route_map_set_rules = {
-    for v in lookup(local.policies, "route_map_set_rules", []) : v.name => {
+    for v in lookup(lookup(local.policies, "protocol", {}), "route_map_set_rules", []) : v.name => {
       additional_communities = lookup(v, "additional_communities", [])
       annotation             = lookup(v, "annotation", local.rmsr.annotation)
       description            = lookup(v, "description", local.rmsr.description)
@@ -1752,7 +1828,7 @@ locals {
   #__________________________________________________________
 
   route_maps_for_route_control = {
-    for v in lookup(local.policies, "route_maps_for_route_control", []) : v.name => {
+    for v in lookup(lookup(local.policies, "protocol", {}), "route_maps_for_route_control", []) : v.name => {
       annotation         = lookup(v, "annotation", local.rm.annotation)
       contexts           = lookup(v, "contexts", [])
       description        = lookup(v, "description", local.rm.description)

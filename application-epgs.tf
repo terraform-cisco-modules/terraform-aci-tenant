@@ -2,7 +2,7 @@
 
 API Information:
  - Class: "fvAEPg"
- - Distinguished Name: /uni/tn-{tenant}/ap-{application_profile}/epg-{application_epg}
+ - Distinguished Name: uni/tn-{tenant}/ap-{application_profile}/epg-{application_epg}
 GUI Location:
 Tenants > {tenant} > Application Profiles > {application_profile} > Application EPGs > {application_epg}
 _______________________________________________________________________________________________________________________
@@ -175,7 +175,7 @@ resource "aci_rest_managed" "application_epgs_global_alias" {
 
 API Information:
  - Class: "fvRsDomAtt"
- - Distinguished Name: /uni/tn-{Tenant}/ap-{App_Profile}/epg-{EPG}/rsdomAtt-[uni/{domain}]
+ - Distinguished Name: uni/tn-{Tenant}/ap-{App_Profile}/epg-{EPG}/rsdomAtt-[uni/{domain}]
 GUI Location:
 Tenants > {Tenant} > Application Profiles > {App_Profile} > Application EPGs > {EPG} > Domains (VMs and Bare-Metals)
 _______________________________________________________________________________________________________________________

@@ -14,7 +14,7 @@ resource "aci_application_profile" "application_profiles" {
   for_each = {
     for k, v in local.application_profiles : k => v if local.controller_type == "apic" && v.create == true
   }
-  tenant_dn   = aci_tenant.tenants[each.value.tenant].id
+  tenant_dn   = "uni/tn-${each.value.tenant}"
   annotation  = each.value.annotation
   description = each.value.description
   name        = each.key
