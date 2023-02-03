@@ -318,12 +318,12 @@ resource "aci_ip_sla_monitoring_policy" "ip_sla" {
   for_each   = local.policies_ip_sla_monitoring
   annotation = each.value.annotation
   #description = each.value.description
-  name                  = each.key
-  http_uri              = each.value.http_uri
-  http_version          = "HTTP/${each.value.http_version}" # 1.0, 1.1, default 1.0
+  name         = each.key
+  http_uri     = each.value.http_uri
+  http_version = "HTTP/${each.value.http_version}" # 1.0, 1.1, default 1.0
   #req_data_size         = each.value.request_data_size      # 0-17512, default 28 
-  sla_detect_multiplier = each.value.detect_multiplier      # 1-100, default 3
-  sla_frequency         = each.value.sla_frequency          # 1-300, default is 60
+  sla_detect_multiplier = each.value.detect_multiplier # 1-100, default 3
+  sla_frequency         = each.value.sla_frequency     # 1-300, default is 60
   sla_port = length(regexall("tcp", each.value.sla_type)
   ) > 0 ? each.value.sla_port : null
   sla_type            = each.value.sla_type # http, icmp, l2ping, tcp, default is icmp

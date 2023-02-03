@@ -1545,7 +1545,7 @@ locals {
         v, "enable_pod_id_aware_redirection", local.l4l7pbr.enable_pod_id_aware_redirection
       )
       hashing_algorithm         = lookup(v, "hashing_algorithm", local.l4l7pbr.hashing_algorithm)
-      ip_sla_monitoring_policy   = lookup(v, "ipsla_monitoring_policy", local.l4l7pbr.ip_sla_monitoring_policy)
+      ip_sla_monitoring_policy  = lookup(v, "ipsla_monitoring_policy", local.l4l7pbr.ip_sla_monitoring_policy)
       max_threshold_percentage  = lookup(v, "max_threshold_percentage", local.l4l7pbr.max_threshold_percentage)
       min_threshold_percentage  = lookup(v, "min_threshold_percentage", local.l4l7pbr.min_threshold_percentage)
       resilient_hashing_enabled = lookup(v, "resilient_hashing_enabled", local.l4l7pbr.resilient_hashing_enabled)
@@ -1563,7 +1563,7 @@ locals {
         dest_key = k
         mac = length(regexall("^(L1|L2)$", value.destination_type)
         ) > 0 ? lookup(v, "mac", local.l4l7pbr.destinations.mac) : ""
-        pod_id                = lookup(v, "pod_id", local.l4l7pbr.destinations.pod_id)
+        pod_id = lookup(v, "pod_id", local.l4l7pbr.destinations.pod_id)
         redirect_health_group = length(regexall("L3", value.destination_type)
         ) > 0 ? lookup(v, "redirect_health_group", local.l4l7pbr.destinations.redirect_health_group) : ""
       }
@@ -1857,4 +1857,26 @@ locals {
       }
     ]
   ]) : "${i.route_map}:${i.name}" => i }
+
+
+  #__________________________________________________________
+  #
+  # L4-L7 Variables
+  #__________________________________________________________
+
+  #==================================
+  # L4-L7 Devices
+  #==================================
+  l4_l7_devices = {}
+  concrete_devices = {}
+  concrete_interfaces = {}
+  logical_interfaces = {}
+
+  #==================================
+  # L4-L7 Service Graph Templates
+  #==================================
+  l4_l7_service_graph_templates = {}
+  l4_l7_service_graph_connections = {}
+  function_nodes = {}
+ 
 }
