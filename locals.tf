@@ -112,15 +112,15 @@ locals {
       }
     ]
   ]) : i.name => i }
-  #schema = length(local.schemas) > 0 ? flatten([for k, v in local.schemas : k])[0] : ""
-  sites = [for i in local.tenants[var.tenant].sites : i.name]
-  users = local.tenants[var.tenant].users
+  schema = length(local.schemas) > 0 ? flatten([for k, v in local.schemas : k])[0] : ""
+  sites  = [for i in local.tenants[var.tenant].sites : i.name]
+  users  = local.tenants[var.tenant].users
 
   template_sites = { for i in flatten([
-    for value in local.schemas : [
+    for key, value in local.schemas : [
       for v in value.templates : [
         for s in v.sites : {
-          schema   = value.name
+          schema   = key
           template = v.name
           site     = s
         }
@@ -155,9 +155,9 @@ locals {
       )
       epg_esg_collection_for_vrfs = {
         contracts = lookup(
-        lookup(v, "epg_esg_collections_for_vrfs", {}), "contracts", [])
+        lookup(v, "epg_esg_collection_for_vrfs", {}), "contracts", [])
         label_match_criteria = lookup(
-          lookup(v, "epg_esg_collections_for_vrfs", {}
+          lookup(v, "epg_esg_collection_for_vrfs", {}
           ), "label_match_criteria", local.vrf.epg_esg_collection_for_vrfs.label_match_criteria
         )
       }
@@ -198,8 +198,9 @@ locals {
         contract_tenant      = lookup(v, "tenant", value.tenant)
         label_match_criteria = value.epg_esg_collection_for_vrfs.label_match_criteria
         qos_class            = lookup(v, "template", local.vrf.epg_esg_collection_for_vrfs.contracts.qos_class)
+        schema               = value.schema
         template             = value.template
-        tenant               = value.tenant
+        tenant               = var.tenant
         vrf                  = key
       }
     ]
@@ -433,8 +434,7 @@ locals {
   #__________________________________________________________
 
   application_profiles = {
-    for v in lookup(local.tenant[var.tenant], "application_profiles", {}
-      ) : v.name => {
+    for v in lookup(local.tenant[var.tenant], "application_profiles", {}) : v.name => {
       alias      = lookup(v, "alias", local.app.alias)
       annotation = lookup(v, "annotation", local.app.annotation)
       annotations = length(lookup(v, "annotations", local.app.annotations)
@@ -720,16 +720,15 @@ locals {
   #
   # Contract Variables
   #__________________________________________________________
-
   contracts = {
     for v in lookup(local.tenant_contracts, "contracts", []) : v.name => {
       alias      = lookup(v, "alias", local.contract.alias)
       annotation = lookup(v, "annotation", local.contract.annotation)
       annotations = length(lookup(v, "annotations", local.contract.annotations)
       ) > 0 ? lookup(v, "annotations", local.contract.annotations) : var.annotations
-      apply_both_directions = lookup(lookup(
-        v, "subjects", {})[0], "apply_both_directions", local.contract.subjects.apply_both_directions
-      )
+      apply_both_directions = length(lookup(v, "subjects", [])) > 0 ? lookup(
+        v.subjects[0], "apply_both_directions", local.contract.subjects.apply_both_directions
+      ) : false
       contract_type = lookup(v, "contract_type", local.contract.contract_type)
       description   = lookup(v, "description", local.contract.description)
       filters = flatten([
@@ -739,19 +738,16 @@ locals {
       ])
       global_alias = lookup(v, "global_alias", local.contract.global_alias)
       log          = lookup(v, "log", local.contract.log)
-      ndo = {
-        schema   = lookup(lookup(v, "ndo", {}), "schema", "")
-        sites    = local.sites
-        template = lookup(v, "template", "")
-      }
-      qos_class   = lookup(v, "qos_class", local.contract.qos_class)
-      subjects    = lookup(v, "subjects", [])
-      scope       = lookup(v, "scope", local.contract.scope)
-      target_dscp = lookup(v, "target_dscp", local.contract.target_dscp)
-      tenant      = var.tenant
+      qos_class    = lookup(v, "qos_class", local.contract.qos_class)
+      subjects     = lookup(v, "subjects", [])
+      schema       = local.schema
+      scope        = lookup(v, "scope", local.contract.scope)
+      sites        = local.sites
+      target_dscp  = lookup(v, "target_dscp", local.contract.target_dscp)
+      template     = lookup(v, "template", "")
+      tenant       = var.tenant
     }
   }
-
 
   contract_subjects = { for i in flatten([
     for key, value in local.contracts : [
@@ -796,7 +792,6 @@ locals {
   #
   # Filter Variables
   #__________________________________________________________
-
   filters = {
     for v in lookup(local.tenant_contracts, "filters", []) : v.name => {
       alias      = lookup(v, "alias", local.filter.alias)
@@ -805,11 +800,9 @@ locals {
       ) > 0 ? lookup(v, "annotations", local.filter.annotations) : var.annotations
       description    = lookup(v, "description", local.filter.description)
       filter_entries = lookup(v, "filter_entries", [])
-      ndo = {
-        schema   = lookup(lookup(v, "ndo", {}), "schema", "")
-        template = lookup(lookup(v, "ndo", {}), "template", "")
-      }
-      tenant = var.tenant
+      schema         = local.schema
+      template       = lookup(v, "template", "")
+      tenant         = var.tenant
     }
   }
 
@@ -830,7 +823,7 @@ locals {
         match_dscp            = lookup(v, "match_dscp", local.filter.filter_entries.match_dscp)
         match_only_fragments  = lookup(v, "match_only_fragments", local.filter.filter_entries.match_only_fragments)
         name                  = v.name
-        ndo                   = value.ndo
+        schema                = value.schema
         source_port_from      = lookup(v, "source_port_from", local.filter.filter_entries.source_port_from)
         source_port_to        = lookup(v, "source_port_to", local.filter.filter_entries.source_port_to)
         stateful              = lookup(v, "stateful", local.filter.filter_entries.stateful)
@@ -847,7 +840,8 @@ locals {
             v, "tcp_session_rules", {}), "synchronize", local.filter.filter_entries.tcp_session_rules.synchronize
           )
         }
-        tenant = value.tenant
+        template = value.template
+        tenant   = var.tenant
       }
     ]
   ]) : "${i.filter_name}:${i.name}" => i }
@@ -898,6 +892,7 @@ locals {
       target_dscp                       = lookup(v, "target_dscp", local.l3out.target_dscp)
       tenant                            = var.tenant
       vrf                               = lookup(v, "vrf", local.l3out.vrf)
+      vrf_template                      = lookup(v, "vrf_template", lookup(lookup(v, "ndo", {}), "template", local.l3out.ndo.template))
     }
   }
 
@@ -1867,16 +1862,16 @@ locals {
   #==================================
   # L4-L7 Devices
   #==================================
-  l4_l7_devices = {}
-  concrete_devices = {}
+  l4_l7_devices       = {}
+  concrete_devices    = {}
   concrete_interfaces = {}
-  logical_interfaces = {}
+  logical_interfaces  = {}
 
   #==================================
   # L4-L7 Service Graph Templates
   #==================================
-  l4_l7_service_graph_templates = {}
+  l4_l7_service_graph_templates   = {}
   l4_l7_service_graph_connections = {}
-  function_nodes = {}
- 
+  function_nodes                  = {}
+
 }

@@ -91,22 +91,8 @@ data "mso_user" "users" {
   username = each.value
 }
 
-data "mso_tenant" "tenants" {
-  depends_on = [
-    mso_tenant.tenants
-  ]
-  provider     = mso
-  for_each     = { for v in local.tenants : v.name => v if local.controller_type == "ndo" }
-  display_name = lookup(each.value, "display_name", each.key)
-  name         = each.key
-}
-
 resource "mso_tenant" "tenants" {
   provider = mso
-  depends_on = [
-    data.mso_site.sites,
-    data.mso_user.users
-  ]
   for_each = {
     for k, v in local.tenants : k => v if local.controller_type == "ndo" && v.create == true
   }
@@ -140,7 +126,7 @@ resource "mso_tenant" "tenants" {
         "shared", site_associations.value.azure_access_type)
       ) > 0 ? site_associations.value.azure_shared_account_id : ""
       azure_subscription_id = site_associations.value.azure_subscription_id
-      site_id               = data.mso_site.sites[site_associations.value.site].id
+      site_id               = data.mso_site.sites[site_associations.value.name].id
       vendor                = site_associations.value.vendor
     }
   }
@@ -151,7 +137,7 @@ resource "mso_tenant" "tenants" {
       ) == 0
     }
     content {
-      site_id = data.mso_site.sites[site_associations.value.site].id
+      site_id = data.mso_site.sites[site_associations.value.name].id
     }
   }
   dynamic "user_associations" {

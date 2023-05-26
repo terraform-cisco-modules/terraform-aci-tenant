@@ -464,7 +464,7 @@ resource "mso_schema_template_anp_epg" "application_epgs" {
   for_each                   = { for k, v in local.application_epgs : k => v if local.controller_type == "ndo" }
   anp_name                   = each.value.application_profile
   bd_name                    = each.value.bd.name
-  bd_schema_id               = data.mso_schema.schemas[each.value.bd.schema].id
+  bd_schema_id               = mso_schema.schemas[each.value.bd.schema].id
   bd_template_name           = each.value.bd.template
   display_name               = each.key
   intra_epg                  = each.value.intra_epg_isolation
@@ -472,12 +472,12 @@ resource "mso_schema_template_anp_epg" "application_epgs" {
   name                       = each.key
   preferred_group            = each.value.preferred_group_member
   proxy_arp                  = each.value.intra_epg_isolation == true ? true : false
-  schema_id                  = data.mso_schema.schemas[each.value.ndo.schema].id
+  schema_id                  = mso_schema.schemas[each.value.ndo.schema].id
   template_name              = each.value.ndo.template
   useg_epg                   = each.value.useg_epg
-  vrf_name                   = each.value.vrf.name
-  vrf_schema_id              = data.mso_schema.schemas[each.value.vrf.schema].id
-  vrf_template_name          = each.value.vrf.template
+  #vrf_name                   = each.value.general.vrf.name
+  #vrf_schema_id              = data.mso_schema.schemas[each.value.general.vrf.schema].id
+  #vrf_template_name          = each.value.general.vrf.template
 }
 
 resource "mso_schema_site_anp_epg_domain" "epg_to_domains" {
@@ -516,4 +516,10 @@ resource "mso_schema_site_anp_epg_domain" "epg_to_domains" {
   vlan_encap_mode = length(regexall("vmm", each.value.domain_type)
   ) > 0 ? each.value.vlan_mode : null
   vmm_domain_type = length(regexall("vmm", each.value.domain_type)) > 0 ? each.value.switch_provider : null
+  lifecycle {
+    ignore_changes = [
+      schema_id,
+      site_id
+    ]
+  }
 }

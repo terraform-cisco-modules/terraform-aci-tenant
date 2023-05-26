@@ -221,14 +221,16 @@ resource "mso_schema_template_contract" "contracts" {
   provider = mso
   depends_on = [
     mso_schema.schemas,
+    mso_schema_template_filter_entry.filter_entries
   ]
   for_each      = { for k, v in local.contracts : k => v if local.controller_type == "ndo" }
-  schema_id     = mso_schema.schemas[each.value.schema].id
-  template_name = each.value.template
   contract_name = each.key
+  directives    = each.value.log == true ? ["log"] : ["none"]
   display_name  = each.key
   filter_type   = each.value.apply_both_directions == true ? "bothWay" : "oneWay"
+  schema_id     = data.mso_schema.schemas[each.value.schema].id
   scope         = each.value.scope
+  template_name = each.value.template
   dynamic "filter_relationship" {
     for_each = toset(each.value.filters)
     content {
@@ -237,5 +239,9 @@ resource "mso_schema_template_contract" "contracts" {
       filter_name          = filter_relationship.value
     }
   }
-  directives = each.value.log == true ? ["log"] : ["none"]
+  lifecycle {
+    ignore_changes = [
+      schema_id
+    ]
+  }
 }

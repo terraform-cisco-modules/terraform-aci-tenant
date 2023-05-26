@@ -70,26 +70,30 @@ resource "aci_filter_entry" "filter_entries" {
   )) : ["unspecified"]
 }
 
+/*_____________________________________________________________________________________________________________________
+
+Nexus Dashboard — Filters
+_______________________________________________________________________________________________________________________
+*/
 resource "mso_schema_template_filter_entry" "filter_entries" {
-  provider = mso
-  depends_on = [
-    mso_schema.schemas
-  ]
-  for_each             = { for k, v in local.filter_entries : k => v if local.controller_type == "ndo" }
-  schema_id            = mso_schema.schemas[each.value.schema].id
-  template_name        = each.value.template
-  display_name         = each.value.filter_name
-  entry_name           = each.value.name
-  name                 = each.value.filter_name
-  entry_display_name   = each.value.name
-  ether_type           = each.value.ethertype
+  provider   = mso
+  depends_on = [mso_schema.schemas]
+  for_each = {
+    for k, v in local.filter_entries : k => v if local.controller_type == "ndo"
+  }
   arp_flag             = each.value.arp_flag
-  ip_protocol          = each.value.ip_protocol
-  match_only_fragments = each.value.match_only_fragments
-  source_from          = each.value.source_port_from
-  source_to            = each.value.source_port_to
   destination_from     = each.value.destination_port_from
   destination_to       = each.value.destination_port_to
+  display_name         = each.value.filter_name
+  entry_display_name   = each.value.name
+  entry_name           = each.value.name
+  ether_type           = each.value.ethertype
+  ip_protocol          = each.value.ip_protocol
+  match_only_fragments = each.value.match_only_fragments
+  name                 = each.value.filter_name
+  schema_id            = data.mso_schema.schemas[each.value.schema].id
+  source_from          = each.value.source_port_from
+  source_to            = each.value.source_port_to
   stateful             = each.value.stateful
   tcp_session_rules = anytrue(
     [
@@ -106,5 +110,11 @@ resource "mso_schema_template_filter_entry" "filter_entries" {
       length(regexall(true, each.value.tcp_session_rules.reset)) > 0 ? "reset" : ""], [
       length(regexall(true, each.value.tcp_session_rules.synchronize)) > 0 ? "synchronize" : ""]
   )) : ["unspecified"]
+  template_name = each.value.template
+  lifecycle {
+    ignore_changes = [
+      schema_id
+    ]
+  }
 }
 

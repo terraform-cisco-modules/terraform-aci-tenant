@@ -89,15 +89,16 @@ ________________________________________________________________________________
 */
 resource "mso_schema_template_anp" "application_profiles" {
   provider = mso
-  depends_on = [
-    mso_schema.schemas,
-    mso_schema_site.template_sites
-  ]
   for_each     = { for k, v in local.application_profiles : k => v if local.controller_type == "ndo" && v.create == true }
   display_name = each.key
   name         = each.key
   schema_id    = data.mso_schema.schemas[each.value.ndo.schema].id
   template     = each.value.ndo.template
+  lifecycle {
+    ignore_changes = [
+      schema_id
+    ]
+  }
 }
 
 #resource "mso_schema_site_anp" "application_profiles" {
@@ -112,9 +113,6 @@ resource "mso_schema_template_anp" "application_profiles" {
 #  template_name = each.value.template
 #}
 data "mso_schema_template_anp" "application_profiles" {
-  depends_on = [
-    mso_schema_template_anp.application_profiles
-  ]
   provider     = mso
   for_each     = { for k, v in local.application_profiles : k => v if local.controller_type == "ndo" }
   display_name = lookup(each.value, "display_name", each.key)

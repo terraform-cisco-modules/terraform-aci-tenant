@@ -902,3 +902,18 @@ ________________________________________________________________________________
 #   # relation_ip_rs_nh_track_member = length(compact([each.value.ip_sla_policy])
 #   # ) > 0 ? "" : ""
 # }
+
+resource "mso_schema_template_l3out" "l3outs" {
+  provider = mso
+  depends_on = [
+    mso_schema.schemas
+  ]
+  for_each          = { for k, v in local.l3outs : k => v if local.controller_type == "ndo" }
+  display_name      = each.key
+  l3out_name        = each.key
+  schema_id         = mso_schema.schemas[each.value.ndo.schema].id
+  template_name     = each.value.ndo.template
+  vrf_name          = each.value.vrf
+  vrf_schema_id     = mso_schema.schemas[each.value.ndo.schema].id
+  vrf_template_name = each.value.vrf_template
+}

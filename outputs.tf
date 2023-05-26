@@ -36,19 +36,19 @@ output "bridge_domains" {
   } : {}
 }
 
-#output "contracts" {
-#  value = length(local.contracts) > 0 && local.controller_type == "apic" ? {
-#    oob_contracts = { for v in sort(keys(aci_rest_managed.oob_contracts)
-#    ) : v => aci_rest_managed.oob_contracts[v].id }
-#    standard_contracts = { for v in sort(keys(aci_contract.contracts)
-#    ) : v => aci_contract.contracts[v].id }
-#    taboo_contracts = { for v in sort(keys(aci_taboo_contract.contracts)
-#    ) : v => aci_taboo_contract.contracts[v].id }
-#    } : length(local.contracts) > 0 && local.controller_type == "ndo" ? {
-#    for v in sort(keys(mso_schema_template_contract.contracts)
-#    ) : v => mso_schema_template_contract.contracts[v].id
-#  } : {}
-#}
+output "contracts" {
+  value = length(local.contracts) > 0 && local.controller_type == "apic" ? {
+    oob_contracts = { for v in sort(keys(aci_rest_managed.oob_contracts)
+    ) : v => aci_rest_managed.oob_contracts[v].id }
+    standard_contracts = { for v in sort(keys(aci_contract.contracts)
+    ) : v => aci_contract.contracts[v].id }
+    taboo_contracts = { for v in sort(keys(aci_taboo_contract.contracts)
+    ) : v => aci_taboo_contract.contracts[v].id }
+    } : length(local.contracts) > 0 && local.controller_type == "ndo" ? {
+    standard_contracts = { for v in sort(keys(mso_schema_template_contract.contracts)
+    ) : v => mso_schema_template_contract.contracts[v].id }
+  } : {}
+}
 
 output "endpoint_retention" {
   value = local.policies_endpoint_retention != {} ? { for v in sort(
@@ -56,17 +56,17 @@ output "endpoint_retention" {
   ) : v => aci_end_point_retention_policy.endpoint_retention[v].id } : {}
 }
 
-#output "filters" {
-#  value = length(local.filters) > 0 && local.controller_type == "apic" ? {
-#    filters = { for v in sort(keys(aci_filter.filters)
-#    ) : v => aci_filter.filters[v].id }
-#    filter_entries = { for v in sort(keys(aci_filter_entry.filter_entries)
-#    ) : v => aci_filter_entry.filter_entries[v].id }
-#    } : length(local.filters) > 0 && local.controller_type == "ndo" ? {
-#    filter_entries = { for v in sort(keys(mso_schema_template_filter_entry.filter_entries)
-#    ) : v => mso_schema_template_filter_entry.filter_entries[v].id }
-#  } : {}
-#}
+output "filters" {
+  value = length(local.filters) > 0 && local.controller_type == "apic" ? {
+    filters = { for v in sort(keys(aci_filter.filters)
+    ) : v => aci_filter.filters[v].id }
+    filter_entries = { for v in sort(keys(aci_filter_entry.filter_entries)
+    ) : v => aci_filter_entry.filter_entries[v].id }
+    } : length(local.filters) > 0 && local.controller_type == "ndo" ? {
+    filter_entries = { for v in sort(keys(mso_schema_template_filter_entry.filter_entries)
+    ) : v => mso_schema_template_filter_entry.filter_entries[v].id }
+  } : {}
+}
 
 output "ndo_sites" {
   value = local.sites != [] ? { for v in sort(
@@ -82,8 +82,8 @@ output "ndo_users" {
 
 output "ndo_schemas" {
   value = local.schemas != {} ? { for v in sort(
-    keys(data.mso_schema.schemas)
-  ) : v => data.mso_schema.schemas[v].id } : {}
+    keys(mso_schema.schemas)
+  ) : v => mso_schema.schemas[v].id } : {}
 }
 
 output "tenants" {

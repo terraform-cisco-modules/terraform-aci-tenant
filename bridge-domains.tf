@@ -260,7 +260,7 @@ resource "mso_schema_template_bd" "bridge_domains" {
   layer2_stretch             = each.value.advanced_troubleshooting.intersite_l2_stretch
   layer3_multicast           = each.value.general.pim
   optimize_wan_bandwidth     = each.value.advanced_troubleshooting.optimize_wan_bandwidth
-  schema_id                  = data.mso_schema.schemas[each.value.ndo.schema].id
+  schema_id                  = mso_schema.schemas[each.value.ndo.schema].id
   template_name              = each.value.ndo.template
   unknown_multicast_flooding = each.value.general.l3_unknown_multicast_flooding
   unicast_routing            = each.value.l3_configurations.unicast_routing
@@ -269,6 +269,11 @@ resource "mso_schema_template_bd" "bridge_domains" {
   vrf_schema_id = length(compact([each.value.general.vrf.schema])
   ) > 0 ? data.mso_schema.schemas[each.value.general.vrf.schema].id : data.mso_schema.schemas[each.value.ndo.schema].id
   vrf_template_name = each.value.general.vrf.template
+  lifecycle {
+    ignore_changes = [
+      schema_id
+    ]
+  }
 }
 
 resource "mso_schema_site_bd" "bridge_domains" {
@@ -282,6 +287,12 @@ resource "mso_schema_site_bd" "bridge_domains" {
   schema_id     = data.mso_schema.schemas[each.value.schema].id
   site_id       = data.mso_site.sites[each.value.site].id
   template_name = each.value.template
+  lifecycle {
+    ignore_changes = [
+      schema_id,
+      site_id
+    ]
+  }
 }
 
 resource "mso_schema_site_bd_l3out" "bridge_domain_l3outs" {
@@ -295,6 +306,12 @@ resource "mso_schema_site_bd_l3out" "bridge_domain_l3outs" {
   schema_id     = data.mso_schema.schemas[each.value.schema].id
   site_id       = data.mso_site.sites[each.value.site].id
   template_name = each.value.template
+  lifecycle {
+    ignore_changes = [
+      schema_id,
+      site_id
+    ]
+  }
 }
 
 resource "mso_schema_template_bd_subnet" "bridge_domain_subnets" {
@@ -313,4 +330,9 @@ resource "mso_schema_template_bd_subnet" "bridge_domain_subnets" {
   template_name      = each.value.ndo.template
   shared             = each.value.scope.shared_between_vrfs
   querier            = each.value.subnet_control.querier_ip
+  lifecycle {
+    ignore_changes = [
+      schema_id
+    ]
+  }
 }
