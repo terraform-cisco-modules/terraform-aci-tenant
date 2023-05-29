@@ -82,8 +82,8 @@ output "ndo_users" {
 
 output "ndo_schemas" {
   value = local.schemas != {} ? { for v in sort(
-    keys(mso_schema.schemas)
-  ) : v => mso_schema.schemas[v].id } : {}
+    keys(data.mso_schema.schemas)
+  ) : v => data.mso_schema.schemas[v].id } : {}
 }
 
 output "tenants" {

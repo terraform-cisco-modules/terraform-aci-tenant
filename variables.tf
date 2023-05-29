@@ -114,6 +114,12 @@ variable "bgp_password_5" {
   type        = string
 }
 
+variable "combine_description" {
+  default     = false
+  description = "Option to Add Description to EPG/BD for Display Name"
+  type        = bool
+}
+
 variable "ospf_key_1" {
   default     = ""
   description = "OSPF Key 1."

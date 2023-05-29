@@ -25,7 +25,7 @@ resource "aci_application_epg" "application_epgs" {
   has_mcast_source       = each.value.has_multicast_source == true ? "yes" : "no"
   is_attr_based_epg      = each.value.useg_epg == true ? "yes" : "no"
   match_t                = each.value.label_match_criteria
-  name                   = each.key
+  name                   = each.value.name
   name_alias             = each.value.alias
   pc_enf_pref            = each.value.intra_epg_isolation
   pref_gr_memb           = each.value.preferred_group_member == true ? "include" : "exclude"
@@ -461,15 +461,16 @@ resource "mso_schema_template_anp_epg" "application_epgs" {
   depends_on = [
     mso_schema_template_anp.application_profiles
   ]
-  for_each                   = { for k, v in local.application_epgs : k => v if local.controller_type == "ndo" }
-  anp_name                   = each.value.application_profile
-  bd_name                    = each.value.bd.name
-  bd_schema_id               = mso_schema.schemas[each.value.bd.schema].id
-  bd_template_name           = each.value.bd.template
-  display_name               = each.key
+  for_each         = { for k, v in local.application_epgs : k => v if local.controller_type == "ndo" }
+  anp_name         = each.value.application_profile
+  bd_name          = each.value.bd.name
+  bd_schema_id     = mso_schema.schemas[each.value.bd.schema].id
+  bd_template_name = each.value.bd.template
+  #description                = each.value.general.description
+  display_name               = var.combine_description == true ? "${each.value.name}-${each.value.description}" : each.value.name
   intra_epg                  = each.value.intra_epg_isolation
   intersite_multicast_source = false
-  name                       = each.key
+  name                       = each.value.name
   preferred_group            = each.value.preferred_group_member
   proxy_arp                  = each.value.intra_epg_isolation == true ? true : false
   schema_id                  = mso_schema.schemas[each.value.ndo.schema].id

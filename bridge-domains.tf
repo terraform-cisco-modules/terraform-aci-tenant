@@ -23,7 +23,7 @@ resource "aci_bridge_domain" "bridge_domains" {
   ipv6_mcast_allow          = each.value.general.pimv6 == true ? "yes" : "no"
   limit_ip_learn_to_subnets = each.value.general.limit_ip_learn_to_subnets == true ? "yes" : "no"
   mcast_allow               = each.value.general.pim == true ? "yes" : "no"
-  name                      = each.key
+  name                      = each.value.name
   name_alias                = each.value.general.alias
   multi_dst_pkt_act         = each.value.general.multi_destination_flooding
   relation_fv_rs_bd_to_ep_ret = length(compact([each.value.general.endpoint_retention_policy])
@@ -247,8 +247,9 @@ resource "mso_schema_template_bd" "bridge_domains" {
   #     # dhcp_option_policy_version = dhcp_policy.value.dhcp_option_policy_version
   #   }
   # }
-  display_name                    = each.key
-  name                            = each.key
+  #description                     = each.value.general.description
+  display_name                    = var.combine_description == true ? "${each.value.name}-${each.value.general.description}" : each.value.name
+  name                            = each.value.name
   intersite_bum_traffic           = each.value.advanced_troubleshooting.intersite_bum_traffic_allow
   ipv6_unknown_multicast_flooding = each.value.general.ipv6_l3_unknown_multicast
   multi_destination_flooding = length(regexall(

@@ -286,7 +286,8 @@ locals {
           ) > 0 ? lookup(lookup(v, "general", {}), "annotations", local.general.annotations
         ) : var.annotations
         arp_flooding = lookup(lookup(v, "general", {}), "arp_flooding", local.general.arp_flooding)
-        description  = lookup(lookup(v, "general", {}), "description", local.general.description)
+        description = coalesce(lookup(lookup(v, "general", {}), "description", local.general.description
+        ), lookup(v, "description", local.general.description))
         endpoint_retention_policy = lookup(lookup(v, "general", {}
         ), "endpoint_retention_policy", local.general.endpoint_retention_policy)
         global_alias = lookup(lookup(v, "general", {}), "global_alias", local.general.global_alias)
@@ -338,7 +339,7 @@ locals {
         virtual_mac_address = lookup(lookup(v, "l3_configurations", {}
         ), "virtual_mac_address", local.l3.virtual_mac_address)
       }
-      name = v.name
+      name = "${local.bd.name_prefix}${v.name}${local.bd.name_suffix}"
       ndo = {
         schema   = lookup(lookup(v, "ndo", {}), "schema", "")
         sites    = lookup(lookup(v, "ndo", {}), "sites", local.sites)
@@ -352,7 +353,7 @@ locals {
     for k, v in local.bridge_domains : [
       for s in range(length(v.ndo.sites)) : {
         advertise_host_routes = s % 2 != 0 ? false : v.general.advertise_host_routes
-        bridge_domain         = k
+        bridge_domain         = v.name
         l3out                 = element(v.l3_configurations.associated_l3outs[0].l3outs, s + 1)
         l3out_schema          = v.general.vrf.schema
         l3out_template        = v.general.vrf.template
@@ -379,7 +380,7 @@ locals {
   bridge_domain_subnets = { for i in flatten([
     for key, value in local.bridge_domains : [
       for v in value.l3_configurations.subnets : {
-        bridge_domain          = key
+        bridge_domain          = value.name
         description            = lookup(v, "description", local.subnet.description)
         gateway_ip             = v.gateway_ip
         ip_data_plane_learning = lookup(v, "ip_data_plane_learning", local.subnet.ip_data_plane_learning)
@@ -552,7 +553,7 @@ locals {
       intra_epg_isolation      = lookup(v, "intra_epg_isolation", local.epg.intra_epg_isolation)
       label_match_criteria     = lookup(v, "label_match_criteria", local.epg.label_match_criteria)
       monitoring_policy        = lookup(v, "monitoring_policy", local.epg.monitoring_policy)
-      name                     = v.name
+      name                     = "${local.epg.name_prefix}${v.name}${local.epg.name_suffix}"
       ndo = {
         schema   = lookup(lookup(v, "ndo", {}), "schema", "")
         sites    = local.sites

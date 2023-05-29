@@ -88,7 +88,7 @@ Nexus Dashboard — Application Profiles
 _______________________________________________________________________________________________________________________
 */
 resource "mso_schema_template_anp" "application_profiles" {
-  provider = mso
+  provider     = mso
   for_each     = { for k, v in local.application_profiles : k => v if local.controller_type == "ndo" && v.create == true }
   display_name = each.key
   name         = each.key
@@ -113,6 +113,7 @@ resource "mso_schema_template_anp" "application_profiles" {
 #  template_name = each.value.template
 #}
 data "mso_schema_template_anp" "application_profiles" {
+  depends_on   = [mso_schema_template_anp.application_profiles]
   provider     = mso
   for_each     = { for k, v in local.application_profiles : k => v if local.controller_type == "ndo" }
   display_name = lookup(each.value, "display_name", each.key)
