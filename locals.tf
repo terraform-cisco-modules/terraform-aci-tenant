@@ -1368,11 +1368,24 @@ locals {
 
   policies_bgp_route_summarization = {
     for v in lookup(lookup(local.policies, "bgp", {}), "bgp_route_summarization", []) : v.name => {
+      address_type_controls = {
+        do_not_advertise_more_specifics = lookup(lookup(
+          v, "address_type_controls", local.bgps.address_type_controls), "af_mcast", false
+        )
+        generate_as_set_information = lookup(lookup(
+          v, "address_type_controls", local.bgps.address_type_controls), "af_ucast", true
+        )
+      }
       annotation  = lookup(v, "annotation", local.bgps.annotation)
       description = lookup(v, "description", local.bgps.description)
-      generate_as_set_information = lookup(
-        v, "generate_as_set_information", local.bgps.generate_as_set_information
-      )
+      control_state = {
+        do_not_advertise_more_specifics = lookup(lookup(
+          v, "control_state", local.bgps.control_state), "do_not_advertise_more_specifics", false
+        )
+        generate_as_set_information = lookup(lookup(
+          v, "control_state", local.bgps.control_state), "generate_as_set_information", false
+        )
+      }
       tenant = var.tenant
     }
   }

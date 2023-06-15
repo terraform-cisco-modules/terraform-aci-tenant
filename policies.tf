@@ -115,10 +115,27 @@ resource "aci_bgp_route_summarization" "bgp_route_summarization" {
   depends_on = [
     aci_tenant.tenants
   ]
-  for_each   = local.policies_bgp_route_summarization
+  for_each = local.policies_bgp_route_summarization
+  address_type_controls = anytrue(
+    [
+      each.value.af_mcast,
+      each.value.af_ucast
+    ]
+    ) ? compact(concat([
+      length(regexall(true, each.value.address_type_controls.af_mcast)) > 0 ? "af-mcast" : ""], [
+      length(regexall(true, each.value.address_type_controls.af_ucast)) > 0 ? "af-ucast" : ""]
+  )) : ["af-ucast"]
   annotation = each.value.annotation
   # attrmap     = each.value.attrmap
-  ctrl        = each.value.generate_as_set_information == true ? "as-set" : "none"
+  ctrl = anytrue(
+    [
+      each.value.control_state.do_not_advertise_more_specifics,
+      each.value.control_state.generate_as_set_information
+    ]
+    ) ? compact(concat([
+      length(regexall(true, each.value.control_state.do_not_advertise_more_specifics)) > 0 ? "summary-only" : ""], [
+      length(regexall(true, each.value.control_state.generate_as_set_information)) > 0 ? "as-set" : ""]
+  )) : ["none"]
   description = each.value.description
   name        = each.key
   tenant_dn   = "uni/tn-${each.value.tenant}"
