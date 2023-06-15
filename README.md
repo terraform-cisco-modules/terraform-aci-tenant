@@ -15,14 +15,14 @@ A comprehensive example using this module is available here: https://github.com/
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.0 |
-| <a name="requirement_aci"></a> [aci](#requirement\_aci) | >= 2.5.2 |
-| <a name="requirement_mso"></a> [mso](#requirement\_mso) | >=0.7.0 |
+| <a name="requirement_aci"></a> [aci](#requirement\_aci) | >=2.8.0 |
+| <a name="requirement_mso"></a> [mso](#requirement\_mso) | >=0.10.0 |
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aci"></a> [aci](#provider\_aci) | >= 2.5.2 |
-| <a name="provider_mso"></a> [mso](#provider\_mso) | >=0.7.0 |
+| <a name="provider_aci"></a> [aci](#provider\_aci) | >=2.8.0 |
+| <a name="provider_mso"></a> [mso](#provider\_mso) | >=0.10.0 |
 ## Inputs
 
 | Name | Description | Type | Default | Required |
@@ -39,6 +39,7 @@ A comprehensive example using this module is available here: https://github.com/
 | <a name="input_bgp_password_3"></a> [bgp\_password\_3](#input\_bgp\_password\_3) | BGP Password 3. | `string` | `""` | no |
 | <a name="input_bgp_password_4"></a> [bgp\_password\_4](#input\_bgp\_password\_4) | BGP Password 4. | `string` | `""` | no |
 | <a name="input_bgp_password_5"></a> [bgp\_password\_5](#input\_bgp\_password\_5) | BGP Password 5. | `string` | `""` | no |
+| <a name="input_combine_description"></a> [combine\_description](#input\_combine\_description) | Option to Add Description to EPG/BD for Display Name | `bool` | `false` | no |
 | <a name="input_ospf_key_1"></a> [ospf\_key\_1](#input\_ospf\_key\_1) | OSPF Key 1. | `string` | `""` | no |
 | <a name="input_ospf_key_2"></a> [ospf\_key\_2](#input\_ospf\_key\_2) | OSPF Key 2. | `string` | `""` | no |
 | <a name="input_ospf_key_3"></a> [ospf\_key\_3](#input\_ospf\_key\_3) | OSPF Key 3. | `string` | `""` | no |
@@ -80,8 +81,12 @@ A comprehensive example using this module is available here: https://github.com/
 | [aci_bgp_route_summarization.bgp_route_summarization](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/bgp_route_summarization) | resource |
 | [aci_bgp_timers.bgp_timers](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/bgp_timers) | resource |
 | [aci_bridge_domain.bridge_domains](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/bridge_domain) | resource |
+| [aci_concrete_device.devices](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/concrete_device) | resource |
+| [aci_concrete_interface.interfaces](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/concrete_interface) | resource |
+| [aci_connection.l4_l7_service_graph_connections](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/connection) | resource |
 | [aci_contract.contracts](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/contract) | resource |
 | [aci_contract_subject.contract_subjects](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/contract_subject) | resource |
+| [aci_destination_of_redirected_traffic.l4_l7_pbr_destinations](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/destination_of_redirected_traffic) | resource |
 | [aci_dhcp_option_policy.dhcp_option](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/dhcp_option_policy) | resource |
 | [aci_dhcp_relay_policy.dhcp_relay](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/dhcp_relay_policy) | resource |
 | [aci_end_point_retention_policy.endpoint_retention](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/end_point_retention_policy) | resource |
@@ -90,8 +95,10 @@ A comprehensive example using this module is available here: https://github.com/
 | [aci_external_network_instance_profile.l3out_external_epgs](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/external_network_instance_profile) | resource |
 | [aci_filter.filters](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/filter) | resource |
 | [aci_filter_entry.filter_entries](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/filter_entry) | resource |
+| [aci_function_node.function_nodes](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/function_node) | resource |
 | [aci_hsrp_group_policy.hsrp_group](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/hsrp_group_policy) | resource |
 | [aci_hsrp_interface_policy.hsrp_interface](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/hsrp_interface_policy) | resource |
+| [aci_ip_sla_monitoring_policy.ip_sla](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/ip_sla_monitoring_policy) | resource |
 | [aci_l3_ext_subnet.external_epg_subnets](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3_ext_subnet) | resource |
 | [aci_l3_outside.l3outs](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3_outside) | resource |
 | [aci_l3out_bgp_external_policy.external_bgp](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3out_bgp_external_policy) | resource |
@@ -103,6 +110,10 @@ A comprehensive example using this module is available here: https://github.com/
 | [aci_l3out_path_attachment.l3out_path_attachments](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3out_path_attachment) | resource |
 | [aci_l3out_path_attachment_secondary_ip.l3out_paths_secondary_ips](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3out_path_attachment_secondary_ip) | resource |
 | [aci_l3out_vpc_member.l3out_vpc_member](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l3out_vpc_member) | resource |
+| [aci_l4_l7_device.device](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l4_l7_device) | resource |
+| [aci_l4_l7_logical_interface.logical_interfaces](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l4_l7_logical_interface) | resource |
+| [aci_l4_l7_redirect_health_group.groups](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l4_l7_redirect_health_group) | resource |
+| [aci_l4_l7_service_graph_template.templates](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/l4_l7_service_graph_template) | resource |
 | [aci_logical_interface_profile.l3out_interface_profiles](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/logical_interface_profile) | resource |
 | [aci_logical_node_profile.l3out_node_profiles](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/logical_node_profile) | resource |
 | [aci_logical_node_to_fabric_node.l3out_node_profiles_nodes](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/logical_node_to_fabric_node) | resource |
@@ -162,6 +173,7 @@ A comprehensive example using this module is available here: https://github.com/
 | [aci_rest_managed.vrf_global_alias](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.vzany_contracts](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.vzany_provider_contracts](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
+| [aci_service_redirect_policy.l4_l7_pbr](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/service_redirect_policy) | resource |
 | [aci_snmp_community.vrf_communities](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/snmp_community) | resource |
 | [aci_static_node_mgmt_address.apics_inband](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/static_node_mgmt_address) | resource |
 | [aci_subnet.bridge_domain_subnets](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/subnet) | resource |
@@ -171,7 +183,7 @@ A comprehensive example using this module is available here: https://github.com/
 | [aci_vrf_snmp_context.vrf_snmp_contexts](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/vrf_snmp_context) | resource |
 | [mso_schema.schemas](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema) | resource |
 | [mso_schema_site.template_sites](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site) | resource |
-| [mso_schema_site_anp.application_profiles](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site_anp) | resource |
+| [mso_schema_site_anp_epg_domain.epg_to_domains](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site_anp_epg_domain) | resource |
 | [mso_schema_site_bd.bridge_domains](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site_bd) | resource |
 | [mso_schema_site_bd_l3out.bridge_domain_l3outs](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site_bd_l3out) | resource |
 | [mso_schema_site_vrf.vrfs](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site_vrf) | resource |
@@ -181,10 +193,12 @@ A comprehensive example using this module is available here: https://github.com/
 | [mso_schema_template_bd_subnet.bridge_domain_subnets](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_template_bd_subnet) | resource |
 | [mso_schema_template_contract.contracts](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_template_contract) | resource |
 | [mso_schema_template_filter_entry.filter_entries](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_template_filter_entry) | resource |
+| [mso_schema_template_l3out.l3outs](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_template_l3out) | resource |
 | [mso_schema_template_vrf.vrfs](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_template_vrf) | resource |
 | [mso_schema_template_vrf_contract.vzany_contracts](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_template_vrf_contract) | resource |
 | [mso_tenant.tenants](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/tenant) | resource |
 | [mso_schema.schemas](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/data-sources/schema) | data source |
+| [mso_schema_template_anp.application_profiles](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/data-sources/schema_template_anp) | data source |
 | [mso_site.sites](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/data-sources/site) | data source |
 | [mso_user.users](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/data-sources/user) | data source |
 <!-- END_TF_DOCS -->
