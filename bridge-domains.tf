@@ -238,17 +238,17 @@ resource "mso_schema_template_bd" "bridge_domains" {
   ]
   for_each     = { for k, v in local.bridge_domains : k => v if local.controller_type == "ndo" }
   arp_flooding = each.value.general.arp_flooding
-  # dynamic "dhcp_policy" {
-  #   for_each = each.value.dhcp_relay_labels
-  #   content {
-  #     name = dhcp_policy.value.name
-  #     # version                    = dhcp_policy.value.version
-  #     dhcp_option_policy_name = dhcp_policy.value.dhcp_option_policy
-  #     # dhcp_option_policy_version = dhcp_policy.value.dhcp_option_policy_version
-  #   }
-  # }
+  #dynamic "dhcp_policies" {
+  #  for_each = each.value.dhcp_relay_labels
+  #  content {
+  #    name                       = dhcp_policies.value.name
+  #    version                    = dhcp_policy.value.version
+  #    dhcp_option_policy_name    = dhcp_policies.value.dhcp_option_policy
+  #    dhcp_option_policy_version = dhcp_policies.value.dhcp_option_policy_version
+  #  }
+  #}
   #description                     = each.value.general.description
-  display_name                    = var.combine_description == true ? "${each.value.name}-${each.value.general.description}" : each.value.name
+  display_name                    = each.value.combine_description == true ? "${each.value.name}-${each.value.general.description}" : each.value.name
   name                            = each.value.name
   intersite_bum_traffic           = each.value.advanced_troubleshooting.intersite_bum_traffic_allow
   ipv6_unknown_multicast_flooding = each.value.general.ipv6_l3_unknown_multicast
@@ -301,7 +301,7 @@ resource "mso_schema_site_bd_l3out" "bridge_domain_l3outs" {
   depends_on = [
     mso_schema_site_bd.bridge_domains
   ]
-  for_each      = { for k, v in local.ndo_bd_sites : k => v if local.controller_type == "ndo" }
+  for_each      = { for k, v in local.ndo_bd_sites : k => v if local.controller_type == "ndo" && length(compact([v.l3out])) > 0 }
   bd_name       = each.value.bridge_domain
   l3out_name    = each.value.l3out
   schema_id     = data.mso_schema.schemas[each.value.schema].id

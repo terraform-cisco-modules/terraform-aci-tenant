@@ -467,7 +467,7 @@ resource "mso_schema_template_anp_epg" "application_epgs" {
   bd_schema_id     = mso_schema.schemas[each.value.bd.schema].id
   bd_template_name = each.value.bd.template
   #description                = each.value.general.description
-  display_name               = var.combine_description == true ? "${each.value.name}-${each.value.description}" : each.value.name
+  display_name               = each.value.combine_description == true ? "${each.value.name}-${each.value.description}" : each.value.name
   intra_epg                  = each.value.intra_epg_isolation
   intersite_multicast_source = false
   name                       = each.value.name

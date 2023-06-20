@@ -18,12 +18,12 @@ resource "aci_static_node_mgmt_address" "apics_inband" {
   t_dn = length(compact([each.value.pod_id])
   ) > 0 ? "topology/pod-${each.value.pod_id}/node-${each.key}" : "topology/pod-1/node-${each.key}"
   type = "in_band"
-  addr = length(compact([each.value.ipv4_address])
+  addr = length(compact([each.value.ipv4_address])) > 0 && length(compact([each.value.ipv4_gateway])
   ) > 0 ? each.value.ipv4_address : ""
-  gw = length(compact([each.value.ipv4_gateway])
+  gw = length(compact([each.value.ipv4_address])) > 0 && length(compact([each.value.ipv4_gateway])
   ) > 0 ? each.value.ipv4_gateway : ""
-  v6_addr = length(compact([each.value.ipv6_address])
+  v6_addr = length(compact([each.value.ipv6_address])) > 0 && length(compact([each.value.ipv6_gateway])
   ) > 0 ? each.value.ipv6_address : ""
-  v6_gw = length(compact([each.value.ipv6_gateway])
+  v6_gw = length(compact([each.value.ipv6_address])) > 0 && length(compact([each.value.ipv6_gateway])
   ) > 0 ? each.value.ipv6_gateway : ""
 }

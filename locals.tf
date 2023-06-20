@@ -7,6 +7,7 @@ locals {
   defaults          = lookup(var.model, "defaults", {})
   networking        = lookup(local.tenant[var.tenant], "networking", {})
   policies          = lookup(local.tenant[var.tenant], "policies", {})
+  static_mgmt_add   = lookup(lookup(local.tenant[var.tenant], "node_management_addresses", {}), "static_node_management_addresses", {})
   templates_bds     = lookup(lookup(var.model, "templates", {}), "bridge_domains", {})
   templates_epgs    = lookup(lookup(var.model, "templates", {}), "application_epgs", {})
   templates_subnets = lookup(lookup(var.model, "templates", {}), "subnets", {})
@@ -14,6 +15,7 @@ locals {
   tenant_contracts  = lookup(local.tenant[var.tenant], "contracts", {})
 
   # Defaults
+  apic_inb = local.defaults.tenants.node_management_addresses.static_node_management_addresses.apics_inband
   app      = local.defaults.tenants.application_profiles
   adv      = local.bd.advanced_troubleshooting
   bd       = local.defaults.tenants.networking.bridge_domains
@@ -128,7 +130,17 @@ locals {
     ]
   ]) : "${i.schema}:${i.template}:${i.site}" => i }
 
-  apics_inband_mgmt_addresses = {}
+  apics_inband_mgmt_addresses = {
+    for v in lookup(local.static_mgmt_add, "apics_inband", []) : v.apic_node_id => {
+      apic_node_id   = v.apic_node_id
+      ipv4_address   = lookup(v, "ipv4_address", local.apic_inb.ipv4_address)
+      ipv4_gateway   = lookup(v, "ipv4_gateway", local.apic_inb.ipv4_gateway)
+      ipv6_address   = lookup(v, "ipv6_address", local.apic_inb.ipv6_address)
+      ipv6_gateway   = lookup(v, "ipv6_gateway", local.apic_inb.ipv6_gateway)
+      management_epg = lookup(v, "management_epg", local.apic_inb.management_epg)
+      pod_id         = lookup(v, "pod_id", local.apic_inb.pod_id)
+    }
+  }
   #__________________________________________________________
   #
   # VRF Variables
@@ -267,13 +279,16 @@ locals {
           v, "advanced/troubleshooting", {}), "rogue_coop_exception_list", []
         )
       }
-      application_epg = lookup(v, "application_epg", [])
+      application_epg     = lookup(v, "application_epg", [])
+      combine_description = lookup(v, "combine_description", local.bd.combine_description)
       dhcp_relay_labels = flatten([
         for s in lookup(v, "dhcp_relay_labels", {}) : [
           for i in lookup(s, "names", []) : {
-            dhcp_option_policy = lookup(s, "dhcp_option_policy", local.bd.dhcp_relay_labels.dhcp_option_policy)
-            scope              = lookup(s, "scope", local.bd.dhcp_relay_labels.scope)
-            name               = i
+            dhcp_option_policy         = lookup(s, "dhcp_option_policy", local.bd.dhcp_relay_labels.dhcp_option_policy)
+            dhcp_option_policy_version = lookup(s, "dhcp_option_policy_version", local.bd.dhcp_relay_labels.dhcp_option_policy_version)
+            scope                      = lookup(s, "scope", local.bd.dhcp_relay_labels.scope)
+            name                       = i
+            version                    = lookup(s, "version", local.bd.dhcp_relay_labels.version)
           }
         ]
       ])
@@ -520,6 +535,7 @@ locals {
         ) > 0 ? local.bridge_domains["${v.bridge_domain}"].ndo.template : ""
       }
       bridge_domain          = lookup(v, "bridge_domain", "")
+      combine_description    = lookup(v, "combine_description", local.epg.combine_description)
       contract_exception_tag = lookup(v, "contract_exception_tag", local.epg.contract_exception_tag)
       contracts              = lookup(v, "contracts", [])
       controller_type        = local.controller_type
