@@ -11,7 +11,7 @@ resource "aci_vrf" "vrfs" {
   depends_on = [
     aci_tenant.tenants
   ]
-  for_each = { for k, v in local.vrfs : k => v if local.controller_type == "apic" }
+  for_each = { for k, v in local.vrfs : k => v if local.controller_type == "apic" && v.create == true }
   # annotation             = each.value.annotation
   bd_enforced_enable     = each.value.bd_enforcement_status == true ? "yes" : "no"
   description            = each.value.description
@@ -96,7 +96,7 @@ resource "aci_any" "vz_any" {
   depends_on = [
     aci_vrf.vrfs
   ]
-  for_each     = { for k, v in local.vrfs : k => v if local.controller_type == "apic" }
+  for_each     = { for k, v in local.vrfs : k => v if local.controller_type == "apic" && v.create == true }
   annotation   = each.value.annotation
   description  = each.value.description
   pref_gr_memb = each.value.preferred_group == true ? "enabled" : "disabled"
@@ -121,13 +121,14 @@ resource "aci_rest_managed" "vrf_annotations" {
     for i in flatten([
       for a, b in local.vrfs : [
         for v in b.annotations : {
+          create = b.create
           key    = v.key
           tenant = b.tenant
           vrf    = a
           value  = v.value
         }
       ]
-    ]) : "${i.tenant}:${i.vrf}:${i.key}" => i if local.controller_type == "apic"
+    ]) : "${i.tenant}:${i.vrf}:${i.key}" => i if local.controller_type == "apic" && i.create == true
   }
   dn         = "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
@@ -151,7 +152,7 @@ resource "aci_rest_managed" "vrf_global_alias" {
   depends_on = [
     aci_vrf.vrfs
   ]
-  for_each   = { for k, v in local.vrfs : k => v if v.global_alias != "" && local.controller_type == "apic" }
+  for_each   = { for k, v in local.vrfs : k => v if v.global_alias != "" && local.controller_type == "apic" && v.create == true }
   class_name = "tagAliasInst"
   dn         = "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/alias"
   content = {
@@ -173,7 +174,7 @@ resource "aci_vrf_snmp_context" "vrf_snmp_contexts" {
   depends_on = [
     aci_vrf.vrfs
   ]
-  for_each   = { for k, v in local.vrfs : k => v if local.controller_type == "apic" }
+  for_each   = { for k, v in local.vrfs : k => v if local.controller_type == "apic" && v.create == true }
   annotation = each.value.annotation
   name       = each.key
   vrf_dn     = aci_vrf.vrfs[each.key].id

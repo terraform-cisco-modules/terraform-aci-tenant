@@ -42,6 +42,8 @@ locals {
   l4l7pbr  = local.defaults.tenants.policies.protocol.l4-l7_policy-based_redirect
   l4l7rhg  = local.defaults.tenants.policies.protocol.l4-l7_redirect_health_groups
   lnp      = local.l3out.logical_node_profiles
+  lnpstrt  = local.l3out.logical_node_profiles.static_routes
+  lnpsrnh  = local.l3out.logical_node_profiles.static_routes.next_hop_addresses
   lip      = local.lnp.logical_interface_profiles
   ospfi    = local.defaults.tenants.policies.protocol.ospf.ospf_interface
   ospfs    = local.defaults.tenants.policies.protocol.ospf.ospf_route_summarization
@@ -1061,12 +1063,13 @@ locals {
         name               = v.name
         nodes = [
           for s in lookup(v, "nodes", []) : {
-            annotation   = lookup(v, "annotation", local.lnp.annotation)
-            l3out        = key
-            node_id      = s.node_id
-            node_profile = "${key}:${v.name}"
-            pod_id       = lookup(v, "pod_id", local.lnp.pod_id)
-            router_id    = s.router_id
+            annotation    = lookup(v, "annotation", local.lnp.annotation)
+            l3out         = key
+            node_id       = s.node_id
+            node_profile  = "${key}:${v.name}"
+            pod_id        = lookup(v, "pod_id", local.lnp.pod_id)
+            router_id     = s.router_id
+            static_routes = lookup(v, "static_routes", [])
             use_router_id_as_loopback = lookup(
               s, "use_router_id_as_loopback", local.lnp.nodes.use_router_id_as_loopback
             )
@@ -1083,7 +1086,51 @@ locals {
     for key, value in local.l3out_node_profiles : [for v in value.nodes : v]
   ]) : "${i.node_profile}:${i.node_id}" => i }
 
-  l3out_node_profile_static_routes = {}
+  #=======================================================================================
+  # L3Outs - Logical Node Profiles - Static Routes
+  #=======================================================================================
+
+  l3out_node_profile_static_routes = { for i in flatten([
+    for key, value in local.l3out_node_profiles_nodes : [
+      for v in value.static_routes : [
+        for e in lookup(v, "prefixes", {}) : {
+          aggregate           = lookup(v, "aggregate", local.lnpstrt.aggregate)
+          alias               = lookup(v, "alias", local.lnpstrt.alias)
+          annotation          = lookup(v, "annotation", local.lnpstrt.annotation)
+          description         = lookup(v, "description", local.lnpstrt.description)
+          fallback_preference = lookup(v, "fallback_preference", local.lnpstrt.fallback_preference)
+          key                 = key
+          next_hop_addresses = [
+            for x in range(0, length(lookup(lookup(v, "next_hop_addresses", {}), "next_hop_ips", []))) : {
+              alias         = lookup(lookup(v, "next_hop_addresses", {}), "alias", local.lnpsrnh.alias)
+              annotation    = lookup(lookup(v, "next_hop_addresses", {}), "annotation", local.lnpsrnh.annotation)
+              description   = lookup(lookup(v, "next_hop_addresses", {}), "description", local.lnpsrnh.description)
+              next_hop_ip   = v.next_hop_addresses.next_hop_ips[x]
+              next_hop_type = lookup(lookup(v, "next_hop_addresses", {}), "next_hop_type", local.lnpsrnh.next_hop_type)
+              preference    = lookup(lookup(v, "next_hop_addresses", {}), "preference", local.lnpsrnh.preference)
+              static_route  = "${key}:${e}"
+              track_list    = lookup(lookup(v, "next_hop_addresses", {}), "track_list", local.lnpsrnh.track_list)
+              track_member = length(
+                lookup(lookup(v, "next_hop_addresses", {}), "track_members", [])
+              ) > 0 ? lookup(lookup(v, "next_hop_addresses", {}), "track_members", [])[x] : ""
+            }
+          ]
+          node_id = value.node_id
+          prefix  = e
+          route_control = {
+            bfd = lookup(lookup(v, "route_control", {}), "bfd", local.lnpstrt.route_control.bfd)
+          }
+          description = lookup(v, "description", local.lnpstrt.description)
+          tenant      = var.tenant
+          track_list  = lookup(v, "track_list", local.lnpstrt.track_list)
+        }
+      ]
+    ]
+  ]) : "${i.key}:${i.prefix}" => i }
+
+  l3out_static_routes_next_hop = { for i in flatten([
+    for key, value in local.l3out_node_profile_static_routes : [for v in value.next_hop_addresses : v]
+  ]) : "${i.static_route}:${i.next_hop_ip}" => i }
 
   #=======================================================================================
   # L3Outs - Logical Node Profiles - Logical Interface Profiles

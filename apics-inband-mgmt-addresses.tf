@@ -11,7 +11,8 @@ ________________________________________________________________________________
 */
 resource "aci_static_node_mgmt_address" "apics_inband" {
   depends_on = [
-    aci_application_epg.application_epgs
+    aci_application_epg.application_epgs,
+    aci_node_mgmt_epg.mgmt_epgs
   ]
   for_each          = local.apics_inband_mgmt_addresses
   management_epg_dn = "uni/tn-mgmt/mgmtp-default/inb-${each.value.management_epg}"

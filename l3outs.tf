@@ -20,7 +20,7 @@ resource "aci_l3_outside" "l3outs" {
   name_alias             = each.value.alias
   target_dscp            = each.value.target_dscp
   tenant_dn              = "uni/tn-${each.value.tenant}"
-  relation_l3ext_rs_ectx = aci_vrf.vrfs[each.value.vrf].id
+  relation_l3ext_rs_ectx = "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}"
   relation_l3ext_rs_l3_dom_att = length(compact([each.value.l3_domain])
   ) > 0 ? "uni/l3dom-${each.value.l3_domain}" : ""
   dynamic "relation_l3ext_rs_dampening_pol" {
@@ -696,8 +696,9 @@ resource "aci_bgp_peer_connectivity_profile" "bgp_peer_connectivity_profiles" {
   weight    = each.value.weight_for_routes_from_neighbor
   local_asn = each.value.local_as_number != 0 ? each.value.local_as_number : null
   # Submit Bug
-  local_asn_propagate          = each.value.local_as_number != 0 ? each.value.local_as_number_config : null
-  relation_bgp_rs_peer_pfx_pol = "uni/tn-${local.policy_tenant}/bgpPfxP-${each.value.bgp_peer_prefix_policy}"
+  local_asn_propagate = each.value.local_as_number != 0 ? each.value.local_as_number_config : null
+  relation_bgp_rs_peer_pfx_pol = length(compact([each.value.bgp_peer_prefix_policy])
+  ) > 0 ? "uni/tn-${local.policy_tenant}/bgpPfxP-${each.value.bgp_peer_prefix_policy}" : ""
   dynamic "relation_bgp_rs_peer_to_profile" {
     for_each = each.value.route_control_profiles
     content {
@@ -858,22 +859,23 @@ GUI Location:
  - tenants > {tenant} > Networking > L3Outs > {l3out} > Logical Node Profile {node_profile} > Logical Interface Profile > {interface_profile} > Nodes > {node_id} > Static Routes
 _______________________________________________________________________________________________________________________
 */
-# resource "aci_l3out_static_route" "l3out_node_profile_static_routes" {
-#   depends_on = [
-#     aci_logical_node_to_fabric_node.l3out_node_profiles_nodes
-#   ]
-#   for_each = local.l3out_node_profile_static_routes
-#   # aggregate      = each.value.aggregate == true ? "yes" : "no"
-#   annotation     = each.value.annotation
-#   description    = each.value.description
-#   fabric_node_dn = aci_logical_node_to_fabric_node.l3out_node_profiles_nodes[each.value.node].id
-#   name_alias     = each.value.alias
-#   ip             = each.value.prefix
-#   pref           = each.value.preference
-#   rt_ctrl        = each.value.route_control_bfd == true ? "bfd" : "unspecified"
-#   # class fvTrackList
-#   relation_ip_rs_route_track = ""
-# }
+resource "aci_l3out_static_route" "l3out_node_profile_static_routes" {
+  depends_on = [
+    aci_logical_node_to_fabric_node.l3out_node_profiles_nodes
+  ]
+  for_each       = local.l3out_node_profile_static_routes
+  aggregate      = each.value.aggregate == true ? "yes" : "no"
+  annotation     = each.value.annotation
+  description    = each.value.description
+  fabric_node_dn = aci_logical_node_to_fabric_node.l3out_node_profiles_nodes[each.value.key].id
+  name_alias     = each.value.alias
+  ip             = each.value.prefix
+  pref           = each.value.fallback_preference
+  rt_ctrl        = each.value.route_control.bfd == true ? "bfd" : "unspecified"
+  # class fvTrackList
+  relation_ip_rs_route_track = length(compact([each.value.track_list])
+  ) > 0 ? "uni/tn-${each.value.tenant}/tracklist-${each.value.track_list}" : ""
+}
 
 /*_____________________________________________________________________________________________________________________
 
@@ -884,24 +886,25 @@ GUI Location:
  - tenants > {tenant} > Networking > L3Outs > {l3out} > Logical Node Profile {node_profile} > Logical Interface Profile > {interface_profile} > Nodes > {node_id} > Static Routes
 _______________________________________________________________________________________________________________________
 */
-# resource "aci_l3out_static_route_next_hop" "l3out_static_routes_next_hop" {
-#   depends_on = [
-#     aci_l3out_static_route.l3out_node_profile_static_routes
-#   ]
-#   for_each             = local.l3out_static_routes_next_hop
-#   annotation           = each.value.annotation
-#   description          = each.value.description
-#   name_alias           = each.value.alias
-#   nexthop_profile_type = each.value.next_hop_type
-#   nh_addr              = each.value.next_hop_ip
-#   pref                 = each.value.preference
-#   static_route_dn      = aci_l3out_static_route.l3out_node_profile_static_routes[each.value.static_route].id
-#   # class fvTrackList
-#   # relation_ip_rs_nexthop_route_track = ""
-#   # # Class "ipRsNHTrackMember"
-#   # relation_ip_rs_nh_track_member = length(compact([each.value.ip_sla_policy])
-#   # ) > 0 ? "" : ""
-# }
+resource "aci_l3out_static_route_next_hop" "l3out_static_routes_next_hop" {
+  depends_on = [
+    aci_l3out_static_route.l3out_node_profile_static_routes
+  ]
+  for_each             = local.l3out_static_routes_next_hop
+  annotation           = each.value.annotation
+  description          = each.value.description
+  name_alias           = each.value.alias
+  nexthop_profile_type = each.value.next_hop_type
+  nh_addr              = each.value.next_hop_ip
+  pref                 = each.value.preference
+  static_route_dn      = aci_l3out_static_route.l3out_node_profile_static_routes[each.value.static_route].id
+  # class fvTrackList
+  relation_ip_rs_nexthop_route_track = length(compact([each.value.track_list])
+  ) > 0 ? "uni/tn-${each.value.tenant}/tracklist-${each.value.track_list}" : ""
+  # Class "ipRsNHTrackMember"
+  relation_ip_rs_nh_track_member = length(compact([each.value.track_member])
+  ) > 0 ? "uni/tn-${each.value.tenant}/trackmember-${each.value.track_member}" : ""
+}
 
 resource "mso_schema_template_l3out" "l3outs" {
   provider = mso
