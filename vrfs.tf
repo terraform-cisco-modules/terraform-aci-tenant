@@ -102,6 +102,12 @@ resource "aci_any" "vz_any" {
   pref_gr_memb = each.value.preferred_group == true ? "enabled" : "disabled"
   match_t      = each.value.epg_esg_collection_for_vrfs.label_match_criteria
   vrf_dn       = aci_vrf.vrfs[each.key].id
+  lifecycle {
+    ignore_changes = [ 
+      relation_vz_rs_any_to_cons,
+      relation_vz_rs_any_to_prov
+     ]
+  }
 }
 
 /*_____________________________________________________________________________________________________________________

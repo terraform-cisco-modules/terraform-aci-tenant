@@ -144,8 +144,8 @@ resource "aci_rest_managed" "l3out_multicast" {
   dn         = "uni/tn-${each.value.tenant}/out-${each.key}/pimextp"
   class_name = "pimExtP"
   content = {
-    annotation = each.value.annotation
-    enableAf = anytrue(
+    #annotation = each.value.annotation
+    enabledAf = anytrue(
       [each.value.pim, each.value.pimv6]
       ) ? replace(trim(join(",", concat([
         length(regexall(true, each.value.pim)) > 0 ? "ipv4-mcast" : ""], [
@@ -896,7 +896,7 @@ resource "aci_l3out_static_route_next_hop" "l3out_static_routes_next_hop" {
   name_alias           = each.value.alias
   nexthop_profile_type = each.value.next_hop_type
   nh_addr              = each.value.next_hop_ip
-  pref                 = each.value.preference
+  pref                 = each.value.preference == 0 ? "unspecified" : each.value.preference
   static_route_dn      = aci_l3out_static_route.l3out_node_profile_static_routes[each.value.static_route].id
   # class fvTrackList
   relation_ip_rs_nexthop_route_track = length(compact([each.value.track_list])
