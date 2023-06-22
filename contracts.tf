@@ -90,7 +90,7 @@ GUI Locations:
  - Tenants > mgmt > Contracts > Standard: {contract} > {subject}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_contract_subject" "contract_subjects" {
+resource "aci_rest_managed" "contract_subjects" {
   depends_on = [
     aci_contract.contracts,
     aci_filter.filters,
@@ -98,16 +98,35 @@ resource "aci_contract_subject" "contract_subjects" {
     aci_taboo_contract.contracts,
   ]
   for_each      = { for k, v in local.contract_subjects : k => v if v.contract_type == "standard" }
-  annotation    = each.value.annotation
-  contract_dn   = aci_contract.contracts[each.value.contract].id
-  cons_match_t  = each.value.label_match_criteria
-  description   = each.value.description
-  name          = each.value.name
-  prio          = each.value.qos_class
-  prov_match_t  = each.value.label_match_criteria
-  rev_flt_ports = each.value.apply_both_directions == true ? "yes" : "no"
-  target_dscp   = each.value.target_dscp
+  dn         = "${aci_contract.contracts[each.value.contract].id}/subj-${each.value.name}"
+  class_name = "vzSubj"
+  content = {
+    consMatchT = each.value.label_match_criteria
+    descr = each.value.description
+    name  = each.value.name
+    provMatchT = each.value.label_match_criteria
+    revFltPorts = each.value.apply_both_directions == true ? "yes" : "no"
+    targetDscp = each.value.target_dscp
+  }
 }
+#resource "aci_contract_subject" "contract_subjects" {
+#  depends_on = [
+#    aci_contract.contracts,
+#    aci_filter.filters,
+#    aci_rest_managed.oob_contracts,
+#    aci_taboo_contract.contracts,
+#  ]
+#  for_each      = { for k, v in local.contract_subjects : k => v if v.contract_type == "standard" }
+#  annotation    = each.value.annotation
+#  contract_dn   = aci_contract.contracts[each.value.contract].id
+#  cons_match_t  = each.value.label_match_criteria
+#  description   = each.value.description
+#  name          = each.value.name
+#  prio          = each.value.qos_class
+#  prov_match_t  = each.value.label_match_criteria
+#  rev_flt_ports = each.value.apply_both_directions == true ? "yes" : "no"
+#  target_dscp   = each.value.target_dscp
+#}
 
 /*_____________________________________________________________________________________________________________________
 
@@ -170,7 +189,8 @@ ________________________________________________________________________________
 */
 resource "aci_rest_managed" "contract_subject_filter" {
   depends_on = [
-    aci_contract_subject.contract_subjects,
+    aci_rest_managed.contract_subjects,
+    #aci_contract_subject.contract_subjects,
     aci_rest_managed.oob_contract_subjects,
   ]
   for_each = { for k, v in local.subject_filters : k => v if v.contract_type != "taboo" }
