@@ -1058,7 +1058,7 @@ locals {
         annotation         = lookup(v, "annotation", local.lnp.annotation)
         color_tag          = lookup(v, "color_tag", local.lnp.color_tag)
         description        = lookup(v, "description", local.lnp.description)
-        interface_profiles = lookup(v, "interface_profiles", [])
+        interface_profiles = lookup(v, "logical_interface_profiles", [])
         l3out              = key
         name               = v.name
         nodes = [
