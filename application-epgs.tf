@@ -21,7 +21,7 @@ resource "aci_application_epg" "application_epgs" {
   description            = each.value.description
   exception_tag          = each.value.contract_exception_tag
   flood_on_encap         = each.value.flood_in_encapsulation
-  fwd_ctrl               = each.value.intra_epg_isolation == true ? "proxy-arp" : "none"
+  fwd_ctrl               = each.value.intra_epg_isolation == "enforced" ? "proxy-arp" : "none"
   has_mcast_source       = each.value.has_multicast_source == true ? "yes" : "no"
   is_attr_based_epg      = each.value.useg_epg == true ? "yes" : "no"
   match_t                = each.value.label_match_criteria
@@ -472,7 +472,7 @@ resource "mso_schema_template_anp_epg" "application_epgs" {
   intersite_multicast_source = false
   name                       = each.value.name
   preferred_group            = each.value.preferred_group_member
-  proxy_arp                  = each.value.intra_epg_isolation == true ? true : false
+  proxy_arp                  = each.value.intra_epg_isolation == "enforced" ? true : false
   schema_id                  = mso_schema.schemas[each.value.ndo.schema].id
   template_name              = each.value.ndo.template
   useg_epg                   = each.value.useg_epg
