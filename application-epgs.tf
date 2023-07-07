@@ -390,11 +390,11 @@ resource "aci_rest_managed" "epg_to_static_paths" {
   for_each = local.epg_to_static_paths
   dn = length(
     regexall("^pc$", each.value.path_type)
-    ) > 0 ? "${aci_application_epg.application_epgs[each.value.epg].id}/rspathAtt-[topology/pod-${each.value.pod}/paths-${element(each.value.nodes, 0)}/pathep-[${each.value.name}]]" : length(
+    ) > 0 ? "${aci_application_epg.application_epgs[each.value.application_epg].id}/rspathAtt-[topology/pod-${each.value.pod}/paths-${element(each.value.nodes, 0)}/pathep-[${each.value.name}]]" : length(
     regexall("^port$", each.value.path_type)
-    ) > 0 ? "${aci_application_epg.application_epgs[each.value.epg].id}/rspathAtt-[topology/pod-${each.value.pod}/paths-${element(each.value.nodes, 0)}/pathep-[eth${each.value.name}]]" : length(
+    ) > 0 ? "${aci_application_epg.application_epgs[each.value.application_epg].id}/rspathAtt-[topology/pod-${each.value.pod}/paths-${element(each.value.nodes, 0)}/pathep-[eth${each.value.name}]]" : length(
     regexall("^vpc$", each.value.path_type)
-  ) > 0 ? "${aci_application_epg.application_epgs[each.value.epg].id}/rspathAtt-[topology/pod-${each.value.pod}/protpaths-${element(each.value.nodes, 0)}-${element(each.value.nodes, 1)}/pathep-[${each.value.name}]]" : ""
+  ) > 0 ? "${aci_application_epg.application_epgs[each.value.application_epg].id}/rspathAtt-[topology/pod-${each.value.pod}/protpaths-${element(each.value.nodes, 0)}-${element(each.value.nodes, 1)}/pathep-[${each.value.name}]]" : ""
   class_name = "fvRsPathAtt"
   content = {
     annotation = each.value.annotation

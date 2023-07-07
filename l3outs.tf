@@ -600,7 +600,7 @@ resource "aci_l3out_path_attachment_secondary_ip" "l3out_paths_secondary_ips" {
     aci_l3out_path_attachment.l3out_path_attachments
   ]
   for_each                 = local.l3out_paths_secondary_ips
-  l3out_path_attachment_dn = aci_l3out_path_attachment.l3out_path_attachments[each.value.l3out_path].id
+  l3out_path_attachment_dn = aci_l3out_path_attachment.l3out_path_attachments[each.value.l3out_interface_profile].id
   addr                     = each.value.secondary_ip_address
   annotation               = each.value.annotation
   ipv6_dad                 = each.value.ipv6_dad

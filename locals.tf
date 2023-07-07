@@ -1204,7 +1204,6 @@ locals {
       for s in range(length(v.secondary_addresses)) : {
         annotation              = v.annotation
         ipv6_dad                = v.ipv6_dad
-        secondary_ip            = "${k}:${s}"
         l3out_interface_profile = k
         secondary_ip_address    = element(v.secondary_addresses, s)
       }
