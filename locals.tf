@@ -133,8 +133,8 @@ locals {
   ]) : "${i.schema}:${i.template}:${i.site}" => i }
 
   apics_inband_mgmt_addresses = {
-    for v in lookup(local.static_mgmt_add, "apics_inband", []) : v.apic_node_id => {
-      apic_node_id   = v.apic_node_id
+    for v in lookup(local.static_mgmt_add, "apics_inband", []) : v.node_id => {
+      node_id        = v.node_id
       ipv4_address   = lookup(v, "ipv4_address", local.apic_inb.ipv4_address)
       ipv4_gateway   = lookup(v, "ipv4_gateway", local.apic_inb.ipv4_gateway)
       ipv6_address   = lookup(v, "ipv6_address", local.apic_inb.ipv6_address)
