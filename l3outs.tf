@@ -13,7 +13,6 @@ resource "aci_l3_outside" "l3outs" {
     aci_vrf.vrfs
   ]
   for_each               = { for k, v in local.l3outs : k => v if local.controller_type == "apic" }
-  annotation             = each.value.annotation
   description            = each.value.description
   enforce_rtctrl         = each.value.route_control_enforcement.import == true ? ["export", "import"] : ["export"]
   name                   = each.key
@@ -42,7 +41,6 @@ resource "aci_l3out_bgp_external_policy" "external_bgp" {
   ]
   for_each      = { for k, v in local.l3outs : k => v if local.controller_type == "apic" && v.enable_bgp == true }
   l3_outside_dn = aci_l3_outside.l3outs[each.key].id
-  annotation    = each.value.annotation
 }
 
 
@@ -119,8 +117,7 @@ resource "aci_rest_managed" "l3out_route_profiles_for_redistribution" {
   dn         = "uni/tn-${each.value.tenant}/out-${each.value.l3out}/rsredistributePol-[${each.value.route_map}]-${each.value.source}"
   class_name = "l3extRsRedistributePol"
   content = {
-    annotation = each.value.annotation
-    src        = each.value.source
+    src = each.value.source
     tDn = length(compact([each.value.rm_l3out])
     ) > 0 ? "uni/tn-${each.value.tenant}/out-${each.value.rm_l3out}/prof-${each.value.route_map}" : "uni/tn-${each.value.tenant}/prof-${each.value.route_map}"
   }
@@ -172,8 +169,7 @@ resource "aci_rest_managed" "l3out_consumer_label" {
   dn         = "uni/tn-${each.value.tenant}/out-${each.key}/conslbl-hcloudGolfLabel"
   class_name = "l3extConsLbl"
   content = {
-    annotation = each.value.annotation
-    name       = "hcloudGolfLabel"
+    name = "hcloudGolfLabel"
   }
 }
 
@@ -193,7 +189,6 @@ resource "aci_external_network_instance_profile" "l3out_external_epgs" {
   ]
   for_each       = { for k, v in local.l3out_external_epgs : k => v }
   l3_outside_dn  = aci_l3_outside.l3outs[each.value.l3out].id
-  annotation     = each.value.annotation
   description    = each.value.description
   exception_tag  = each.value.contract_exception_tag
   flood_on_encap = each.value.flood_on_encapsulation
@@ -336,7 +331,6 @@ resource "aci_l3_ext_subnet" "external_epg_subnets" {
       length(regexall(true, each.value.aggregate.aggregate_import)) > 0 ? "import-rtctrl" : ""], [
       length(regexall(true, each.value.aggregate.aggregate_shared_routes)) > 0 ? "shared-rtctrl" : ""]
   )), ","), ",,", ",") : "none"
-  annotation                           = each.value.annotation
   description                          = each.value.description
   external_network_instance_profile_dn = aci_external_network_instance_profile.l3out_external_epgs[each.value.external_epg].id
   ip                                   = each.value.subnet
@@ -387,9 +381,8 @@ resource "aci_l3out_ospf_external_policy" "l3out_ospf_external_profile" {
   depends_on = [
     aci_l3_outside.l3outs
   ]
-  for_each   = local.l3out_ospf_external_profile
-  annotation = each.value.annotation
-  area_cost  = each.value.ospf_area_cost
+  for_each  = local.l3out_ospf_external_profile
+  area_cost = each.value.ospf_area_cost
   area_ctrl = anytrue([
     each.value.ospf_area_control.send_redistribution_lsas_into_nssa_area,
     each.value.ospf_area_control.originate_summary_lsa,
@@ -424,7 +417,6 @@ resource "aci_logical_node_profile" "l3out_node_profiles" {
   ]
   for_each      = local.l3out_node_profiles
   l3_outside_dn = aci_l3_outside.l3outs[each.value.l3out].id
-  annotation    = each.value.annotation
   description   = each.value.description
   name          = each.value.name
   name_alias    = each.value.alias
@@ -450,7 +442,6 @@ resource "aci_logical_node_to_fabric_node" "l3out_node_profiles_nodes" {
     aci_logical_node_profile.l3out_node_profiles
   ]
   for_each                = local.l3out_node_profiles_nodes
-  annotation              = each.value.annotation
   logical_node_profile_dn = aci_logical_node_profile.l3out_node_profiles[each.value.node_profile].id
   tdn                     = "topology/pod-${each.value.pod_id}/node-${each.value.node_id}"
   rtr_id                  = each.value.router_id
@@ -475,7 +466,6 @@ resource "aci_logical_interface_profile" "l3out_interface_profiles" {
   ]
   for_each                = local.l3out_interface_profiles
   logical_node_profile_dn = aci_logical_node_profile.l3out_node_profiles[each.value.node_profile].id
-  annotation              = each.value.annotation
   description             = each.value.description
   name                    = each.value.name
   prio                    = each.value.qos_class
@@ -537,7 +527,6 @@ resource "aci_l3out_path_attachment" "l3out_path_attachments" {
   ) > 0 ? "topology/pod-${each.value.pod_id}/paths-${element(each.value.nodes, 0)}/pathep-[${each.value.interface_or_policy_group}]" : ""
   if_inst_t   = each.value.interface_type
   addr        = each.value.interface_type != "ext-svi" ? each.value.primary_preferred_address : ""
-  annotation  = each.value.annotation
   autostate   = each.value.interface_type == "ext-svi" ? each.value.auto_state : "disabled"
   encap       = each.value.interface_type != "l3-port" ? "vlan-${each.value.encap_vlan}" : "unknown"
   mode        = each.value.mode == "trunk" ? "regular" : "native"
@@ -568,7 +557,6 @@ resource "aci_l3out_vpc_member" "l3out_vpc_member" {
   ]
   for_each     = local.l3out_paths_svi_addressing
   addr         = each.value.primary_preferred_address
-  annotation   = each.value.annotation
   description  = ""
   ipv6_dad     = each.value.ipv6_dad
   leaf_port_dn = aci_l3out_path_attachment.l3out_path_attachments[each.value.l3out_interface_profile].id
@@ -602,7 +590,6 @@ resource "aci_l3out_path_attachment_secondary_ip" "l3out_paths_secondary_ips" {
   for_each                 = local.l3out_paths_secondary_ips
   l3out_path_attachment_dn = aci_l3out_path_attachment.l3out_path_attachments[each.value.l3out_interface_profile].id
   addr                     = each.value.secondary_ip_address
-  annotation               = each.value.annotation
   ipv6_dad                 = each.value.ipv6_dad
 }
 
@@ -724,8 +711,7 @@ ________________________________________________________________________________
 #   ]
 #   for_each                     = local.l3out_floating_svis
 #   addr                         = each.value.address
-#   annotation                   = each.value.annotation
-#   autostate                    = each.value.auto_state
+##   autostate                    = each.value.auto_state
 #   description                  = each.value.description
 #   encap_scope                  = each.value.encap_scope
 #   if_inst_t                    = each.value.interface_type
@@ -758,7 +744,6 @@ resource "aci_l3out_hsrp_interface_profile" "hsrp_interface_profile" {
   for_each = local.hsrp_interface_profile
   logical_interface_profile_dn = length(compact([each.value.interface_profile])
   ) > 0 ? aci_logical_interface_profile.l3out_interface_profiles[each.value.interface_profile].id : ""
-  annotation              = each.value.annotation
   description             = each.value.description
   name_alias              = each.value.alias
   relation_hsrp_rs_if_pol = "uni/tn-${local.policy_tenant}/hsrpIfPol-${each.value.hsrp_interface_policy}"
@@ -782,7 +767,6 @@ resource "aci_l3out_hsrp_interface_group" "hsrp_interface_profile_groups" {
   for_each                        = local.hsrp_interface_profile_groups
   l3out_hsrp_interface_profile_dn = aci_l3out_hsrp_interface_profile.hsrp_interface_profile[each.value.key1].id
   name_alias                      = each.value.alias
-  annotation                      = each.value.annotation
   group_af                        = each.value.address_family
   group_id                        = each.value.group_id
   group_name                      = each.value.group_name
@@ -830,8 +814,7 @@ resource "aci_l3out_ospf_interface_profile" "l3out_ospf_interface_profiles" {
     aci_logical_interface_profile.l3out_interface_profiles,
     aci_ospf_interface_policy.ospf_interface,
   ]
-  for_each   = local.l3out_ospf_interface_profiles
-  annotation = each.value.annotation
+  for_each = local.l3out_ospf_interface_profiles
   auth_key = length(regexall(
     "(md5|simple)", each.value.authentication_type)
     ) > 0 && each.value.ospf_key == 5 ? var.ospf_key_5 : length(regexall(
@@ -865,7 +848,6 @@ resource "aci_l3out_static_route" "l3out_node_profile_static_routes" {
   ]
   for_each       = local.l3out_node_profile_static_routes
   aggregate      = each.value.aggregate == true ? "yes" : "no"
-  annotation     = each.value.annotation
   description    = each.value.description
   fabric_node_dn = aci_logical_node_to_fabric_node.l3out_node_profiles_nodes[each.value.key].id
   name_alias     = each.value.alias
@@ -891,7 +873,6 @@ resource "aci_l3out_static_route_next_hop" "l3out_static_routes_next_hop" {
     aci_l3out_static_route.l3out_node_profile_static_routes
   ]
   for_each             = local.l3out_static_routes_next_hop
-  annotation           = each.value.annotation
   description          = each.value.description
   name_alias           = each.value.alias
   nexthop_profile_type = each.value.next_hop_type

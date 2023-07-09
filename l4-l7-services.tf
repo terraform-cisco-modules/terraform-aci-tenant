@@ -15,7 +15,6 @@ resource "aci_l4_l7_device" "device" {
     aci_tenant.tenants
   ]
   for_each      = local.l4_l7_devices
-  annotation    = each.value.annotation
   active        = length(regexall(true, each.value.active)) > 0 ? "yes" : "no"  # default is no
   context_aware = each.value.context_aware                                      # multi-Context, single-Context
   device_type   = each.value.device_type                                        # CLOUD, PHYSICAL, VIRTUAL
@@ -52,7 +51,6 @@ resource "aci_concrete_device" "devices" {
     aci_l4_l7_device.device
   ]
   for_each        = local.concrete_devices
-  annotation      = each.value.annotation
   l4_l7_device_dn = aci_l4_l7_device.device[each.value.l4-l7-device].id
   name            = each.value.name
   vmm_controller_dn = length(regexall("VIRTUAL", each.value.device_type)
@@ -126,7 +124,6 @@ resource "aci_l4_l7_service_graph_template" "templates" {
     aci_tenant.tenants
   ]
   for_each         = local.l4_l7_service_graph_templates
-  annotation       = each.value.annotation
   description      = each.value.description
   name             = each.key
   tenant_dn        = "uni/tn-${each.value.tenant}"
@@ -156,8 +153,7 @@ resource "aci_connection" "l4_l7_service_graph_connections" {
     aci_l4_l7_service_graph_template.templates
   ]
   for_each       = local.l4_l7_service_graph_connections
-  adj_type       = each.value.adjacency_type # L2, L3; default is L2
-  annotation     = each.value.annotation
+  adj_type       = each.value.adjacency_type       # L2, L3; default is L2
   conn_dir       = each.value.connection_direction # consumer, provider; default is provider
   conn_type      = each.value.connection_type      # external, internal; default is external
   description    = each.value.description
@@ -188,7 +184,6 @@ resource "aci_function_node" "function_nodes" {
     aci_l4_l7_service_graph_template.templates
   ]
   for_each           = local.function_nodes
-  annotation         = each.value.annotation
   description        = each.value.description
   func_template_type = each.value.function_template
   # ADC_ONE_ARM, ADC_TWO_ARM,
@@ -226,8 +221,7 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 #resource "aci_logical_device_context" "example" {
-#  annotation                         = "example"
-#  context                            = "ctx1"
+##  context                            = "ctx1"
 #  ctrct_name_or_lbl                  = "default"
 #  description                        = "from terraform"
 #  graph_name_or_lbl                  = "any"
@@ -247,8 +241,7 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 #resource "aci_logical_interface_context" "example" {
-#  annotation                = "example"
-#  conn_name_or_lbl          = "example"
+##  conn_name_or_lbl          = "example"
 #  description               = "from terraform"
 #  l3_dest                   = "no"
 #  logical_device_context_dn = aci_logical_device_context.example.id

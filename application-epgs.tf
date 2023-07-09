@@ -16,7 +16,6 @@ resource "aci_application_epg" "application_epgs" {
   for_each = {
     for k, v in local.application_epgs : k => v if v.epg_type == "standard" && local.controller_type == "apic"
   }
-  annotation             = each.value.annotation
   application_profile_dn = aci_application_profile.application_profiles[each.value.application_profile].id
   description            = each.value.description
   exception_tag          = each.value.contract_exception_tag
@@ -73,7 +72,6 @@ resource "aci_node_mgmt_epg" "mgmt_epgs" {
   }
   management_profile_dn    = "uni/tn-mgmt/mgmtp-default"
   name                     = each.key
-  annotation               = each.value.annotation
   encap                    = each.value.epg_type == "inb" ? "vlan-${element(each.value.vlans, 0)}" : ""
   match_t                  = each.value.epg_type == "inb" ? each.value.label_match_criteria : "AtleastOne"
   name_alias               = each.value.alias
@@ -105,8 +103,7 @@ resource "aci_rest_managed" "external_management_network_instance_profiles" {
   dn         = "uni/tn-mgmt/extmgmt-default/instp-${each.value.name}"
   class_name = "mgmtInstP"
   content = {
-    # annotation = each.value.annotation
-    name = each.value.name
+    #    name = each.value.name
   }
 }
 
@@ -193,7 +190,6 @@ resource "aci_epg_to_domain" "epg_to_domains" {
     ) > 0 ? "uni/phys-${each.value.domain}" : length(
     regexall("vmm", each.value.domain_type)
   ) > 0 ? "uni/vmmp-${each.value.switch_provider}/dom-${each.value.domain}" : ""
-  annotation = each.value.annotation
   binding_type = length(
     regexall("physical", each.value.domain_type)
     ) > 0 ? "none" : length(regexall(
@@ -307,7 +303,6 @@ resource "aci_rest_managed" "contract_to_epgs" {
   dn         = "uni/tn-${each.value.tenant}/ap-${each.value.application_profile}/epg-${each.value.application_epg}/${each.value.contract_dn}-${each.value.contract}"
   class_name = each.value.contract_class
   content = {
-    annotation = each.value.annotation
     # matchT = each.value.match_type
     prio = each.value.qos_class
   }
@@ -324,8 +319,7 @@ resource "aci_rest_managed" "contract_to_oob_epgs" {
   dn         = "uni/tn-${each.value.tenant}/mgmtp-default/oob-${each.value.application_epg}/${each.value.contract_dn}-${each.value.contract}"
   class_name = each.value.contract_class
   content = {
-    # annotation = each.value.annotation
-    # matchT = each.value.match_type
+    #    # matchT = each.value.match_type
     prio = each.value.qos_class
   }
 }
@@ -341,8 +335,7 @@ resource "aci_rest_managed" "contract_to_inb_epgs" {
   dn         = "uni/tn-${each.value.tenant}/mgmtp-default/inb-${each.value.application_epg}/${each.value.contract_dn}-${each.value.contract}"
   class_name = each.value.contract_class
   content = {
-    # annotation = each.value.annotation
-    # matchT = each.value.match_type
+    #    # matchT = each.value.match_type
     prio = each.value.qos_class
   }
 }
@@ -397,7 +390,6 @@ resource "aci_rest_managed" "epg_to_static_paths" {
   ) > 0 ? "${aci_application_epg.application_epgs[each.value.application_epg].id}/rspathAtt-[topology/pod-${each.value.pod}/protpaths-${element(each.value.nodes, 0)}-${element(each.value.nodes, 1)}/pathep-[${each.value.name}]]" : ""
   class_name = "fvRsPathAtt"
   content = {
-    annotation = each.value.annotation
     encap = length(
       regexall("micro_seg", each.value.encapsulation_type)
       ) > 0 ? "vlan-${element(each.value.vlans, 0)}" : length(
@@ -464,7 +456,7 @@ resource "mso_schema_template_anp_epg" "application_epgs" {
   for_each         = { for k, v in local.application_epgs : k => v if local.controller_type == "ndo" }
   anp_name         = each.value.application_profile
   bd_name          = each.value.bd.name
-  bd_schema_id     = mso_schema.schemas[each.value.bd.schema].id
+  bd_schema_id     = data.mso_schema.schemas[each.value.bd.schema].id
   bd_template_name = each.value.bd.template
   #description                = each.value.general.description
   display_name               = each.value.combine_description == true ? "${each.value.name}-${each.value.description}" : each.value.name
@@ -473,7 +465,7 @@ resource "mso_schema_template_anp_epg" "application_epgs" {
   name                       = each.value.name
   preferred_group            = each.value.preferred_group_member
   proxy_arp                  = each.value.intra_epg_isolation == "enforced" ? true : false
-  schema_id                  = mso_schema.schemas[each.value.ndo.schema].id
+  schema_id                  = data.mso_schema.schemas[each.value.ndo.schema].id
   template_name              = each.value.ndo.template
   useg_epg                   = each.value.useg_epg
   #vrf_name                   = each.value.general.vrf.name

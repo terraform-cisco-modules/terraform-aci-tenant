@@ -12,8 +12,7 @@ resource "aci_vrf" "vrfs" {
     aci_tenant.tenants
   ]
   for_each = { for k, v in local.vrfs : k => v if local.controller_type == "apic" && v.create == true }
-  # annotation             = each.value.annotation
-  bd_enforced_enable     = each.value.bd_enforcement_status == true ? "yes" : "no"
+  #  bd_enforced_enable     = each.value.bd_enforcement_status == true ? "yes" : "no"
   description            = each.value.description
   ip_data_plane_learning = each.value.ip_data_plane_learning
   knw_mcast_act          = each.value.layer3_multicast == true ? "permit" : "deny"
@@ -97,16 +96,15 @@ resource "aci_any" "vz_any" {
     aci_vrf.vrfs
   ]
   for_each     = { for k, v in local.vrfs : k => v if local.controller_type == "apic" && v.create == true }
-  annotation   = each.value.annotation
   description  = each.value.description
   pref_gr_memb = each.value.preferred_group == true ? "enabled" : "disabled"
   match_t      = each.value.epg_esg_collection_for_vrfs.label_match_criteria
   vrf_dn       = aci_vrf.vrfs[each.key].id
   lifecycle {
-    ignore_changes = [ 
+    ignore_changes = [
       relation_vz_rs_any_to_cons,
       relation_vz_rs_any_to_prov
-     ]
+    ]
   }
 }
 
@@ -180,10 +178,9 @@ resource "aci_vrf_snmp_context" "vrf_snmp_contexts" {
   depends_on = [
     aci_vrf.vrfs
   ]
-  for_each   = { for k, v in local.vrfs : k => v if local.controller_type == "apic" && v.create == true }
-  annotation = each.value.annotation
-  name       = each.key
-  vrf_dn     = aci_vrf.vrfs[each.key].id
+  for_each = { for k, v in local.vrfs : k => v if local.controller_type == "apic" && v.create == true }
+  name     = each.key
+  vrf_dn   = aci_vrf.vrfs[each.key].id
 }
 
 
@@ -200,7 +197,6 @@ resource "aci_snmp_community" "vrf_communities" {
   for_each = { for i in flatten([
     for k, v in local.vrfs : [
       for s in v.communities : {
-        annotation         = v.annotation
         community_variable = s.community_variable
         description        = lookup(s, "description", "")
         vrf                = k
@@ -208,7 +204,6 @@ resource "aci_snmp_community" "vrf_communities" {
     ]
     ]) : "${i.vrf}:${i.community_variable}" => i if local.controller_type == "apic"
   }
-  annotation  = each.value.annotation
   description = each.value.description
   name = length(regexall(
     5, each.value.community_variable)) > 0 ? var.vrf_snmp_community_5 : length(regexall(
@@ -231,8 +226,7 @@ resource "aci_rest_managed" "vzany_provider_contracts" {
   dn         = "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/any/rsanyToProv-${each.value.contract}"
   class_name = "vzRsAnyToProv"
   content = {
-    # annotation   = each.value.annotation
-    matchT       = each.value.label_match_criteria
+    #    matchT       = each.value.label_match_criteria
     prio         = each.value.qos_class
     tnVzBrCPName = each.value.contract
   }
@@ -254,8 +248,7 @@ resource "aci_rest_managed" "vzany_contracts" {
     "interface", each.value.contract_type)
   ) > 0 ? "vzRsAnyToConsIf" : ""
   content = {
-    # annotation   = each.value.annotation
-    prio         = each.value.qos_class
+    #    prio         = each.value.qos_class
     tnVzBrCPName = each.value.contract
   }
 }

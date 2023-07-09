@@ -4,59 +4,60 @@ locals {
   # Model Inputs
   #__________________________________________________________
 
-  defaults          = lookup(var.model, "defaults", {})
-  networking        = lookup(local.tenant[var.tenant], "networking", {})
-  policies          = lookup(local.tenant[var.tenant], "policies", {})
-  static_mgmt_add   = lookup(lookup(local.tenant[var.tenant], "node_management_addresses", {}), "static_node_management_addresses", {})
-  templates_bds     = lookup(lookup(var.model, "templates", {}), "bridge_domains", {})
-  templates_epgs    = lookup(lookup(var.model, "templates", {}), "application_epgs", {})
-  templates_subnets = lookup(lookup(var.model, "templates", {}), "subnets", {})
-  tenant            = lookup(var.model, "tenants", {})
-  tenant_contracts  = lookup(local.tenant[var.tenant], "contracts", {})
+  defaults          = yamldecode(file("${path.module}/defaults.yaml")).defaults.tenants
+  npfx              = merge(local.defaults.name_prefix, lookup(var.model, "name_prefix", {}))
+  nsfx              = merge(local.defaults.name_suffix, lookup(var.model, "name_suffix", {}))
+  networking        = lookup(var.model, "networking", {})
+  policies          = lookup(var.model, "policies", {})
+  static_mgmt_add   = lookup(lookup(var.model, "node_management_addresses", {}), "static_node_management_addresses", {})
+  templates_bds     = lookup(var.templates, "bridge_domains", {})
+  templates_epgs    = lookup(var.templates, "application_epgs", {})
+  templates_subnets = lookup(var.templates, "subnets", {})
+  tenant_contracts  = lookup(var.model, "contracts", {})
 
   # Defaults
-  apic_inb = local.defaults.tenants.node_management_addresses.static_node_management_addresses.apics_inband
-  app      = local.defaults.tenants.application_profiles
+  apic_inb = local.defaults.node_management_addresses.static_node_management_addresses.apics_inband
+  app      = local.defaults.application_profiles
   adv      = local.bd.advanced_troubleshooting
-  bd       = local.defaults.tenants.networking.bridge_domains
-  bfd      = local.defaults.tenants.policies.protocol.bfd_interface
-  bgpa     = local.defaults.tenants.policies.protocol.bgp.bgp_address_family_context
-  bgpb     = local.defaults.tenants.policies.protocol.bgp.bgp_best_path
-  bgpp     = local.defaults.tenants.policies.protocol.bgp.bgp_peer_prefix
+  bd       = local.defaults.networking.bridge_domains
+  bfd      = local.defaults.policies.protocol.bfd_interface
+  bgpa     = local.defaults.policies.protocol.bgp.bgp_address_family_context
+  bgpb     = local.defaults.policies.protocol.bgp.bgp_best_path
+  bgpp     = local.defaults.policies.protocol.bgp.bgp_peer_prefix
   bgppeer  = local.lip.bgp_peers
-  bgps     = local.defaults.tenants.policies.protocol.bgp.bgp_route_summarization
-  bgpt     = local.defaults.tenants.policies.protocol.bgp.bgp_timers
-  contract = local.defaults.tenants.contracts.contracts
-  dhcpo    = local.defaults.tenants.policies.protocol.dhcp.option_policies
-  dhcpr    = local.defaults.tenants.policies.protocol.dhcp.relay_policies
-  ep       = local.defaults.tenants.policies.protocol.endpoint_retention
+  bgps     = local.defaults.policies.protocol.bgp.bgp_route_summarization
+  bgpt     = local.defaults.policies.protocol.bgp.bgp_timers
+  contract = local.defaults.contracts.contracts
+  dhcpo    = local.defaults.policies.protocol.dhcp.option_policies
+  dhcpr    = local.defaults.policies.protocol.dhcp.relay_policies
+  ep       = local.defaults.policies.protocol.endpoint_retention
   epg      = local.app.application_epgs
-  filter   = local.defaults.tenants.contracts.filters
+  filter   = local.defaults.contracts.filters
   general  = local.bd.general
   hip      = local.lip.hsrp_interface_profiles
-  hsrpg    = local.defaults.tenants.policies.protocol.hsrp.group_policies
-  hsrpi    = local.defaults.tenants.policies.protocol.hsrp.interface_policies
+  hsrpg    = local.defaults.policies.protocol.hsrp.group_policies
+  hsrpi    = local.defaults.policies.protocol.hsrp.interface_policies
   l3       = local.bd.l3_configurations
   l3ospf   = local.l3out.ospf_external_profile
-  l3out    = local.defaults.tenants.networking.l3outs
-  l4l7pbr  = local.defaults.tenants.policies.protocol.l4-l7_policy-based_redirect
-  l4l7rhg  = local.defaults.tenants.policies.protocol.l4-l7_redirect_health_groups
+  l3out    = local.defaults.networking.l3outs
+  l4l7pbr  = local.defaults.policies.protocol.l4-l7_policy-based_redirect
+  l4l7rhg  = local.defaults.policies.protocol.l4-l7_redirect_health_groups
   lnp      = local.l3out.logical_node_profiles
   lnpstrt  = local.l3out.logical_node_profiles.static_routes
   lnpsrnh  = local.l3out.logical_node_profiles.static_routes.next_hop_addresses
   lip      = local.lnp.logical_interface_profiles
-  ospfi    = local.defaults.tenants.policies.protocol.ospf.ospf_interface
-  ospfs    = local.defaults.tenants.policies.protocol.ospf.ospf_route_summarization
-  ospft    = local.defaults.tenants.policies.protocol.ospf.ospf_timers
+  ospfi    = local.defaults.policies.protocol.ospf.ospf_interface
+  ospfs    = local.defaults.policies.protocol.ospf.ospf_route_summarization
+  ospft    = local.defaults.policies.protocol.ospf.ospf_timers
   ospfip   = local.lnp.logical_interface_profiles.ospf_interface_profile
-  sla      = local.defaults.tenants.policies.protocol.ip_sla.ip_sla_monitoring_policies
+  sla      = local.defaults.policies.protocol.ip_sla.ip_sla_monitoring_policies
   subnet   = local.l3.subnets
   subnets  = local.l3out.external_epgs.subnets
-  rm       = local.defaults.tenants.policies.protocol.route_maps_for_route_control
-  rmmr     = local.defaults.tenants.policies.protocol.route_map_match_rules
-  rmsr     = local.defaults.tenants.policies.protocol.route_map_set_rules
-  tnt      = local.defaults.tenants
-  vrf      = local.defaults.tenants.networking.vrfs
+  rm       = local.defaults.policies.protocol.route_maps_for_route_control
+  rmmr     = local.defaults.policies.protocol.route_map_match_rules
+  rmsr     = local.defaults.policies.protocol.route_map_set_rules
+  tnt      = local.defaults
+  vrf      = local.defaults.networking.vrfs
 
   # Local Values
   controller_type = var.controller_type
@@ -68,9 +69,8 @@ locals {
   #__________________________________________________________
 
   tenants = {
-    for v in lookup(var.model, "tenants", []) : v.name => {
-      alias      = lookup(v, "alias", local.tnt.alias)
-      annotation = lookup(v, "annotation", local.tnt.annotation)
+    for v in [var.model] : v.name => {
+      alias = lookup(v, "alias", local.tnt.alias)
       annotations = length(lookup(v, "annotations", local.tnt.annotations)
       ) > 0 ? lookup(v, "annotations", local.tnt.annotations) : var.annotations
       controller_type   = local.controller_type
@@ -124,6 +124,7 @@ locals {
     for key, value in local.schemas : [
       for v in value.templates : [
         for s in v.sites : {
+          create   = value.create
           schema   = key
           template = v.name
           site     = s
@@ -133,8 +134,8 @@ locals {
   ]) : "${i.schema}:${i.template}:${i.site}" => i }
 
   apics_inband_mgmt_addresses = {
-    for v in lookup(local.static_mgmt_add, "apics_inband", []) : v.node_id => {
-      node_id        = v.node_id
+    for v in lookup(local.static_mgmt_add, "apics_inband", []) : v.apic_node_id => {
+      apic_node_id   = v.apic_node_id
       ipv4_address   = lookup(v, "ipv4_address", local.apic_inb.ipv4_address)
       ipv4_gateway   = lookup(v, "ipv4_gateway", local.apic_inb.ipv4_gateway)
       ipv6_address   = lookup(v, "ipv6_address", local.apic_inb.ipv6_address)
@@ -150,8 +151,7 @@ locals {
 
   vrfs = {
     for v in lookup(local.networking, "vrfs", []) : v.name => {
-      alias      = lookup(v, "alias", local.vrf.alias)
-      annotation = lookup(v, "annotation", local.vrf.annotation)
+      alias = lookup(v, "alias", local.vrf.alias)
       annotations = length(lookup(v, "annotations", local.vrf.annotations)
       ) > 0 ? lookup(v, "annotations", local.vrf.annotations) : var.annotations
       bd_enforcement_status = lookup(v, "bd_enforcement_status", local.vrf.bd_enforcement_status)
@@ -202,8 +202,7 @@ locals {
   vzany_contracts = { for i in flatten([
     for key, value in local.vrfs : [
       for v in value.epg_esg_collection_for_vrfs.contracts : {
-        annotation = value.annotation
-        contract   = v.name
+        contract = v.name
         contract_type = lookup(
           v, "contract_type", local.vrf.epg_esg_collection_for_vrfs.contracts.contract_type
         )
@@ -297,8 +296,7 @@ locals {
       general = {
         advertise_host_routes = lookup(lookup(v, "general", {}
         ), "advertise_host_routes", local.general.advertise_host_routes)
-        alias      = lookup(lookup(v, "general", {}), "alias", local.general.alias)
-        annotation = lookup(lookup(v, "general", {}), "annotation", local.general.annotation)
+        alias = lookup(lookup(v, "general", {}), "alias", local.general.alias)
         annotations = length(lookup(lookup(v, "general", {}), "annotations", local.general.annotations)
           ) > 0 ? lookup(lookup(v, "general", {}), "annotations", local.general.annotations
         ) : var.annotations
@@ -331,7 +329,7 @@ locals {
           schema = lookup(lookup(lookup(v, "general", {}), "vrf", {}), "schema", "")
           template = lookup(lookup(lookup(v, "general", {}
           ), "vrf", {}), "template", lookup(lookup(v, "ndo", {}), "template", ""))
-          tenant = lookup(lookup(lookup(v, "general", {}), "vrf", {}), "tenant", local.tenant)
+          tenant = lookup(lookup(lookup(v, "general", {}), "vrf", {}), "tenant", var.tenant)
         }
       }
       l3_configurations = {
@@ -356,7 +354,7 @@ locals {
         virtual_mac_address = lookup(lookup(v, "l3_configurations", {}
         ), "virtual_mac_address", local.l3.virtual_mac_address)
       }
-      name = "${local.bd.name_prefix}${v.name}${local.bd.name_suffix}"
+      name = "${local.npfx.bridge_domains}${v.name}${local.nsfx.bridge_domains}"
       ndo = {
         schema   = lookup(lookup(v, "ndo", {}), "schema", "")
         sites    = lookup(lookup(v, "ndo", {}), "sites", local.sites)
@@ -384,7 +382,6 @@ locals {
   bridge_domain_dhcp_labels = { for i in flatten([
     for key, value in local.bridge_domains : [
       for v in value.dhcp_relay_labels : {
-        annotation         = value.general.annotation
         bridge_domain      = key
         dhcp_option_policy = v.dhcp_option_policy
         name               = v.name
@@ -452,9 +449,8 @@ locals {
   #__________________________________________________________
 
   application_profiles = {
-    for v in lookup(local.tenant[var.tenant], "application_profiles", {}) : v.name => {
-      alias      = lookup(v, "alias", local.app.alias)
-      annotation = lookup(v, "annotation", local.app.annotation)
+    for v in lookup(var.model, "application_profiles", {}) : v.name => {
+      alias = lookup(v, "alias", local.app.alias)
       annotations = length(lookup(v, "annotations", local.app.annotations)
       ) > 0 ? lookup(v, "annotations", local.app.annotations) : var.annotations
       application_epgs  = lookup(v, "application_epgs", [])
@@ -523,8 +519,7 @@ locals {
 
   application_epgs = {
     for k, v in local.merged_epgs : k => {
-      alias      = lookup(v, "alias", local.epg.alias)
-      annotation = lookup(v, "annotation", local.epg.annotation)
+      alias = lookup(v, "alias", local.epg.alias)
       annotations = length(lookup(v, "annotations", local.epg.annotations)
       ) > 0 ? lookup(v, "annotations", local.epg.annotations) : var.annotations
       application_profile = v.application_profile
@@ -571,7 +566,7 @@ locals {
       intra_epg_isolation      = lookup(v, "intra_epg_isolation", local.epg.intra_epg_isolation)
       label_match_criteria     = lookup(v, "label_match_criteria", local.epg.label_match_criteria)
       monitoring_policy        = lookup(v, "monitoring_policy", local.epg.monitoring_policy)
-      name                     = "${local.epg.name_prefix}${v.name}${local.epg.name_suffix}"
+      name                     = "${local.npfx.application_epgs}${v.name}${local.nsfx.application_epgs}"
       ndo = {
         schema   = lookup(lookup(v, "ndo", {}), "schema", "")
         sites    = local.sites
@@ -600,7 +595,6 @@ locals {
   epg_to_domains = { for i in flatten([
     for key, value in local.application_epgs : [
       for v in value.domains : {
-        annotation = lookup(v, "annotation", local.epg.domains.annotation)
         allow_micro_segmentation = lookup(
           v, "allow_micro_segmentation", local.epg.domains.allow_micro_segmentation
         )
@@ -635,7 +629,6 @@ locals {
   ndo_epg_to_domains = { for i in flatten([
     for k, v in local.epg_to_domains : [
       for s in range(length(v.sites)) : {
-        annotation               = v.annotation
         allow_micro_segmentation = v.allow_micro_segmentation
         application_profile      = v.application_profile
         application_epg          = v.application_epg
@@ -665,7 +658,6 @@ locals {
     for key, value in local.application_epgs : [
       for v in value.static_paths : [
         for s in v.names : {
-          annotation          = value.annotation
           application_epg     = key
           application_profile = value.application_profile
           encapsulation_type  = lookup(v, "encapsulation_type", local.epg.static_paths.encapsulation_type)
@@ -698,7 +690,6 @@ locals {
   contract_to_epgs = { for i in flatten([
     for key, value in local.application_epgs : [
       for v in value.contracts : {
-        annotation          = value.annotation
         application_epg     = key
         application_profile = value.application_profile
         contract            = v.name
@@ -741,8 +732,7 @@ locals {
   #__________________________________________________________
   contracts = {
     for v in lookup(local.tenant_contracts, "contracts", []) : v.name => {
-      alias      = lookup(v, "alias", local.contract.alias)
-      annotation = lookup(v, "annotation", local.contract.annotation)
+      alias = lookup(v, "alias", local.contract.alias)
       annotations = length(lookup(v, "annotations", local.contract.annotations)
       ) > 0 ? lookup(v, "annotations", local.contract.annotations) : var.annotations
       apply_both_directions = length(lookup(v, "subjects", [])) > 0 ? lookup(
@@ -773,7 +763,6 @@ locals {
       for v in value.subjects : {
         action                = lookup(v, "action", local.contract.subjects.action)
         apply_both_directions = lookup(v, "apply_both_directions", local.contract.subjects.apply_both_directions)
-        annotation            = value.annotation
         contract              = key
         contract_type         = value.contract_type
         description           = lookup(v, "description", local.contract.subjects.description)
@@ -813,8 +802,7 @@ locals {
   #__________________________________________________________
   filters = {
     for v in lookup(local.tenant_contracts, "filters", []) : v.name => {
-      alias      = lookup(v, "alias", local.filter.alias)
-      annotation = lookup(v, "annotation", local.filter.annotation)
+      alias = lookup(v, "alias", local.filter.alias)
       annotations = length(lookup(v, "annotations", local.filter.annotations)
       ) > 0 ? lookup(v, "annotations", local.filter.annotations) : var.annotations
       description    = lookup(v, "description", local.filter.description)
@@ -829,7 +817,6 @@ locals {
     for key, value in local.filters : [
       for k, v in value.filter_entries : {
         alias                 = lookup(v, "alias", local.filter.filter_entries.alias)
-        annotation            = lookup(v, "annotation", local.filter.filter_entries.annotation)
         arp_flag              = lookup(v, "arp_flag", local.filter.filter_entries.arp_flag)
         description           = lookup(v, "description", local.filter.filter_entries.description)
         destination_port_from = lookup(v, "destination_port_from", local.filter.filter_entries.destination_port_from)
@@ -877,8 +864,7 @@ locals {
 
   l3outs = {
     for v in lookup(local.networking, "l3outs", []) : v.name => {
-      alias      = lookup(v, "alias", local.l3out.alias)
-      annotation = lookup(v, "annotation", local.l3out.annotation)
+      alias = lookup(v, "alias", local.l3out.alias)
       annotations = length(lookup(v, "annotations", local.l3out.annotations)
       ) > 0 ? lookup(v, "annotations", local.l3out.annotations) : var.annotations
       consumer_label        = lookup(v, "consumer_label", local.l3out.consumer_label)
@@ -918,12 +904,11 @@ locals {
   l3out_route_profiles_for_redistribution = { for i in flatten([
     for key, value in local.l3outs : [
       for v in value.route_profiles_for_redistribution : {
-        annotation = value.annotation
-        l3out      = key
-        tenant     = value.tenant
-        rm_l3out   = lookup(v, "l3out", local.l3out.route_profiles_for_redistribution.l3out)
-        source     = lookup(v, "source", local.l3out.route_profiles_for_redistribution.source)
-        route_map  = v.route_map
+        l3out     = key
+        tenant    = value.tenant
+        rm_l3out  = lookup(v, "l3out", local.l3out.route_profiles_for_redistribution.l3out)
+        source    = lookup(v, "source", local.l3out.route_profiles_for_redistribution.source)
+        route_map = v.route_map
       }
     ]
   ]) : "${i.l3out}:${i.route_map}:${i.source}" => i }
@@ -935,13 +920,11 @@ locals {
   l3out_external_epgs = { for i in flatten([
     for key, value in local.l3outs : [
       for v in value.external_epgs : {
-        annotation             = value.annotation
         alias                  = lookup(v, "alias", local.l3out.external_epgs.alias)
         contract_exception_tag = lookup(v, "contract_exception_tag", local.l3out.external_epgs.contract_exception_tag)
         contracts              = lookup(v, "contracts", [])
         description            = lookup(v, "description", local.l3out.external_epgs.description)
         flood_on_encapsulation = lookup(v, "flood_on_encapsulation", local.l3out.external_epgs.flood_on_encapsulation)
-        annotation             = value.annotation
         l3out                  = key
         l3out_contract_masters = [
           for s in lookup(v, "l3out_contract_masters", []) : {
@@ -969,7 +952,6 @@ locals {
   l3out_ext_epg_contracts = { for i in flatten([
     for key, value in local.l3out_external_epgs : [
       for v in value.contracts : {
-        annotation    = value.annotation
         contract      = v.name
         tenant        = lookup(v, "tenant", local.l3out.external_epgs.contracts.tenant)
         contract_type = lookup(v, "contract_type", local.l3out.external_epgs.contracts.contract_type)
@@ -991,7 +973,6 @@ locals {
             aggregate_shared_routes = lookup(lookup(v, "aggregate", {}
             ), "aggregate_shared_routes", local.subnets.aggregate.aggregate_shared_routes)
           }
-          annotation   = value.annotation
           description  = lookup(v, "description", local.subnets.description)
           external_epg = key
           l3out        = value.l3out
@@ -1029,7 +1010,6 @@ locals {
   l3out_ospf_external_profile = { for i in flatten([
     for key, value in local.l3outs : [
       for v in value.ospf_external_profile : {
-        annotation     = value.annotation
         l3out          = key
         ospf_area_cost = lookup(v, "ospf_area_cost", local.l3ospf.ospf_area_cost)
         ospf_area_id   = lookup(v, "ospf_area_id", local.l3ospf.ospf_area_id)
@@ -1055,7 +1035,6 @@ locals {
     for key, value in local.l3outs : [
       for v in value.logical_node_profiles : {
         alias              = lookup(v, "alias", local.lnp.alias)
-        annotation         = lookup(v, "annotation", local.lnp.annotation)
         color_tag          = lookup(v, "color_tag", local.lnp.color_tag)
         description        = lookup(v, "description", local.lnp.description)
         interface_profiles = lookup(v, "logical_interface_profiles", [])
@@ -1063,7 +1042,6 @@ locals {
         name               = v.name
         nodes = [
           for s in lookup(v, "nodes", []) : {
-            annotation    = lookup(v, "annotation", local.lnp.annotation)
             l3out         = key
             node_id       = s.node_id
             node_profile  = "${key}:${v.name}"
@@ -1096,14 +1074,12 @@ locals {
         for e in lookup(v, "prefixes", {}) : {
           aggregate           = lookup(v, "aggregate", local.lnpstrt.aggregate)
           alias               = lookup(v, "alias", local.lnpstrt.alias)
-          annotation          = lookup(v, "annotation", local.lnpstrt.annotation)
           description         = lookup(v, "description", local.lnpstrt.description)
           fallback_preference = lookup(v, "fallback_preference", local.lnpstrt.fallback_preference)
           key                 = key
           next_hop_addresses = [
             for x in range(0, length(lookup(lookup(v, "next_hop_addresses", {}), "next_hop_ips", []))) : {
               alias         = lookup(lookup(v, "next_hop_addresses", {}), "alias", local.lnpsrnh.alias)
-              annotation    = lookup(lookup(v, "next_hop_addresses", {}), "annotation", local.lnpsrnh.annotation)
               description   = lookup(lookup(v, "next_hop_addresses", {}), "description", local.lnpsrnh.description)
               next_hop_ip   = v.next_hop_addresses.next_hop_ips[x]
               next_hop_type = lookup(lookup(v, "next_hop_addresses", {}), "next_hop_type", local.lnpsrnh.next_hop_type)
@@ -1139,7 +1115,6 @@ locals {
   l3out_interface_profiles = { for i in flatten([
     for key, value in local.l3out_node_profiles : [
       for v in value.interface_profiles : {
-        annotation                  = value.annotation
         color_tag                   = value.color_tag
         l3out                       = value.l3out
         arp_policy                  = lookup(v, "arp_policy", local.lip.arp_policy)
@@ -1185,8 +1160,7 @@ locals {
     for key, value in local.l3out_interface_profiles : [
       for v in value.svi_addresses : [
         for s in range(length(v.primary_preferred_addresses)) : {
-          annotation = value.annotation
-          ipv6_dad   = value.ipv6_dad
+          ipv6_dad = value.ipv6_dad
           link_local_address = length(lookup(v, "link_local_addresses", [])
           ) == 2 ? element(v.link_local_addresses, s) : "::"
           l3out_interface_profile   = key
@@ -1202,7 +1176,6 @@ locals {
   interface_secondaries_ips = { for i in flatten([
     for k, v in local.l3out_interface_profiles : [
       for s in range(length(v.secondary_addresses)) : {
-        annotation              = v.annotation
         ipv6_dad                = v.ipv6_dad
         l3out_interface_profile = k
         secondary_ip_address    = element(v.secondary_addresses, s)
@@ -1213,7 +1186,6 @@ locals {
   svi_secondaries_ips = { for i in flatten([
     for k, v in local.l3out_paths_svi_addressing : [
       for s in range(length(v.secondary_addresses)) : {
-        annotation              = v.annotation
         ipv6_dad                = v.ipv6_dad
         l3out_interface_profile = k
         secondary_ip_address    = element(v.secondary_addresses, s)
@@ -1240,7 +1212,6 @@ locals {
           }
           admin_state           = lookup(v, "admin_state", local.bgppeer.admin_state)
           allowed_self_as_count = lookup(v, "allowed_self_as_count", local.bgppeer.allowed_self_as_count)
-          annotation            = value.annotation
           bgp_controls = {
             allow_self_as = lookup(lookup(v, "bgp_controls", {}), "allow_self_as", local.bgppeer.bgp_controls.allow_self_as)
             as_override   = lookup(lookup(v, "bgp_controls", {}), "as_override", local.bgppeer.bgp_controls.as_override)
@@ -1301,7 +1272,6 @@ locals {
     for key, value in local.l3out_interface_profiles : [
       for v in value.hsrp_interface_profile : {
         alias                   = lookup(v, "alias", local.hip.alias)
-        annotation              = lookup(v, "annotation", local.hip.annotation)
         description             = lookup(v, "description", local.hip.description)
         groups                  = lookup(v, "groups", local.hip.groups)
         hsrp_interface_policy   = lookup(v, "hsrp_interface_policy", local.hip.hsrp_interface_policy)
@@ -1315,7 +1285,6 @@ locals {
     for key, value in local.hsrp_interface_profile : [
       for v in value.groups : {
         alias                  = lookup(v, "alias", local.hip.groups.alias)
-        annotation             = lookup(v, "annotation", local.hip.groups.annotation)
         description            = lookup(v, "description", local.hip.groups.description)
         group_id               = lookup(v, "group_id", local.hip.groups.group_id)
         group_name             = lookup(v, "group_name", local.hip.groups.group_name)
@@ -1347,7 +1316,6 @@ locals {
   l3out_ospf_interface_profiles = { for i in flatten([
     for key, value in local.l3out_interface_profiles : [
       for v in value.ospf_interface_profile : {
-        annotation              = value.annotation
         authentication_type     = lookup(v, "authentication_type", local.ospfip.authentication_type)
         description             = lookup(v, "description", local.ospfip.description)
         l3out_interface_profile = key
@@ -1369,7 +1337,6 @@ locals {
   policies_bfd_interface = {
     for v in lookup(local.policies, "bfd_interface", []) : v.name => {
       admin_state           = lookup(v, "admin_state", local.bfd.admin_state)
-      annotation            = lookup(v, "annotation", local.bfd.annotation)
       description           = lookup(v, "description", local.bfd.description)
       detection_multiplier  = lookup(v, "detection_multiplier", local.bfd.detection_multiplier)
       echo_admin_state      = lookup(v, "echo_admin_state", local.bfd.echo_admin_state)
@@ -1391,7 +1358,6 @@ locals {
 
   policies_bgp_address_family_context = {
     for v in lookup(lookup(local.policies, "bgp", {}), "bgp_address_family_context", []) : v.name => {
-      annotation             = lookup(v, "annotation", local.bgpa.annotation)
       description            = lookup(v, "description", local.bgpa.description)
       ebgp_distance          = lookup(v, "ebgp_distance", local.bgpa.ebgp_distance)
       ebgp_max_ecmp          = lookup(v, "ebgp_max_ecmp", local.bgpa.ebgp_max_ecmp)
@@ -1405,7 +1371,6 @@ locals {
 
   policies_bgp_best_path = {
     for v in lookup(lookup(local.policies, "bgp", {}), "bgp_best_path", []) : v.name => {
-      annotation  = lookup(v, "annotation", local.bgpb.annotation)
       description = lookup(v, "description", local.bgpb.description)
       relax_as_path_restriction = lookup(
         v, "relax_as_path_restriction", local.bgpb.relax_as_path_restriction
@@ -1417,7 +1382,6 @@ locals {
   policies_bgp_peer_prefix = {
     for v in lookup(lookup(local.policies, "bgp", {}), "bgp_peer_prefix", []) : v.name => {
       action      = lookup(v, "action", local.bgpp.action)
-      annotation  = lookup(v, "annotation", local.bgpp.annotation)
       description = lookup(v, "description", local.bgpp.description)
       maximum_number_of_prefixes = lookup(
         v, "maximum_number_of_prefixes", local.bgpp.maximum_number_of_prefixes
@@ -1438,7 +1402,6 @@ locals {
           v, "address_type_controls", local.bgps.address_type_controls), "af_ucast", true
         )
       }
-      annotation  = lookup(v, "annotation", local.bgps.annotation)
       description = lookup(v, "description", local.bgps.description)
       control_state = {
         do_not_advertise_more_specifics = lookup(lookup(
@@ -1454,7 +1417,6 @@ locals {
 
   policies_bgp_timers = {
     for v in lookup(lookup(local.policies, "bgp", {}), "bgp_timers", []) : v.name => {
-      annotation              = lookup(v, "annotation", local.bgpt.annotation)
       description             = lookup(v, "description", local.bgpt.description)
       graceful_restart_helper = lookup(v, "graceful_restart_helper", local.bgpt.graceful_restart_helper)
       hold_interval           = lookup(v, "hold_interval", local.bgpt.hold_interval)
@@ -1473,7 +1435,6 @@ locals {
 
   policies_dhcp_option = {
     for v in lookup(lookup(local.policies, "dhcp", {}), "option_policies", []) : v.name => {
-      annotation  = lookup(v, "annotation", local.dhcpo.annotation)
       description = lookup(v, "description", local.dhcpo.description)
       options = { for value in lookup(v, "options", []) : v.name =>
         {
@@ -1488,7 +1449,6 @@ locals {
 
   policies_dhcp_relay = {
     for v in lookup(lookup(local.policies, "dhcp", {}), "relay_policies", []) : v.name => {
-      annotation  = lookup(v, "annotation", local.dhcpr.annotation)
       description = lookup(v, "description", local.dhcpr.description)
       dhcp_relay_providers = { for value in v.dhcp_relay_providers : value.address =>
         {
@@ -1515,7 +1475,6 @@ locals {
 
   policies_endpoint_retention = {
     for v in lookup(local.policies, "endpoint_retention", []) : v.name => {
-      annotation = lookup(v, "annotation", local.ep.annotation)
       bounce_entry_aging_interval = lookup(
         v, "bounce_entry_aging_interval", local.ep.bounce_entry_aging_interval
       )
@@ -1541,7 +1500,6 @@ locals {
 
   policies_hsrp_group = {
     for v in lookup(lookup(local.policies, "hsrp", {}), "group_policies", []) : v.name => {
-      annotation  = lookup(v, "annotation", local.hsrpg.annotation)
       description = lookup(v, "description", local.hsrpg.description)
       enable_preemption_for_the_group = lookup(
         v, "enable_preemption_for_the_group", local.hsrpg.enable_preemption_for_the_group
@@ -1565,7 +1523,6 @@ locals {
 
   policies_hsrp_interface = {
     for v in lookup(lookup(local.policies, "hsrp", {}), "interface_policies", []) : v.name => {
-      annotation   = lookup(v, "annotation", local.hsrpi.annotation)
       delay        = lookup(v, "delay", local.hsrpi.delay)
       description  = lookup(v, "description", local.hsrpi.description)
       reload_delay = lookup(v, "reload_delay", local.hsrpi.reload_delay)
@@ -1585,7 +1542,6 @@ locals {
   #__________________________________________________________
   policies_ip_sla_monitoring = {
     for v in lookup(lookup(local.policies, "ip_sla", {}), "ip_sla_monitoring_policies", []) : v.name => {
-      annotation          = lookup(v, "annotation", local.sla.annotation)
       detect_multiplier   = lookup(v, "detect_multiplier", local.sla.detect_multiplier)
       http_uri            = lookup(v, "http_uri", local.sla.http_uri)
       http_version        = lookup(v, "http_version", local.sla.http_version)
@@ -1607,7 +1563,6 @@ locals {
   #__________________________________________________________
   policies_l4_l7_pbr = {
     for v in lookup(local.policies, "l4-l7_policy-based_redirect", []) : v.name => {
-      annotation       = lookup(v, "annotation", local.l4l7pbr.annotation)
       anycast_enabled  = lookup(v, "anycast_enabled", local.l4l7pbr.anycast_enabled)
       description      = lookup(v, "description", local.l4l7pbr.description)
       destinations     = lookup(v, "destinations", [])
@@ -1647,7 +1602,6 @@ locals {
   #__________________________________________________________
   policies_l4_l7_redirect_health_groups = {
     for v in lookup(local.policies, "l4-l7_redirect_health_groups", []) : v.name => {
-      annotation  = lookup(v, "annotation", local.l4l7rhg.annotation)
       description = lookup(v, "description", local.l4l7rhg.description)
     }
   }
@@ -1660,7 +1614,6 @@ locals {
 
   policies_ospf_interface = {
     for v in lookup(lookup(local.policies, "ospf", {}), "ospf_interface", []) : v.name => {
-      annotation        = lookup(v, "annotation", local.ospfi.annotation)
       cost_of_interface = lookup(v, "cost_of_interface", local.ospfi.cost_of_interface)
       dead_interval     = lookup(v, "dead_interval", local.ospfi.dead_interval)
       description       = lookup(v, "description", local.ospfi.description)
@@ -1683,7 +1636,6 @@ locals {
 
   policies_ospf_route_summarization = {
     for v in lookup(lookup(local.policies, "ospf", {}), "ospf_route_summarization", []) : v.name => {
-      annotation         = lookup(v, "annotation", local.ospfs.annotation)
       cost               = lookup(v, "cost", local.ospfs.cost)
       description        = lookup(v, "description", local.ospfs.description)
       inter_area_enabled = lookup(v, "inter_area_enabled", local.ospfs.inter_area_enabled)
@@ -1693,7 +1645,6 @@ locals {
 
   policies_ospf_timers = {
     for v in lookup(lookup(local.policies, "ospf", {}), "ospf_timers", []) : v.name => {
-      annotation                = lookup(v, "annotation", local.ospft.annotation)
       bandwidth_reference       = lookup(v, "bandwidth_reference", local.ospft.bandwidth_reference)
       description               = lookup(v, "description", local.ospft.description)
       admin_distance_preference = lookup(v, "admin_distance_preference", local.ospft.admin_distance_preference)
@@ -1748,7 +1699,6 @@ locals {
 
   route_map_match_rules = {
     for v in lookup(lookup(local.policies, "protocol", {}), "route_map_match_rules", []) : v.name => {
-      annotation                   = lookup(v, "annotation", local.rmsr.annotation)
       description                  = lookup(v, "description", local.rmsr.description)
       match_community_terms        = lookup(v, "match_community_terms", [])
       match_regex_community_terms  = lookup(v, "match_regex_community_terms", [])
@@ -1810,7 +1760,6 @@ locals {
   route_map_set_rules = {
     for v in lookup(lookup(local.policies, "protocol", {}), "route_map_set_rules", []) : v.name => {
       additional_communities = lookup(v, "additional_communities", [])
-      annotation             = lookup(v, "annotation", local.rmsr.annotation)
       description            = lookup(v, "description", local.rmsr.description)
       multipath              = lookup(v, "multipath", local.rmsr.multipath)
       next_hop_propegation   = lookup(v, "next_hop_propegation", local.rmsr.next_hop_propegation)
@@ -1900,7 +1849,6 @@ locals {
 
   route_maps_for_route_control = {
     for v in lookup(lookup(local.policies, "protocol", {}), "route_maps_for_route_control", []) : v.name => {
-      annotation         = lookup(v, "annotation", local.rm.annotation)
       contexts           = lookup(v, "contexts", [])
       description        = lookup(v, "description", local.rm.description)
       route_map_continue = lookup(v, "route_map_continue", local.rm.route_map_continue)
@@ -1913,7 +1861,6 @@ locals {
     for key, value in local.route_maps_for_route_control : [
       for k, v in value.contexts : {
         action      = v.action
-        annotation  = value.annotation
         description = lookup(v, "description", local.rm.contexts.description)
         match_rules = [
           for i in lookup(v, "match_rules", []) : {

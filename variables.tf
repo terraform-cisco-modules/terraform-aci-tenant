@@ -8,9 +8,15 @@ variable "model" {
   type        = any
 }
 
+variable "templates" {
+  description = "Name of the Tenant"
+  type        = any
+}
+
+
 variable "tenant" {
   description = "Name of the Tenant"
-  type        = string
+  type        = any
 }
 
 
@@ -20,12 +26,6 @@ Global Shared Variables
 _______________________________________________________________________________________________________________________
 */
 
-
-variable "annotation" {
-  default     = "orchestrator:terraform:easy-aci-v2.0"
-  description = "The Version of this Script."
-  type        = string
-}
 
 variable "annotations" {
   default = [

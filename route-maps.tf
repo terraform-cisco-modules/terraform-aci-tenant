@@ -8,7 +8,6 @@ resource "aci_match_rule" "route_map_match_rules" {
     aci_tenant.tenants
   ]
   for_each    = local.route_map_match_rules
-  annotation  = each.value.annotation
   description = each.value.description
   name        = each.key
   name_alias  = each.value.alias
@@ -73,7 +72,6 @@ resource "aci_match_route_destination_rule" "match_rules_match_route_destination
   ]
   for_each          = local.match_rules_match_route_destination_rule
   aggregate         = each.value.greater_than_mask == 0 && each.value.less_than_mask == 0 ? "no" : "yes"
-  annotation        = each.value.annotation
   match_rule_dn     = aci_match_rule.route_map_match_rules[each.value.match_rule].id
   greater_than_mask = each.value.greater_than_mask
   ip                = each.value.ip
@@ -89,8 +87,7 @@ resource "aci_rest_managed" "route_map_set_rules" {
   dn         = "uni/tn-${each.value.tenant}/attr-${each.key}"
   class_name = "rtctrlAttrP"
   content = {
-    # annotation = each.value.annotation
-    descr     = each.value.description
+    #    descr     = each.value.description
     name      = each.key
     nameAlias = each.value.alias
   }
@@ -302,10 +299,9 @@ resource "aci_rest_managed" "route_maps_for_route_control" {
   dn         = "uni/tn-${each.value.tenant}/prof-${each.key}"
   class_name = "rtctrlProfile"
   content = {
-    # annotation   = each.value.annotation
-    autoContinue = each.value.route_map_continue == true ? "yes" : "no"
-    descr        = each.value.description
-    name         = each.key
+    #    autoContinue = each.value.route_map_continue == true ? "yes" : "no"
+    descr = each.value.description
+    name  = each.key
   }
 }
 
@@ -318,8 +314,7 @@ resource "aci_rest_managed" "route_maps_contexts" {
   class_name = "rtctrlCtxP"
   content = {
     action = each.value.action
-    # annotation = each.value.annotation
-    descr = each.value.description
+    #    descr = each.value.description
     name  = each.value.name
     order = each.value.order
   }

@@ -11,9 +11,8 @@ resource "aci_bfd_interface_policy" "bfd_interface" {
   depends_on = [
     aci_tenant.tenants
   ]
-  for_each   = local.policies_bfd_interface
-  admin_st   = each.value.admin_state
-  annotation = each.value.annotation
+  for_each = local.policies_bfd_interface
+  admin_st = each.value.admin_state
   # Bug 803 Submitted
   # ctrl          = each.value.enable_sub_interface_optimization == true ? "opt-subif" : "none"
   description   = each.value.description
@@ -42,7 +41,6 @@ resource "aci_bgp_address_family_context" "bgp_address_family_context" {
   ]
   # Missing Local Max ECMP
   for_each      = local.policies_bgp_address_family_context
-  annotation    = each.value.annotation
   ctrl          = each.value.enable_host_route_leak == true ? "host-rt-leak" : "none"
   description   = each.value.description
   e_dist        = each.value.ebgp_distance
@@ -69,7 +67,6 @@ resource "aci_bgp_best_path_policy" "bgp_best_path" {
     aci_tenant.tenants
   ]
   for_each    = local.policies_bgp_best_path
-  annotation  = each.value.annotation
   ctrl        = each.value.relax_as_path_restriction == true ? "asPathMultipathRelax" : "0"
   description = each.value.description
   name        = each.key
@@ -92,7 +89,6 @@ resource "aci_bgp_peer_prefix" "bgp_peer_prefix" {
   ]
   for_each     = local.policies_bgp_peer_prefix
   action       = each.value.action
-  annotation   = each.value.annotation
   description  = each.value.description
   name         = each.key
   max_pfx      = each.value.maximum_number_of_prefixes
@@ -125,7 +121,6 @@ resource "aci_bgp_route_summarization" "bgp_route_summarization" {
       length(regexall(true, each.value.address_type_controls.af_mcast)) > 0 ? "af-mcast" : ""], [
       length(regexall(true, each.value.address_type_controls.af_ucast)) > 0 ? "af-ucast" : ""]
   )) : ["af-ucast"]
-  annotation = each.value.annotation
   # attrmap     = each.value.attrmap
   ctrl = anytrue(
     [
@@ -156,7 +151,6 @@ resource "aci_bgp_timers" "bgp_timers" {
     aci_tenant.tenants
   ]
   for_each     = local.policies_bgp_timers
-  annotation   = each.value.annotation
   description  = each.value.description
   gr_ctrl      = each.value.graceful_restart_helper == true ? "helper" : "none"
   hold_intvl   = each.value.hold_interval
@@ -182,14 +176,12 @@ resource "aci_dhcp_option_policy" "dhcp_option" {
     aci_tenant.tenants
   ]
   for_each    = local.policies_dhcp_option
-  annotation  = each.value.annotation
   description = each.value.description
   name        = each.key
   tenant_dn   = "uni/tn-${each.value.tenant}"
   dynamic "dhcp_option" {
     for_each = each.value.options
     content {
-      annotation     = dhcp_option.value.annotation
       data           = dhcp_option.value.data
       dhcp_option_id = dhcp_option.value.dhcp_option_id
       name           = dhcp_option.value.name
@@ -212,7 +204,6 @@ resource "aci_dhcp_relay_policy" "dhcp_relay" {
     aci_tenant.tenants
   ]
   for_each    = local.policies_dhcp_relay
-  annotation  = each.value.annotation
   description = each.value.description
   mode        = each.value.mode
   name        = each.key
@@ -246,7 +237,6 @@ resource "aci_end_point_retention_policy" "endpoint_retention" {
     aci_tenant.tenants
   ]
   for_each            = local.policies_endpoint_retention
-  annotation          = each.value.annotation
   bounce_age_intvl    = each.value.bounce_entry_aging_interval
   bounce_trig         = each.value.bounce_trigger
   description         = each.value.description
@@ -273,7 +263,6 @@ resource "aci_hsrp_group_policy" "hsrp_group" {
     aci_tenant.tenants
   ]
   for_each               = local.policies_hsrp_group
-  annotation             = each.value.annotation
   description            = each.value.description
   ctrl                   = each.value.enable_preemption_for_the_group == true ? "preempt" : 0
   hello_intvl            = each.value.hello_interval
@@ -303,8 +292,7 @@ resource "aci_hsrp_interface_policy" "hsrp_interface" {
   depends_on = [
     aci_tenant.tenants
   ]
-  for_each   = local.policies_hsrp_interface
-  annotation = each.value.annotation
+  for_each = local.policies_hsrp_interface
   ctrl = anytrue(
     [each.value.enable_bidirectional_forwarding_detection, each.value.use_burnt_in_mac_address_of_the_interface]
     ) ? compact(concat([
@@ -332,8 +320,7 @@ resource "aci_ip_sla_monitoring_policy" "ip_sla" {
   depends_on = [
     aci_tenant.tenants
   ]
-  for_each   = local.policies_ip_sla_monitoring
-  annotation = each.value.annotation
+  for_each = local.policies_ip_sla_monitoring
   #description = each.value.description
   name         = each.key
   http_uri     = each.value.http_uri
@@ -367,7 +354,6 @@ resource "aci_service_redirect_policy" "l4_l7_pbr" {
     aci_ip_sla_monitoring_policy.ip_sla
   ]
   for_each              = local.policies_l4_l7_pbr
-  annotation            = each.value.annotation
   anycast_enabled       = length(regexall(true, each.value.enable_anycast)) > 0 ? "yes" : "no" # default is no
   description           = each.value.description
   dest_type             = each.value.destination_type # L1,L2,L3, default L3
@@ -404,7 +390,6 @@ resource "aci_l4_l7_redirect_health_group" "groups" {
     aci_tenant.tenants
   ]
   for_each    = local.policies_l4_l7_redirect_health_groups
-  annotation  = each.value.annotation
   description = each.value.description
   name        = each.key
   tenant_dn   = "uni/tn-${each.value.tenant}"
@@ -451,7 +436,6 @@ resource "aci_ospf_interface_policy" "ospf_interface" {
   ]
   for_each    = local.policies_ospf_interface
   tenant_dn   = "uni/tn-${each.value.tenant}"
-  annotation  = each.value.annotation
   description = each.value.description
   name        = each.key
   cost        = each.value.cost_of_interface == 0 ? "unspecified" : each.value.cost_of_interface
@@ -492,7 +476,6 @@ resource "aci_ospf_route_summarization" "ospf_route_summarization" {
     aci_tenant.tenants
   ]
   for_each           = local.policies_ospf_route_summarization
-  annotation         = each.value.annotation
   cost               = each.value.cost == 0 ? "unspecified" : each.value.cost # 0 to 16777215
   description        = each.value.description
   inter_area_enabled = each.value.inter_area_enabled == true ? "yes" : "no"
@@ -515,9 +498,8 @@ resource "aci_ospf_timers" "ospf_timers" {
   depends_on = [
     aci_tenant.tenants
   ]
-  for_each   = local.policies_ospf_timers
-  annotation = each.value.annotation
-  bw_ref     = each.value.bandwidth_reference
+  for_each = local.policies_ospf_timers
+  bw_ref   = each.value.bandwidth_reference
   ctrl = anytrue(
     [
       each.value.control_knobs.enable_name_lookup_for_router_ids,

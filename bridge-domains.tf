@@ -15,7 +15,6 @@ resource "aci_bridge_domain" "bridge_domains" {
   ]
   for_each = { for k, v in local.bridge_domains : k => v if local.controller_type == "apic" }
   # General
-  annotation                = each.value.general.annotation
   arp_flood                 = each.value.general.arp_flooding == true ? "yes" : "no"
   bridge_domain_type        = each.value.general.type
   description               = each.value.general.description
@@ -94,7 +93,6 @@ resource "aci_bd_dhcp_label" "bridge_domain_dhcp_labels" {
     aci_bridge_domain.bridge_domains,
   ]
   for_each         = { for k, v in local.bridge_domain_dhcp_labels : k => v if local.controller_type == "apic" }
-  annotation       = each.value.annotation
   bridge_domain_dn = "uni/tn-${each.value.tenant}/BD-${each.value.bridge_domain}"
   name             = each.value.name
   owner            = each.value.scope
@@ -238,16 +236,16 @@ resource "mso_schema_template_bd" "bridge_domains" {
   ]
   for_each     = { for k, v in local.bridge_domains : k => v if local.controller_type == "ndo" }
   arp_flooding = each.value.general.arp_flooding
-  #dynamic "dhcp_policies" {
-  #  for_each = each.value.dhcp_relay_labels
-  #  content {
-  #    name                       = dhcp_policies.value.name
-  #    version                    = dhcp_policy.value.version
-  #    dhcp_option_policy_name    = dhcp_policies.value.dhcp_option_policy
-  #    dhcp_option_policy_version = dhcp_policies.value.dhcp_option_policy_version
-  #  }
-  #}
-  #description                     = each.value.general.description
+  dynamic "dhcp_policies" {
+    for_each = each.value.dhcp_relay_labels
+    content {
+      name                       = dhcp_policies.value.name
+      version                    = dhcp_policies.value.version
+      dhcp_option_policy_name    = dhcp_policies.value.dhcp_option_policy
+      dhcp_option_policy_version = dhcp_policies.value.dhcp_option_policy_version
+    }
+  }
+  description                     = each.value.general.description
   display_name                    = each.value.combine_description == true ? "${each.value.name}-${each.value.general.description}" : each.value.name
   name                            = each.value.name
   intersite_bum_traffic           = each.value.advanced_troubleshooting.intersite_bum_traffic_allow
@@ -261,7 +259,7 @@ resource "mso_schema_template_bd" "bridge_domains" {
   layer2_stretch             = each.value.advanced_troubleshooting.intersite_l2_stretch
   layer3_multicast           = each.value.general.pim
   optimize_wan_bandwidth     = each.value.advanced_troubleshooting.optimize_wan_bandwidth
-  schema_id                  = mso_schema.schemas[each.value.ndo.schema].id
+  schema_id                  = data.mso_schema.schemas[each.value.ndo.schema].id
   template_name              = each.value.ndo.template
   unknown_multicast_flooding = each.value.general.l3_unknown_multicast_flooding
   unicast_routing            = each.value.l3_configurations.unicast_routing

@@ -11,7 +11,6 @@ resource "aci_tenant" "tenants" {
   for_each = {
     for k, v in local.tenants : k => v if local.controller_type == "apic" && v.create == true
   }
-  annotation                    = each.value.annotation
   description                   = each.value.description
   name                          = each.key
   name_alias                    = each.value.alias
@@ -83,6 +82,12 @@ data "mso_site" "sites" {
   provider = mso
   for_each = { for k, v in local.sites : v => v if local.controller_type == "ndo" }
   name     = each.value
+}
+
+data "mso_tenant" "tenants" {
+  provider = mso
+  for_each = { for k, v in local.tenants : k => v if local.controller_type == "ndo" }
+  name     = each.value.name
 }
 
 data "mso_user" "users" {
