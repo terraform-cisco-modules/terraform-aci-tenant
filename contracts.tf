@@ -203,11 +203,8 @@ Nexus Dashboard — Contracts
 _______________________________________________________________________________________________________________________
 */
 resource "mso_schema_template_contract" "map" {
-  provider = mso
-  depends_on = [
-    mso_schema.map,
-    mso_schema_template_filter_entry.map
-  ]
+  provider      = mso
+  depends_on    = [mso_schema.map, mso_schema_template_filter_entry.map]
   for_each      = { for k, v in local.contracts : k => v if var.controller_type == "ndo" }
   contract_name = each.key
   directives    = each.value.log == true ? ["log"] : ["none"]
@@ -224,9 +221,5 @@ resource "mso_schema_template_contract" "map" {
       filter_name          = filter_relationship.value
     }
   }
-  lifecycle {
-    ignore_changes = [
-      schema_id
-    ]
-  }
+  lifecycle { ignore_changes = [schema_id] }
 }

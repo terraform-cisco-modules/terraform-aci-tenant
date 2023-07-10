@@ -473,3 +473,18 @@ resource "mso_schema_site_anp_epg_domain" "map" {
     ]
   }
 }
+
+resource "mso_schema_template_anp_epg_contract" "map" {
+  provider               = mso
+  depends_on             = [mso_schema_template_anp_epg.map]
+  for_each               = { for k, v in local.contract_to_epgs : k => v if var.controller_type == "ndo" }
+  anp_name               = each.value.application_profile
+  epg_name               = each.value.application_epg
+  contract_name          = each.value.contract
+  contract_schema_id     = data.mso_schema.map[each.value.ndo.contract_schema].id
+  contract_template_name = each.value.ndo.contract_template
+  relationship_type      = each.value.type
+  schema_id              = data.mso_schema.map[each.value.ndo.schema].id
+  template_name          = each.value.ndo.template
+  lifecycle { ignore_changes = [contract_schema_id, schema_id] }
+}

@@ -27,12 +27,7 @@ resource "mso_schema_site" "map" {
   schema_id     = data.mso_schema.map[each.value.schema].id
   site_id       = data.mso_site.map[each.value.site].id
   template_name = each.value.template
-  lifecycle {
-    ignore_changes = [
-      schema_id,
-      site_id
-    ]
-  }
+  lifecycle { ignore_changes = [schema_id, site_id] }
 }
 
 

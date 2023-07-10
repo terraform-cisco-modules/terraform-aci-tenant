@@ -276,7 +276,7 @@ resource "mso_schema_site_bd_l3out" "map" {
   lifecycle { ignore_changes = [schema_id, site_id] }
 }
 
-resource "mso_schema_template_bd_subnet" "bridge_domain_subnets" {
+resource "mso_schema_template_bd_subnet" "map" {
   provider           = mso
   depends_on         = [mso_schema_template_bd.map, mso_schema_site_bd.map]
   for_each           = { for k, v in local.bridge_domain_subnets : k => v if var.controller_type == "ndo" }

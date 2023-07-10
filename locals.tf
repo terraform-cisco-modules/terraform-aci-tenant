@@ -363,8 +363,6 @@ locals {
             application_epg     = s.application_epg
           }
         ]
-        epg_to_aaeps = length(lookup(v, "epg_to_aaeps", [])) > 0 ? [for s in lookup(v, "epg_to_aaeps", []
-        ) : merge(local.epg.epg_to_aaeps, s, { vlans = lookup(v, "epg_to_aaep_vlans", lookup(v, "vlans", [])) })] : []
         name = "${local.npfx.application_epgs}${v.name}${local.nsfx.application_epgs}"
         ndo = {
           schema   = lookup(lookup(v, "ndo", {}), "schema", "")
@@ -439,30 +437,21 @@ locals {
       element(split("-", s), 0)), (tonumber(element(split("-", s), 1)) + 1)) : tonumber(v)] : [tonumber(s)]
     ]) : tonumber(v.vlan_split)
   })]
-  aaep_to_epgs = { for i in flatten([
+  epg_to_aaeps = { for i in flatten([
     for k, v in local.application_epgs : [
       for e in local.aaep_to_epgs_loop_2 : {
-        aaep = e.aaep
-        access              = e.access
-        application_epg     = k
-        application_profile = v.application_profile
+        aaep                      = e.aaep
+        access                    = e.access
+        application_epg           = k
+        application_profile       = v.application_profile
         instrumentation_immediacy = e.instrumentation_immediacy
-        mode = contains(v.vlans, tonumber(e.access)) ? "native" : e.mode
-        vlans               = v.vlans
+        mode                      = contains(v.vlans, tonumber(e.access)) ? "native" : e.mode
+        vlans                     = lookup(v, "vlans", [])
         } if length(v.vlans) == 2 ? contains(e.vlan_list, tonumber(element(v.vlans, 0))) && contains(
         e.vlan_list, tonumber(element(v.vlans, 1))) : length(v.vlans) == 1 ? contains(e.vlan_list, tonumber(element(v.vlans, 0))
       ) : false
     ] if v.epg_type == "standard"
   ]) : "${i.application_profile}:${i.application_epg}:${i.aaep}" => i }
-  epg_to_aaeps_loop = { for i in flatten([
-    for key, value in local.application_epgs : [
-      for v in value.epg_to_aaeps : merge(
-        local.epg.epg_to_aaeps, v,
-        { application_epg = key, application_profile = value.application_profile }
-      )
-    ]
-  ]) : "${i.application_profile}:${i.application_epg}:${i.aaep}" => i }
-  epg_to_aaeps = merge(local.epg_to_aaeps_loop, local.aaep_to_epgs)
 
   contract_to_epgs = { for i in flatten([
     for key, value in local.application_epgs : [
@@ -495,9 +484,15 @@ locals {
         ) > 0 ? "taboo" : "brc"
         contract_tenant = lookup(v, "tenant", var.tenant)
         contract_type   = lookup(v, "contract_type", local.epg.contracts.contract_type)
-        qos_class       = lookup(v, "qos_class", local.epg.contracts.qos_class)
-        epg_type        = value.epg_type
-        tenant          = value.tenant
+        ndo = {
+          contract_schema   = lookup(lookup(v, "ndo", {}), "schema", value.ndo.schema)
+          contract_template = lookup(lookup(v, "ndo", {}), "template", value.ndo.template)
+          schema            = value.ndo.schema
+          template          = value.ndo.template
+        }
+        qos_class = lookup(v, "qos_class", local.epg.contracts.qos_class)
+        epg_type  = value.epg_type
+        tenant    = value.tenant
       }
     ]
   ]) : "${i.application_profile}:${i.application_epg}:${i.contract_type}:${i.contract}" => i }
