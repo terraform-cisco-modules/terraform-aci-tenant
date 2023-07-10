@@ -1,105 +1,83 @@
-output "application_epgs" {
-  value = length(local.application_epgs) > 0 && local.controller_type == "apic" ? merge({
-    for v in sort(keys(aci_application_epg.application_epgs)
-    ) : v => aci_application_epg.application_epgs[v].id },
-    { for v in sort(keys(aci_node_mgmt_epg.mgmt_epgs)
-    ) : v => aci_node_mgmt_epg.mgmt_epgs[v].id }) : length(local.application_epgs
-    ) > 0 && local.controller_type == "ndo" ? {
-    for v in sort(keys(mso_schema_template_anp_epg.application_epgs)
-    ) : v => mso_schema_template_anp_epg.application_epgs[v].id
-  } : {}
-}
-#output "epg_to_domains" {
-#  value = local.epg_to_domains
-#}
-#output "ndo_epg_to_domains" {
-#  value = local.ndo_epg_to_domains
-#}
-
 output "application_profiles" {
-  value = length(local.application_profiles) > 0 && local.controller_type == "apic" ? {
-    for v in sort(keys(aci_application_profile.application_profiles)
-    ) : v => aci_application_profile.application_profiles[v].id } : length(local.application_profiles
-    ) > 0 && local.controller_type == "ndo" ? {
-    for v in sort(keys(mso_schema_template_anp.application_profiles)
-    ) : v => mso_schema_template_anp.application_profiles[v].id
-  } : {}
-}
-
-output "bridge_domains" {
-  value = length(local.bridge_domains) > 0 && local.controller_type == "apic" ? {
-    for v in sort(keys(aci_bridge_domain.bridge_domains)
-    ) : v => aci_bridge_domain.bridge_domains[v].id } : length(local.bridge_domains
-    ) > 0 && local.controller_type == "ndo" ? {
-    for v in sort(keys(mso_schema_template_bd.bridge_domains)
-    ) : v => mso_schema_template_bd.bridge_domains[v].id
-  } : {}
+  value = {
+    application_profiles = var.controller_type == "apic" ? {
+      for v in sort(keys(aci_application_profile.map)
+      ) : v => aci_application_profile.map[v].id } : var.controller_type == "ndo" ? {
+      for v in sort(keys(mso_schema_template_anp.map)
+      ) : v => mso_schema_template_anp.map[v].id
+    } : {}
+    application_epgs = var.controller_type == "apic" ? merge(
+      { for v in sort(keys(aci_application_epg.map)
+        ) : v => aci_application_epg.map[v].id }, { for v in sort(keys(aci_node_mgmt_epg.mgmt_epgs)
+        ) : v => aci_node_mgmt_epg.mgmt_epgs[v].id
+      }) : var.controller_type == "ndo" ? {
+      for v in sort(keys(mso_schema_template_anp_epg.map)) : v => mso_schema_template_anp_epg.map[v].id
+    } : {}
+  }
 }
 
 output "contracts" {
-  value = length(local.contracts) > 0 && local.controller_type == "apic" ? {
-    oob_contracts = { for v in sort(keys(aci_rest_managed.oob_contracts)
-    ) : v => aci_rest_managed.oob_contracts[v].id }
-    standard_contracts = { for v in sort(keys(aci_contract.contracts)
-    ) : v => aci_contract.contracts[v].id }
-    taboo_contracts = { for v in sort(keys(aci_taboo_contract.contracts)
-    ) : v => aci_taboo_contract.contracts[v].id }
-    } : length(local.contracts) > 0 && local.controller_type == "ndo" ? {
-    standard_contracts = { for v in sort(keys(mso_schema_template_contract.contracts)
-    ) : v => mso_schema_template_contract.contracts[v].id }
-  } : {}
+  value = {
+    contracts = var.controller_type == "apic" ? {
+      oob_contracts = { for v in sort(keys(aci_rest_managed.oob_contracts)
+      ) : v => aci_rest_managed.oob_contracts[v].id }
+      standard_contracts = { for v in sort(keys(aci_contract.map)
+      ) : v => aci_contract.map[v].id }
+      taboo_contracts = { for v in sort(keys(aci_taboo_contract.map)
+      ) : v => aci_taboo_contract.map[v].id }
+      } : var.controller_type == "ndo" ? {
+      standard_contracts = { for v in sort(keys(mso_schema_template_contract.map)
+      ) : v => mso_schema_template_contract.map[v].id }
+    } : {}
+    filters = var.controller_type == "apic" ? {
+      filters = { for v in sort(keys(aci_filter.map)
+      ) : v => aci_filter.map[v].id }
+      filter_entries = { for v in sort(keys(aci_filter_entry.map)
+      ) : v => aci_filter_entry.map[v].id }
+      } : var.controller_type == "ndo" ? {
+      filter_entries = { for v in sort(keys(mso_schema_template_filter_entry.map)
+      ) : v => mso_schema_template_filter_entry.map[v].id }
+    } : {}
+  }
+}
+output "networking" {
+  value = {
+    bridge_domains = var.controller_type == "apic" ? { for v in sort(keys(aci_bridge_domain.map)
+      ) : v => aci_bridge_domain.map[v].id } : var.controller_type == "ndo" ? {
+      for v in sort(keys(mso_schema_template_bd.map)) : v => mso_schema_template_bd.map[v].id
+    } : {}
+    l3outs = {}
+    vrf = var.controller_type == "apic" ? {
+      for v in sort(keys(aci_vrf.map)) : v => aci_vrf.map[v].id } : var.controller_type == "ndo" ? {
+      for v in sort(keys(mso_schema_template_vrf.map)) : v => mso_schema_template_vrf.map[v].id
+    } : {}
+  }
 }
 
 output "endpoint_retention" {
   value = local.policies_endpoint_retention != {} ? { for v in sort(
-    keys(aci_end_point_retention_policy.endpoint_retention)
-  ) : v => aci_end_point_retention_policy.endpoint_retention[v].id } : {}
+    keys(aci_end_point_retention_policy.map)
+  ) : v => aci_end_point_retention_policy.map[v].id } : {}
 }
 
-output "filters" {
-  value = length(local.filters) > 0 && local.controller_type == "apic" ? {
-    filters = { for v in sort(keys(aci_filter.filters)
-    ) : v => aci_filter.filters[v].id }
-    filter_entries = { for v in sort(keys(aci_filter_entry.filter_entries)
-    ) : v => aci_filter_entry.filter_entries[v].id }
-    } : length(local.filters) > 0 && local.controller_type == "ndo" ? {
-    filter_entries = { for v in sort(keys(mso_schema_template_filter_entry.filter_entries)
-    ) : v => mso_schema_template_filter_entry.filter_entries[v].id }
-  } : {}
-}
-
-output "ndo_sites" {
-  value = local.sites != [] ? { for v in sort(
-    keys(data.mso_site.sites)
-  ) : v => data.mso_site.sites[v].id } : {}
-}
-
-output "ndo_users" {
-  value = local.users != [] ? { for v in sort(
-    keys(data.mso_user.users)
-  ) : v => data.mso_user.users[v].id } : {}
-}
-
-output "ndo_schemas" {
-  value = local.schemas != {} ? { for v in sort(
-    keys(data.mso_schema.schemas)
-  ) : v => data.mso_schema.schemas[v].id } : {}
+output "nexus_dashboard_orchestrator" {
+  value = {
+    schemas = { for v in sort(keys(data.mso_schema.map)) : v => data.mso_schema.map[v].id }
+    sites   = { for v in sort(keys(data.mso_site.map)) : v => data.mso_site.map[v].id }
+    users   = { for v in sort(keys(data.mso_user.map)) : v => data.mso_user.map[v].id }
+  }
 }
 
 output "tenants" {
-  value = local.controller_type == "apic" && length(local.tenants) > 0 ? {
-    for v in sort(keys(aci_tenant.tenants)
-    ) : v => aci_tenant.tenants[v].id } : local.controller_type == "ndo" && length(local.tenants) > 0 ? {
-    for v in sort(keys(mso_tenant.tenants)
-    ) : v => mso_tenant.tenants[v].id
+  value = var.controller_type == "apic" ? { for v in sort(keys(aci_tenant.map)
+    ) : v => aci_tenant.map[v].id } : var.controller_type == "ndo" ? {
+    for v in sort(keys(mso_tenant.map)) : v => mso_tenant.map[v].id
   } : {}
 }
 
-output "vrfs" {
-  value = local.controller_type == "apic" && length(local.vrfs) > 0 ? {
-    for v in sort(keys(aci_vrf.vrfs)
-    ) : v => aci_vrf.vrfs[v].id } : local.controller_type == "ndo" && length(local.vrfs) > 0 ? {
-    for v in sort(keys(mso_schema_template_vrf.vrfs)
-    ) : v => mso_schema_template_vrf.vrfs[v].id
-  } : {}
+output "zzzz" {
+  value = {
+    aaep_last = local.aaep_to_epgs
+    both      = local.epg_to_aaeps
+  }
 }

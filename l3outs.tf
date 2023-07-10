@@ -7,12 +7,9 @@ GUI Location:
  - tenants > {tenant} > Networking > L3Outs > {l3out}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_l3_outside" "l3outs" {
-  depends_on = [
-    aci_tenant.tenants,
-    aci_vrf.vrfs
-  ]
-  for_each               = { for k, v in local.l3outs : k => v if local.controller_type == "apic" }
+resource "aci_l3_outside" "map" {
+  depends_on             = [aci_tenant.map, aci_vrf.map]
+  for_each               = { for k, v in local.l3outs : k => v if var.controller_type == "apic" }
   description            = each.value.description
   enforce_rtctrl         = each.value.route_control_enforcement.import == true ? ["export", "import"] : ["export"]
   name                   = each.key
@@ -35,12 +32,10 @@ resource "aci_l3_outside" "l3outs" {
   # relation_l3ext_rs_out_to_bd_public_subnet_holder = ["{fvBDPublicSubnetHolder}"]
 }
 
-resource "aci_l3out_bgp_external_policy" "external_bgp" {
-  depends_on = [
-    aci_l3_outside.l3outs
-  ]
-  for_each      = { for k, v in local.l3outs : k => v if local.controller_type == "apic" && v.enable_bgp == true }
-  l3_outside_dn = aci_l3_outside.l3outs[each.key].id
+resource "aci_l3out_bgp_external_policy" "map" {
+  depends_on    = [aci_l3_outside.map]
+  for_each      = { for k, v in local.l3outs : k => v if var.controller_type == "apic" && v.enable_bgp == true }
+  l3_outside_dn = aci_l3_outside.map[each.key].id
 }
 
 
@@ -54,20 +49,13 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "l3out_annotations" {
-  depends_on = [
-    aci_l3_outside.l3outs
-  ]
+  depends_on = [aci_l3_outside.map]
   for_each = {
     for i in flatten([
       for a, b in local.l3outs : [
-        for v in b.annotations : {
-          key    = v.key
-          tenant = b.tenant
-          l3out  = a
-          value  = v.value
-        }
+        for v in b.annotations : { key = v.key, tenant = b.tenant, l3out = a, value = v.value }
       ]
-    ]) : "${i.tenant}:${i.l3out}:${i.key}" => i if local.controller_type == "apic"
+    ]) : "${i.tenant}:${i.l3out}:${i.key}" => i if var.controller_type == "apic"
   }
   dn         = "uni/tn-${each.value.tenant}/out-${each.value.l3out}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
@@ -88,10 +76,8 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "l3out_global_alias" {
-  depends_on = [
-    aci_l3_outside.l3outs
-  ]
-  for_each   = { for k, v in local.l3outs : k => v if v.global_alias != "" && local.controller_type == "apic" }
+  depends_on = [aci_l3_outside.map]
+  for_each   = { for k, v in local.l3outs : k => v if v.global_alias != "" && var.controller_type == "apic" }
   class_name = "tagAliasInst"
   dn         = "uni/tn-${each.value.tenant}/out-${each.value.l3out}/alias"
   content = {
@@ -110,9 +96,7 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "l3out_route_profiles_for_redistribution" {
-  depends_on = [
-    aci_l3_outside.l3outs
-  ]
+  depends_on = [aci_l3_outside.map]
   for_each   = local.l3out_route_profiles_for_redistribution
   dn         = "uni/tn-${each.value.tenant}/out-${each.value.l3out}/rsredistributePol-[${each.value.route_map}]-${each.value.source}"
   class_name = "l3extRsRedistributePol"
@@ -134,10 +118,8 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "l3out_multicast" {
-  depends_on = [
-    aci_l3_outside.l3outs
-  ]
-  for_each   = { for k, v in local.l3outs : k => v if local.controller_type == "apic" && (v.pim == true || v.pimv6 == true) }
+  depends_on = [aci_l3_outside.map]
+  for_each   = { for k, v in local.l3outs : k => v if var.controller_type == "apic" && (v.pim == true || v.pimv6 == true) }
   dn         = "uni/tn-${each.value.tenant}/out-${each.key}/pimextp"
   class_name = "pimExtP"
   content = {
@@ -162,15 +144,11 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "l3out_consumer_label" {
-  depends_on = [
-    aci_l3_outside.l3outs
-  ]
-  for_each   = { for k, v in local.l3outs : k => v if local.controller_type == "apic" && v.consumer_label == "hcloudGolfLabel" }
+  depends_on = [aci_l3_outside.map]
+  for_each   = { for k, v in local.l3outs : k => v if var.controller_type == "apic" && v.consumer_label == "hcloudGolfLabel" }
   dn         = "uni/tn-${each.value.tenant}/out-${each.key}/conslbl-hcloudGolfLabel"
   class_name = "l3extConsLbl"
-  content = {
-    name = "hcloudGolfLabel"
-  }
+  content    = { name = "hcloudGolfLabel" }
 }
 
 
@@ -183,12 +161,10 @@ GUI Location:
  - tenants > {tenant} > Networking > L3Outs > {l3out} > External EPGs > {Ext_EPG}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_external_network_instance_profile" "l3out_external_epgs" {
-  depends_on = [
-    aci_l3_outside.l3outs
-  ]
+resource "aci_external_network_instance_profile" "map" {
+  depends_on     = [aci_l3_outside.map]
   for_each       = { for k, v in local.l3out_external_epgs : k => v }
-  l3_outside_dn  = aci_l3_outside.l3outs[each.value.l3out].id
+  l3_outside_dn  = aci_l3_outside.map[each.value.l3out].id
   description    = each.value.description
   exception_tag  = each.value.contract_exception_tag
   flood_on_encap = each.value.flood_on_encapsulation
@@ -229,10 +205,10 @@ ________________________________________________________________________________
 */
 resource "aci_rest_managed" "external_epg_intra_epg_contracts" {
   depends_on = [
-    aci_external_network_instance_profile.l3out_external_epgs,
+    aci_external_network_instance_profile.map,
   ]
   for_each = {
-    for k, v in local.l3out_ext_epg_contracts : k => v if local.controller_type == "apic" && v.contract_type == "intra_epg"
+    for k, v in local.l3out_ext_epg_contracts : k => v if var.controller_type == "apic" && v.contract_type == "intra_epg"
   }
   dn         = "uni/tn-${var.tenant}/out-${each.value.l3out}/instP-${each.value.epg}/rsintraEpg-${each.value.contract}"
   class_name = "fvRsIntraEpg"
@@ -258,11 +234,11 @@ ________________________________________________________________________________
 */
 resource "aci_rest_managed" "external_epg_contracts" {
   depends_on = [
-    aci_external_network_instance_profile.l3out_external_epgs,
+    aci_external_network_instance_profile.map,
   ]
   for_each = {
     for k, v in local.l3out_ext_epg_contracts : k => v if length(regexall("(intra_epg|taboo)", v.contract_type)
-    ) > 0 && local.controller_type == "apic"
+    ) > 0 && var.controller_type == "apic"
   }
   dn = length(regexall(
     "consumed", each.value.contract_type)
@@ -287,11 +263,11 @@ resource "aci_rest_managed" "external_epg_contracts" {
 
 resource "aci_rest_managed" "external_epg_contracts_taboo" {
   depends_on = [
-    aci_external_network_instance_profile.l3out_external_epgs,
+    aci_external_network_instance_profile.map,
   ]
   for_each = {
     for k, v in local.l3out_ext_epg_contracts : k => v if length(regexall("taboo", v.contract_type)
-    ) > 0 && local.controller_type == "apic"
+    ) > 0 && var.controller_type == "apic"
   }
   dn         = "uni/tn-${var.tenant}/out-${each.value.l3out}/instP-${each.value.external_epg}/rsprotBy-${each.value.contract}"
   class_name = "fvRsProtBy"
@@ -315,11 +291,9 @@ GUI Location:
  - tenants > {tenant} > Networking > L3Outs > {l3out} > External EPGs > {external_epg}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_l3_ext_subnet" "external_epg_subnets" {
-  depends_on = [
-    aci_external_network_instance_profile.l3out_external_epgs
-  ]
-  for_each = { for k, v in local.l3out_external_epg_subnets : k => v }
+resource "aci_l3_ext_subnet" "map" {
+  depends_on = [aci_external_network_instance_profile.map]
+  for_each   = { for k, v in local.l3out_external_epg_subnets : k => v }
   aggregate = anytrue(
     [
       each.value.aggregate.aggregate_export,
@@ -332,7 +306,7 @@ resource "aci_l3_ext_subnet" "external_epg_subnets" {
       length(regexall(true, each.value.aggregate.aggregate_shared_routes)) > 0 ? "shared-rtctrl" : ""]
   )), ","), ",,", ",") : "none"
   description                          = each.value.description
-  external_network_instance_profile_dn = aci_external_network_instance_profile.l3out_external_epgs[each.value.external_epg].id
+  external_network_instance_profile_dn = aci_external_network_instance_profile.map[each.value.external_epg].id
   ip                                   = each.value.subnet
   scope = anytrue(
     [
@@ -377,12 +351,10 @@ ________________________________________________________________________________
 #------------------------------------------------
 # Assign a OSPF Routing Policy to the L3Out
 #------------------------------------------------
-resource "aci_l3out_ospf_external_policy" "l3out_ospf_external_profile" {
-  depends_on = [
-    aci_l3_outside.l3outs
-  ]
-  for_each  = local.l3out_ospf_external_profile
-  area_cost = each.value.ospf_area_cost
+resource "aci_l3out_ospf_external_policy" "map" {
+  depends_on = [aci_l3_outside.map]
+  for_each   = local.l3out_ospf_external_profile
+  area_cost  = each.value.ospf_area_cost
   area_ctrl = anytrue([
     each.value.ospf_area_control.send_redistribution_lsas_into_nssa_area,
     each.value.ospf_area_control.originate_summary_lsa,
@@ -394,7 +366,7 @@ resource "aci_l3out_ospf_external_policy" "l3out_ospf_external_profile" {
   )) : ["redistribute", "summary"]
   area_id       = each.value.ospf_area_id
   area_type     = each.value.ospf_area_type
-  l3_outside_dn = aci_l3_outside.l3outs[each.value.l3out].id
+  l3_outside_dn = aci_l3_outside.map[each.value.l3out].id
   # multipod_internal = "no"
 }
 
@@ -411,12 +383,10 @@ ________________________________________________________________________________
 #------------------------------------------------
 # Create Logical Node Profiles
 #------------------------------------------------
-resource "aci_logical_node_profile" "l3out_node_profiles" {
-  depends_on = [
-    aci_l3_outside.l3outs
-  ]
+resource "aci_logical_node_profile" "map" {
+  depends_on    = [aci_l3_outside.map]
   for_each      = local.l3out_node_profiles
-  l3_outside_dn = aci_l3_outside.l3outs[each.value.l3out].id
+  l3_outside_dn = aci_l3_outside.map[each.value.l3out].id
   description   = each.value.description
   name          = each.value.name
   name_alias    = each.value.alias
@@ -437,12 +407,10 @@ ________________________________________________________________________________
 #------------------------------------------------
 # Assign a Node to a Logical Node Profiles
 #------------------------------------------------
-resource "aci_logical_node_to_fabric_node" "l3out_node_profiles_nodes" {
-  depends_on = [
-    aci_logical_node_profile.l3out_node_profiles
-  ]
+resource "aci_logical_node_to_fabric_node" "map" {
+  depends_on              = [aci_logical_node_profile.map]
   for_each                = local.l3out_node_profiles_nodes
-  logical_node_profile_dn = aci_logical_node_profile.l3out_node_profiles[each.value.node_profile].id
+  logical_node_profile_dn = aci_logical_node_profile.map[each.value.node_profile].id
   tdn                     = "topology/pod-${each.value.pod_id}/node-${each.value.node_id}"
   rtr_id                  = each.value.router_id
   rtr_id_loop_back        = each.value.use_router_id_as_loopback == true ? "yes" : "no"
@@ -460,12 +428,10 @@ ________________________________________________________________________________
 #------------------------------------------------
 # Create Logical Interface Profile
 #------------------------------------------------
-resource "aci_logical_interface_profile" "l3out_interface_profiles" {
-  depends_on = [
-    aci_logical_node_profile.l3out_node_profiles
-  ]
+resource "aci_logical_interface_profile" "map" {
+  depends_on              = [aci_logical_node_profile.map]
   for_each                = local.l3out_interface_profiles
-  logical_node_profile_dn = aci_logical_node_profile.l3out_node_profiles[each.value.node_profile].id
+  logical_node_profile_dn = aci_logical_node_profile.map[each.value.node_profile].id
   description             = each.value.description
   name                    = each.value.name
   prio                    = each.value.qos_class
@@ -514,12 +480,10 @@ ________________________________________________________________________________
 #-------------------------------------------------------------
 # Attach a Node Interface Path to a Logical Interface Profile
 #-------------------------------------------------------------
-resource "aci_l3out_path_attachment" "l3out_path_attachments" {
-  depends_on = [
-    aci_logical_interface_profile.l3out_interface_profiles
-  ]
+resource "aci_l3out_path_attachment" "map" {
+  depends_on                   = [aci_logical_interface_profile.map]
   for_each                     = local.l3out_interface_profiles
-  logical_interface_profile_dn = aci_logical_interface_profile.l3out_interface_profiles[each.key].id
+  logical_interface_profile_dn = aci_logical_interface_profile.map[each.key].id
   target_dn = length(regexall(
     "ext-svi", each.value.interface_type)
     ) > 0 ? "topology/pod-${each.value.pod_id}/protpaths-${element(each.value.nodes, 0)}-${element(each.value.nodes, 1)}/pathep-[${each.value.interface_or_policy_group}]" : length(regexall(
@@ -551,15 +515,13 @@ ________________________________________________________________________________
 #-------------------------------------------------------------
 # Attach a Node Interface Path to a Logical Interface Profile
 #-------------------------------------------------------------
-resource "aci_l3out_vpc_member" "l3out_vpc_member" {
-  depends_on = [
-    aci_l3out_path_attachment.l3out_path_attachments
-  ]
+resource "aci_l3out_vpc_member" "map" {
+  depends_on   = [aci_l3out_path_attachment.map]
   for_each     = local.l3out_paths_svi_addressing
   addr         = each.value.primary_preferred_address
   description  = ""
   ipv6_dad     = each.value.ipv6_dad
-  leaf_port_dn = aci_l3out_path_attachment.l3out_path_attachments[each.value.l3out_interface_profile].id
+  leaf_port_dn = aci_l3out_path_attachment.map[each.value.l3out_interface_profile].id
   ll_addr      = each.value.link_local_address
   side         = each.value.side
 }
@@ -583,12 +545,10 @@ ________________________________________________________________________________
 #-------------------------------------------------------------
 # Attach a Node Interface Path to a Logical Interface Profile
 #-------------------------------------------------------------
-resource "aci_l3out_path_attachment_secondary_ip" "l3out_paths_secondary_ips" {
-  depends_on = [
-    aci_l3out_path_attachment.l3out_path_attachments
-  ]
+resource "aci_l3out_path_attachment_secondary_ip" "map" {
+  depends_on               = [aci_l3out_path_attachment.map]
   for_each                 = local.l3out_paths_secondary_ips
-  l3out_path_attachment_dn = aci_l3out_path_attachment.l3out_path_attachments[each.value.l3out_interface_profile].id
+  l3out_path_attachment_dn = aci_l3out_path_attachment.map[each.value.l3out_interface_profile].id
   addr                     = each.value.secondary_ip_address
   ipv6_dad                 = each.value.ipv6_dad
 }
@@ -607,11 +567,11 @@ ________________________________________________________________________________
 #------------------------------------------------
 # Create a BGP Peer Connectivity Profile
 #------------------------------------------------
-resource "aci_bgp_peer_connectivity_profile" "bgp_peer_connectivity_profiles" {
+resource "aci_bgp_peer_connectivity_profile" "map" {
   depends_on = [
-    aci_logical_node_profile.l3out_node_profiles,
-    aci_logical_interface_profile.l3out_interface_profiles,
-    aci_bgp_peer_prefix.bgp_peer_prefix
+    aci_logical_node_profile.map,
+    aci_logical_interface_profile.map,
+    aci_bgp_peer_prefix.map
   ]
   for_each = local.bgp_peer_connectivity_profiles
   addr     = each.value.peer_address
@@ -650,9 +610,9 @@ resource "aci_bgp_peer_connectivity_profile" "bgp_peer_connectivity_profiles" {
   description = each.value.description
   parent_dn = length(
     regexall("interface", each.value.peer_level)
-    ) > 0 ? aci_l3out_path_attachment.l3out_path_attachments[each.value.l3out_interface_profile].id : length(
+    ) > 0 ? aci_l3out_path_attachment.map[each.value.l3out_interface_profile].id : length(
     regexall("loopback", each.value.peer_level)
-  ) > 0 ? aci_logical_node_profile.l3out_node_profiles[each.value.node_profile].id : ""
+  ) > 0 ? aci_logical_node_profile.map[each.value.node_profile].id : ""
   password = length(
     regexall(5, each.value.password)) > 0 ? var.bgp_password_5 : length(
     regexall(4, each.value.password)) > 0 ? var.bgp_password_4 : length(
@@ -737,13 +697,13 @@ Tenants > {tenant} > L3Outs > {l3out} > Logical Node Profiles > {logical_node_pr
 {logical_interface_profile} > Create HSRP Interface Profile
 _______________________________________________________________________________________________________________________
 */
-resource "aci_l3out_hsrp_interface_profile" "hsrp_interface_profile" {
+resource "aci_l3out_hsrp_interface_profile" "map" {
   depends_on = [
-    aci_logical_interface_profile.l3out_interface_profiles
+    aci_logical_interface_profile.map
   ]
   for_each = local.hsrp_interface_profile
   logical_interface_profile_dn = length(compact([each.value.interface_profile])
-  ) > 0 ? aci_logical_interface_profile.l3out_interface_profiles[each.value.interface_profile].id : ""
+  ) > 0 ? aci_logical_interface_profile.map[each.value.interface_profile].id : ""
   description             = each.value.description
   name_alias              = each.value.alias
   relation_hsrp_rs_if_pol = "uni/tn-${local.policy_tenant}/hsrpIfPol-${each.value.hsrp_interface_policy}"
@@ -760,12 +720,10 @@ Tenants > {tenant} > L3Outs > {l3out} > Logical Node Profiles > {logical_node_pr
 {logical_interface_profile} > Create HSRP Interface Profile
 _______________________________________________________________________________________________________________________
 */
-resource "aci_l3out_hsrp_interface_group" "hsrp_interface_profile_groups" {
-  depends_on = [
-    aci_l3out_hsrp_interface_profile.hsrp_interface_profile
-  ]
+resource "aci_l3out_hsrp_interface_group" "map" {
+  depends_on                      = [aci_l3out_hsrp_interface_profile.map]
   for_each                        = local.hsrp_interface_profile_groups
-  l3out_hsrp_interface_profile_dn = aci_l3out_hsrp_interface_profile.hsrp_interface_profile[each.value.key1].id
+  l3out_hsrp_interface_profile_dn = aci_l3out_hsrp_interface_profile.map[each.value.key1].id
   name_alias                      = each.value.alias
   group_af                        = each.value.address_family
   group_id                        = each.value.group_id
@@ -787,12 +745,10 @@ Tenants > {tenant} > L3Outs > {l3out} > Logical Node Profiles > {logical_node_pr
 {logical_interface_profile} > Create HSRP Interface Profile
 _______________________________________________________________________________________________________________________
 */
-resource "aci_l3out_hsrp_secondary_vip" "hsrp_interface_profile_group_secondaries" {
-  depends_on = [
-    aci_l3out_hsrp_interface_group.hsrp_interface_profile_groups
-  ]
+resource "aci_l3out_hsrp_secondary_vip" "map" {
+  depends_on                    = [aci_l3out_hsrp_interface_group.map]
   for_each                      = local.hsrp_interface_profile_group_secondaries
-  l3out_hsrp_interface_group_dn = aci_l3out_hsrp_interface_group.hsrp_interface_profile_groups[each.value.key1].id
+  l3out_hsrp_interface_group_dn = aci_l3out_hsrp_interface_group.map[each.value.key1].id
   ip                            = each.value.secondary_ip
 }
 
@@ -809,10 +765,10 @@ ________________________________________________________________________________
 #------------------------------------------------
 # Assign a OSPF Routing Policy to the L3Out
 #------------------------------------------------
-resource "aci_l3out_ospf_interface_profile" "l3out_ospf_interface_profiles" {
+resource "aci_l3out_ospf_interface_profile" "map" {
   depends_on = [
-    aci_logical_interface_profile.l3out_interface_profiles,
-    aci_ospf_interface_policy.ospf_interface,
+    aci_logical_interface_profile.map,
+    aci_ospf_interface_policy.map,
   ]
   for_each = local.l3out_ospf_interface_profiles
   auth_key = length(regexall(
@@ -829,7 +785,7 @@ resource "aci_l3out_ospf_interface_profile" "l3out_ospf_interface_profiles" {
   auth_key_id                  = each.value.authentication_type == "md5" ? each.value.ospf_key : ""
   auth_type                    = each.value.authentication_type
   description                  = each.value.description
-  logical_interface_profile_dn = aci_logical_interface_profile.l3out_interface_profiles[each.value.l3out_interface_profile].id
+  logical_interface_profile_dn = aci_logical_interface_profile.map[each.value.l3out_interface_profile].id
   relation_ospf_rs_if_pol      = "uni/tn-${local.policy_tenant}/ospfIfPol-${each.value.ospf_interface_policy}"
 }
 
@@ -842,14 +798,14 @@ GUI Location:
  - tenants > {tenant} > Networking > L3Outs > {l3out} > Logical Node Profile {node_profile} > Logical Interface Profile > {interface_profile} > Nodes > {node_id} > Static Routes
 _______________________________________________________________________________________________________________________
 */
-resource "aci_l3out_static_route" "l3out_node_profile_static_routes" {
+resource "aci_l3out_static_route" "map" {
   depends_on = [
-    aci_logical_node_to_fabric_node.l3out_node_profiles_nodes
+    aci_logical_node_to_fabric_node.map
   ]
   for_each       = local.l3out_node_profile_static_routes
   aggregate      = each.value.aggregate == true ? "yes" : "no"
   description    = each.value.description
-  fabric_node_dn = aci_logical_node_to_fabric_node.l3out_node_profiles_nodes[each.value.key].id
+  fabric_node_dn = aci_logical_node_to_fabric_node.map[each.value.key].id
   name_alias     = each.value.alias
   ip             = each.value.prefix
   pref           = each.value.fallback_preference
@@ -868,9 +824,9 @@ GUI Location:
  - tenants > {tenant} > Networking > L3Outs > {l3out} > Logical Node Profile {node_profile} > Logical Interface Profile > {interface_profile} > Nodes > {node_id} > Static Routes
 _______________________________________________________________________________________________________________________
 */
-resource "aci_l3out_static_route_next_hop" "l3out_static_routes_next_hop" {
+resource "aci_l3out_static_route_next_hop" "map" {
   depends_on = [
-    aci_l3out_static_route.l3out_node_profile_static_routes
+    aci_l3out_static_route.map
   ]
   for_each             = local.l3out_static_routes_next_hop
   description          = each.value.description
@@ -878,7 +834,7 @@ resource "aci_l3out_static_route_next_hop" "l3out_static_routes_next_hop" {
   nexthop_profile_type = each.value.next_hop_type
   nh_addr              = each.value.next_hop_ip
   pref                 = each.value.preference == 0 ? "unspecified" : each.value.preference
-  static_route_dn      = aci_l3out_static_route.l3out_node_profile_static_routes[each.value.static_route].id
+  static_route_dn      = aci_l3out_static_route.map[each.value.static_route].id
   # class fvTrackList
   relation_ip_rs_nexthop_route_track = length(compact([each.value.track_list])
   ) > 0 ? "uni/tn-${each.value.tenant}/tracklist-${each.value.track_list}" : ""
@@ -887,17 +843,15 @@ resource "aci_l3out_static_route_next_hop" "l3out_static_routes_next_hop" {
   ) > 0 ? "uni/tn-${each.value.tenant}/trackmember-${each.value.track_member}" : ""
 }
 
-resource "mso_schema_template_l3out" "l3outs" {
-  provider = mso
-  depends_on = [
-    mso_schema.schemas
-  ]
-  for_each          = { for k, v in local.l3outs : k => v if local.controller_type == "ndo" }
+resource "mso_schema_template_l3out" "map" {
+  provider          = mso
+  depends_on        = [mso_schema.map]
+  for_each          = { for k, v in local.l3outs : k => v if var.controller_type == "ndo" }
   display_name      = each.key
   l3out_name        = each.key
-  schema_id         = mso_schema.schemas[each.value.ndo.schema].id
+  schema_id         = mso_schema.map[each.value.ndo.schema].id
   template_name     = each.value.ndo.template
   vrf_name          = each.value.vrf
-  vrf_schema_id     = mso_schema.schemas[each.value.ndo.schema].id
+  vrf_schema_id     = mso_schema.map[each.value.ndo.schema].id
   vrf_template_name = each.value.vrf_template
 }

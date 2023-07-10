@@ -7,12 +7,10 @@ GUI Location:
  - Tenants > {tenant} > Policies > Protocol > BFD > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_bfd_interface_policy" "bfd_interface" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
-  for_each = local.policies_bfd_interface
-  admin_st = each.value.admin_state
+resource "aci_bfd_interface_policy" "map" {
+  depends_on = [aci_tenant.map]
+  for_each   = local.policies_bfd_interface
+  admin_st   = each.value.admin_state
   # Bug 803 Submitted
   # ctrl          = each.value.enable_sub_interface_optimization == true ? "opt-subif" : "none"
   description   = each.value.description
@@ -35,10 +33,8 @@ GUI Location:
  - Tenants > {tenant} > Policies > Protocol > BGP > BGP Address Family Context > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_bgp_address_family_context" "bgp_address_family_context" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
+resource "aci_bgp_address_family_context" "map" {
+  depends_on = [aci_tenant.map]
   # Missing Local Max ECMP
   for_each      = local.policies_bgp_address_family_context
   ctrl          = each.value.enable_host_route_leak == true ? "host-rt-leak" : "none"
@@ -62,10 +58,8 @@ GUI Location:
  - Tenants > {tenant} > Policies > Protocol > BGP > BGP Best Path > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_bgp_best_path_policy" "bgp_best_path" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
+resource "aci_bgp_best_path_policy" "map" {
+  depends_on  = [aci_tenant.map]
   for_each    = local.policies_bgp_best_path
   ctrl        = each.value.relax_as_path_restriction == true ? "asPathMultipathRelax" : "0"
   description = each.value.description
@@ -83,10 +77,8 @@ GUI Location:
  - Tenants > {tenant} > Networking > Policies > Protocol > BGP >  BGP Peer Prefix > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_bgp_peer_prefix" "bgp_peer_prefix" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
+resource "aci_bgp_peer_prefix" "map" {
+  depends_on   = [aci_tenant.map]
   for_each     = local.policies_bgp_peer_prefix
   action       = each.value.action
   description  = each.value.description
@@ -107,11 +99,9 @@ GUI Location:
  - Tenants > {tenant} > Policies > Protocol > BGP > BGP Route Summarization > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_bgp_route_summarization" "bgp_route_summarization" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
-  for_each = local.policies_bgp_route_summarization
+resource "aci_bgp_route_summarization" "map" {
+  depends_on = [aci_tenant.map]
+  for_each   = local.policies_bgp_route_summarization
   address_type_controls = anytrue(
     [
       each.value.af_mcast,
@@ -146,10 +136,8 @@ GUI Location:
  - Tenants > {tenant} > Policies > Protocol > BGP > BGP Timers > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_bgp_timers" "bgp_timers" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
+resource "aci_bgp_timers" "map" {
+  depends_on   = [aci_tenant.map]
   for_each     = local.policies_bgp_timers
   description  = each.value.description
   gr_ctrl      = each.value.graceful_restart_helper == true ? "helper" : "none"
@@ -171,10 +159,8 @@ GUI Location:
  - Tenants > {tenant} > Policies > Protocol > DHCP > Options Policies > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_dhcp_option_policy" "dhcp_option" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
+resource "aci_dhcp_option_policy" "map" {
+  depends_on  = [aci_tenant.map]
   for_each    = local.policies_dhcp_option
   description = each.value.description
   name        = each.key
@@ -199,10 +185,8 @@ GUI Location:
  - Tenants > {tenant} > Policies > Protocol > DHCP > Relay Policies > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_dhcp_relay_policy" "dhcp_relay" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
+resource "aci_dhcp_relay_policy" "map" {
+  depends_on  = [aci_tenant.map]
   for_each    = local.policies_dhcp_relay
   description = each.value.description
   mode        = each.value.mode
@@ -232,10 +216,8 @@ GUI Location:
  - Tenants > {tenant} > Policies > Protocol > End Point Retention > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_end_point_retention_policy" "endpoint_retention" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
+resource "aci_end_point_retention_policy" "map" {
+  depends_on          = [aci_tenant.map]
   for_each            = local.policies_endpoint_retention
   bounce_age_intvl    = each.value.bounce_entry_aging_interval
   bounce_trig         = each.value.bounce_trigger
@@ -258,10 +240,8 @@ GUI Location:
 tenants > {tenant} > Policies > Protocol > HSRP > Group Policies > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_hsrp_group_policy" "hsrp_group" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
+resource "aci_hsrp_group_policy" "map" {
+  depends_on             = [aci_tenant.map]
   for_each               = local.policies_hsrp_group
   description            = each.value.description
   ctrl                   = each.value.enable_preemption_for_the_group == true ? "preempt" : 0
@@ -288,11 +268,9 @@ GUI Location:
 tenants > {tenant} > Policies > Protocol > HSRP > Interface Policies > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_hsrp_interface_policy" "hsrp_interface" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
-  for_each = local.policies_hsrp_interface
+resource "aci_hsrp_interface_policy" "map" {
+  depends_on = [aci_tenant.map]
+  for_each   = local.policies_hsrp_interface
   ctrl = anytrue(
     [each.value.enable_bidirectional_forwarding_detection, each.value.use_burnt_in_mac_address_of_the_interface]
     ) ? compact(concat([
@@ -316,11 +294,9 @@ GUI Location:
  - Tenants > {tenant} > Networking > Policies > Protocol > IP SLA >  IP SLA Monitoring Policies > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_ip_sla_monitoring_policy" "ip_sla" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
-  for_each = local.policies_ip_sla_monitoring
+resource "aci_ip_sla_monitoring_policy" "map" {
+  depends_on = [aci_tenant.map]
+  for_each   = local.policies_ip_sla_monitoring
   #description = each.value.description
   name         = each.key
   http_uri     = each.value.http_uri
@@ -348,10 +324,10 @@ GUI Location:
  - Tenants > {tenant} > Networking > Policies > Protocol > L4-L7 Policy-Based Redirect > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_service_redirect_policy" "l4_l7_pbr" {
+resource "aci_service_redirect_policy" "map" {
   depends_on = [
-    aci_tenant.tenants,
-    aci_ip_sla_monitoring_policy.ip_sla
+    aci_tenant.map,
+    aci_ip_sla_monitoring_policy.map
   ]
   for_each              = local.policies_l4_l7_pbr
   anycast_enabled       = length(regexall(true, each.value.enable_anycast)) > 0 ? "yes" : "no" # default is no
@@ -362,7 +338,7 @@ resource "aci_service_redirect_policy" "l4_l7_pbr" {
   min_threshold_percent = each.value.min_threshold_percentage # 1-100, default 0
   hashing_algorithm     = each.value.hashing_algorithm        # dip,sip, sip-dip-prototype, default is sip-dip-prototype
   relation_vns_rs_ipsla_monitoring_pol = length(compact([each.value.ip_sla_monitoring_poilcy])
-  ) > 0 ? aci_ip_sla_monitoring_policy.ip_sla[each.value.ip_sla_monitoring_poilcy].id : ""
+  ) > 0 ? aci_ip_sla_monitoring_policy.map[each.value.ip_sla_monitoring_poilcy].id : ""
   resilient_hash_enabled = length(regexall(
     true, each.value.resilient_hashing_enabled)
   ) > 0 ? "yes" : "no" # default is no
@@ -385,10 +361,8 @@ GUI Location:
  - Tenants > {tenant} > Networking > Policies > Protocol > L4-L7 Redirect Health Group > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_l4_l7_redirect_health_group" "groups" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
+resource "aci_l4_l7_redirect_health_group" "map" {
+  depends_on  = [aci_tenant.map]
   for_each    = local.policies_l4_l7_redirect_health_groups
   description = each.value.description
   name        = each.key
@@ -405,10 +379,10 @@ GUI Location:
  - Tenants > {tenant} > Networking > Policies > Protocol > L4-L7 Policy-Based Redirect > {name} > {L1/L2|L3} Destinations
 _______________________________________________________________________________________________________________________
 */
-resource "aci_destination_of_redirected_traffic" "l4_l7_pbr_destinations" {
+resource "aci_destination_of_redirected_traffic" "map" {
   depends_on = [
-    aci_l4_l7_redirect_health_group.groups,
-    aci_service_redirect_policy.l4_l7_pbr
+    aci_l4_l7_redirect_health_group.map,
+    aci_service_redirect_policy.map
   ]
   for_each = local.policies_l4_l7_pbr_destinations
   ip       = each.value.ip
@@ -417,8 +391,8 @@ resource "aci_destination_of_redirected_traffic" "l4_l7_pbr_destinations" {
   mac    = each.value.mac
   pod_id = each.value.pod_id
   relation_vns_rs_redirect_health_group = length(compact([each.value.redirect_health_group])
-  ) > 0 ? aci_l4_l7_redirect_health_group.groups[each.value.redirect_health_group].id : ""
-  service_redirect_policy_dn = aci_service_redirect_policy.l4_l7_pbr[each.value.l4_l7_pbr_policy].id
+  ) > 0 ? aci_l4_l7_redirect_health_group.map[each.value.redirect_health_group].id : ""
+  service_redirect_policy_dn = aci_service_redirect_policy.map[each.value.l4_l7_pbr_policy].id
 }
 
 /*_____________________________________________________________________________________________________________________
@@ -430,10 +404,8 @@ GUI Location:
  - Tenants > {tenant} > Networking > Policies > Protocol > OSPF >  OSPF Interface > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_ospf_interface_policy" "ospf_interface" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
+resource "aci_ospf_interface_policy" "map" {
+  depends_on  = [aci_tenant.map]
   for_each    = local.policies_ospf_interface
   tenant_dn   = "uni/tn-${each.value.tenant}"
   description = each.value.description
@@ -471,10 +443,8 @@ GUI Location:
  - Tenants > {tenant} > Networking > Policies > Protocol > OSPF >  OSPF Route Summarization > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_ospf_route_summarization" "ospf_route_summarization" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
+resource "aci_ospf_route_summarization" "map" {
+  depends_on         = [aci_tenant.map]
   for_each           = local.policies_ospf_route_summarization
   cost               = each.value.cost == 0 ? "unspecified" : each.value.cost # 0 to 16777215
   description        = each.value.description
@@ -494,12 +464,10 @@ GUI Location:
  - Tenants > {tenant} > Networking > Policies > Protocol > OSPF >  OSPF Timers > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_ospf_timers" "ospf_timers" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
-  for_each = local.policies_ospf_timers
-  bw_ref   = each.value.bandwidth_reference
+resource "aci_ospf_timers" "map" {
+  depends_on = [aci_tenant.map]
+  for_each   = local.policies_ospf_timers
+  bw_ref     = each.value.bandwidth_reference
   ctrl = anytrue(
     [
       each.value.control_knobs.enable_name_lookup_for_router_ids,

@@ -13,8 +13,11 @@ defaults:
       description: ''
       global_alias: ''
       monitoring_policy: default
+      ndo:
+        schema: ''
+        sites: []
+        template: ''
       qos_class: unspecified
-      template: ''
       #=============================
       # Application EPGs
       #=============================
@@ -153,6 +156,7 @@ defaults:
       application_epgs: ''
       bridge_domains: ''
       contracts: ''
+      external_epgs: ''
       filters: ''
       l3outs: ''
       logical_interface_profiles: ''
@@ -163,12 +167,16 @@ defaults:
       application_epgs: ''
       bridge_domains: ''
       contracts: ''
+      external_epgs: ''
       filters: ''
       l3outs: ''
       logical_interface_profiles: ''
       logical_node_profiles: ''
       vrfs: ''
     policy_tenant: 'common'
+    #=============================
+    # Nexus Dashboard Orchestrator
+    #=============================
     ndo:
       schemas: # REQUIRED FOR NDO
         create: true
@@ -185,21 +193,35 @@ defaults:
         azure_shared_account_id: '' # REQUIRED for access_type shared
         azure_subscription_id: ''
         is_aws_account_trusted: true
-        name: '**REQUIRED**'
         vendor: cisco # azure, aws, cisco
       users: [] # REQUIRED FOR NDO
+    netflow_monitor_policies:
+      filter_type: ipv4 # ipv4, ipv6
+      #netflow_policy: '**REQUIRED**'
     networking:
       #=============================
       # Bridge Domains
       #=============================
       bridge_domains:
+        advanced_troubleshooting:
+          disable_ip_data_plane_learning_for_pbr: false
+          endpoint_clear: false
+          first_hop_security_policy: ''
+          intersite_bum_traffic_allow: false
+          intersite_l2_stretch: false
+          monitoring_policy: ''
+          netflow_monitor_policies:
+            filter_type: ipv4 # ipv4, ipv6
+            #netflow_policy: '**REQUIRED**'
+          optimize_wan_bandwidth: false
+          rogue_coop_exception_list: []
         combine_description: false
         dhcp_relay_labels:
           dhcp_option_policy: ''
-          dhcp_option_policy_version: null # Used by NDO
-          names: [default]
+          dhcp_option_policy_version: 1 # Used by NDO
+          #names: []
           scope: infra
-          version: null # Used by NDO
+          version: 1 # Used by NDO
         general:
           advertise_host_routes: false
           alias: ''
@@ -220,7 +242,7 @@ defaults:
           pimv6: false
           type: regular
           vrf:
-            name: '**REQUIRED**'
+            #name: '**REQUIRED**'
             schema: ''
             template: ''
             tenant: ''
@@ -247,18 +269,6 @@ defaults:
             treat_as_virtual_ip_address: false
           unicast_routing: true
           virtual_mac_address: ''
-        advanced_troubleshooting:
-          disable_ip_data_plane_learning_for_pbr: false
-          endpoint_clear: false
-          first_hop_security_policy: ''
-          intersite_bum_traffic_allow: false
-          intersite_l2_stretch: false
-          monitoring_policy: ''
-          netflow_monitor_policies:
-            filter_type: ipv4 # ipv4, ipv6
-            netflow_policy: '**REQUIRED**'
-          optimize_wan_bandwidth: false
-          rogue_coop_exception_list: []
         name: '**REQUIRED**'
         ndo:
           template:
@@ -487,6 +497,8 @@ defaults:
         policy_control_enforcement_preference: enforced # unenforced
         preferred_group: false
         ndo:
+          schema: ''
+          sites: []
           template: ''
         transit_route_tag_policy: ''
     #=============================

@@ -13,7 +13,11 @@ variable "templates" {
   type        = any
 }
 
-
+variable "aaep_to_epgs" {
+  default     = {}
+  description = "AAEP to EPGs VLAN Mapping from Access Module."
+  type        = any
+}
 variable "tenant" {
   description = "Name of the Tenant"
   type        = any

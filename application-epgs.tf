@@ -7,16 +7,12 @@ GUI Location:
 Tenants > {tenant} > Application Profiles > {application_profile} > Application EPGs > {application_epg}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_application_epg" "application_epgs" {
-  depends_on = [
-    aci_tenant.tenants,
-    aci_application_profile.application_profiles,
-    aci_bridge_domain.bridge_domains
-  ]
+resource "aci_application_epg" "map" {
+  depends_on = [aci_tenant.map, aci_application_profile.map, aci_bridge_domain.map]
   for_each = {
-    for k, v in local.application_epgs : k => v if v.epg_type == "standard" && local.controller_type == "apic"
+    for k, v in local.application_epgs : k => v if v.epg_type == "standard" && var.controller_type == "apic"
   }
-  application_profile_dn = aci_application_profile.application_profiles[each.value.application_profile].id
+  application_profile_dn = aci_application_profile.map[each.value.application_profile].id
   description            = each.value.description
   exception_tag          = each.value.contract_exception_tag
   flood_on_encap         = each.value.flood_in_encapsulation
@@ -63,12 +59,10 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_node_mgmt_epg" "mgmt_epgs" {
-  depends_on = [
-    aci_bridge_domain.bridge_domains,
-  ]
+  depends_on = [aci_bridge_domain.map]
   for_each = {
     for k, v in local.application_epgs : k => v if length(regexall("(inb|oob)", v.epg_type)
-    ) > 0 && local.controller_type == "apic"
+    ) > 0 && var.controller_type == "apic"
   }
   management_profile_dn    = "uni/tn-mgmt/mgmtp-default"
   name                     = each.key
@@ -96,9 +90,7 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "external_management_network_instance_profiles" {
-  depends_on = [
-    aci_l3_outside.l3outs
-  ]
+  depends_on = [aci_l3_outside.map]
   for_each   = { for k, v in local.application_epgs : k => v if v.epg_type == "oob" }
   dn         = "uni/tn-mgmt/extmgmt-default/instp-${each.value.name}"
   class_name = "mgmtInstP"
@@ -118,9 +110,7 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "application_epgs_annotations" {
-  depends_on = [
-    aci_application_epg.application_epgs
-  ]
+  depends_on = [aci_application_epg.map]
   for_each = {
     for i in flatten([
       for a, b in local.application_epgs : [
@@ -134,7 +124,7 @@ resource "aci_rest_managed" "application_epgs_annotations" {
         }
       ]
       ]) : "${i.application_profile}:${i.application_epg}:${i.key}" => i if length(regexall("standard", i.epg_type)
-    ) > 0 && local.controller_type == "apic"
+    ) > 0 && var.controller_type == "apic"
   }
   dn         = "uni/tn-${each.value.tenant}/ap-${each.value.application_profile}/epg-${each.value.application_epg}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
@@ -156,10 +146,8 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "application_epgs_global_alias" {
-  depends_on = [
-    aci_application_epg.application_epgs
-  ]
-  for_each   = { for k, v in local.application_epgs : k => v if v.global_alias != "" && local.controller_type == "apic" }
+  depends_on = [aci_application_epg.map]
+  for_each   = { for k, v in local.application_epgs : k => v if v.global_alias != "" && var.controller_type == "apic" }
   class_name = "tagAliasInst"
   dn         = "uni/tn-${each.key}/ap-${each.value.application_profile}/epg-${each.value.application_epg}/alias"
   content = {
@@ -177,14 +165,12 @@ GUI Location:
 Tenants > {Tenant} > Application Profiles > {App_Profile} > Application EPGs > {EPG} > Domains (VMs and Bare-Metals)
 _______________________________________________________________________________________________________________________
 */
-resource "aci_epg_to_domain" "epg_to_domains" {
-  depends_on = [
-    aci_application_epg.application_epgs
-  ]
+resource "aci_epg_to_domain" "map" {
+  depends_on = [aci_application_epg.map]
   for_each = {
-    for k, v in local.epg_to_domains : k => v if local.controller_type == "apic" && v.epg_type == "standard"
+    for k, v in local.epg_to_domains : k => v if var.controller_type == "apic" && v.epg_type == "standard"
   }
-  application_epg_dn = aci_application_epg.application_epgs[each.value.application_epg].id
+  application_epg_dn = aci_application_epg.map[each.value.application_epg].id
   tdn = length(
     regexall("physical", each.value.domain_type)
     ) > 0 ? "uni/phys-${each.value.domain}" : length(
@@ -206,56 +192,33 @@ resource "aci_epg_to_domain" "epg_to_domains" {
     regexall("vmm", each.value.domain_type)
   ) > 0 ? "vlan-${element(each.value.vlans, 0)}" : "unknown"
   encap_mode = each.value.vlan_mode == "static" && length(
-    regexall("vmm", each.value.domain_type)
-  ) > 0 ? "vlan" : "auto"
-  epg_cos = length(
-    regexall("vmm", each.value.domain_type)
-  ) > 0 ? "Cos0" : "Cos0"
-  epg_cos_pref = length(
-    regexall("vmm", each.value.domain_type)
-  ) > 0 ? "disabled" : "disabled"
-  instr_imedcy = each.value.deploy_immediacy == "on-demand" ? "lazy" : each.value.deploy_immediacy
-  enhanced_lag_policy = length(
-    regexall("vmm", each.value.domain_type)
-  ) > 0 ? each.value.enhanced_lag_policy : ""
-  netflow_dir = length(
-    regexall("vmm", each.value.domain_type)
-  ) > 0 ? "both" : "both"
-  netflow_pref = length(
-    regexall("vmm", each.value.domain_type)
-  ) > 0 ? "disabled" : "disabled"
-  num_ports = length(
-    regexall("vmm", each.value.domain_type)) > 0 && (length(regexall(
-      "dynamic_binding", each.value.port_binding)) > 0 || length(regexall(
-    "static_binding", each.value.port_binding)) > 0
+  regexall("vmm", each.value.domain_type)) > 0 ? "vlan" : "auto"
+  epg_cos             = length(regexall("vmm", each.value.domain_type)) > 0 ? "Cos0" : "Cos0"
+  epg_cos_pref        = length(regexall("vmm", each.value.domain_type)) > 0 ? "disabled" : "disabled"
+  instr_imedcy        = each.value.deploy_immediacy == "on-demand" ? "lazy" : each.value.deploy_immediacy
+  enhanced_lag_policy = length(regexall("vmm", each.value.domain_type)) > 0 ? each.value.enhanced_lag_policy : ""
+  netflow_dir         = length(regexall("vmm", each.value.domain_type)) > 0 ? "both" : "both"
+  netflow_pref        = length(regexall("vmm", each.value.domain_type)) > 0 ? "disabled" : "disabled"
+  num_ports = length(regexall("vmm", each.value.domain_type)) > 0 && (length(regexall(
+    "dynamic_binding", each.value.port_binding)) > 0 || length(regexall("static_binding", each.value.port_binding)) > 0
   ) ? each.value.number_of_ports : 0
-  port_allocation = length(
-    regexall("vmm", each.value.domain_type)) > 0 && length(regexall(
+  port_allocation = length(regexall("vmm", each.value.domain_type)) > 0 && length(regexall(
     "static_binding", each.value.port_binding)
   ) > 0 ? each.value.port_allocation : "none"
-  primary_encap = length(
-    regexall("vmm", each.value.domain_type)) > 0 && length(regexall(
+  primary_encap = length(regexall("vmm", each.value.domain_type)) > 0 && length(regexall(
     "static", each.value.vlan_mode)) > 0 && length(each.value.vlans
   ) > 0 ? "vlan-${element(each.value.vlans, 1)}" : "unknown"
-  primary_encap_inner = length(
-    regexall("vmm", each.value.domain_type)) > 0 && length(regexall(
+  primary_encap_inner = length(regexall("vmm", each.value.domain_type)) > 0 && length(regexall(
     "static", each.value.vlan_mode)) > 0 && length(each.value.vlans
   ) > 1 ? "vlan-${element(each.value.vlans, 2)}" : "unknown"
   res_imedcy = each.value.resolution_immediacy == "on-demand" ? "lazy" : each.value.resolution_immediacy
-  secondary_encap_inner = length(
-    regexall("vmm", each.value.domain_type)) > 0 && length(regexall(
+  secondary_encap_inner = length(regexall("vmm", each.value.domain_type)) > 0 && length(regexall(
     "static", each.value.vlan_mode)) > 0 && length(each.value.vlans
   ) > 3 ? "vlan-${element(each.value.vlans, 3)}" : "unknown"
-  switching_mode = "native"
-  vmm_allow_promiscuous = length(
-    regexall("vmm", each.value.domain_type)
-  ) > 0 ? each.value.security["allow_promiscuous"] : ""
-  vmm_forged_transmits = length(
-    regexall("vmm", each.value.domain_type)
-  ) > 0 ? each.value.security["forged_transmits"] : ""
-  vmm_mac_changes = length(
-    regexall("vmm", each.value.domain_type)
-  ) > 0 ? each.value.security["mac_changes"] : ""
+  switching_mode        = "native"
+  vmm_allow_promiscuous = length(regexall("vmm", each.value.domain_type)) > 0 ? each.value.security.allow_promiscuous : ""
+  vmm_forged_transmits  = length(regexall("vmm", each.value.domain_type)) > 0 ? each.value.security.forged_transmits : ""
+  vmm_mac_changes       = length(regexall("vmm", each.value.domain_type)) > 0 ? each.value.security.mac_changes : ""
 }
 
 
@@ -295,9 +258,9 @@ ________________________________________________________________________________
 
 resource "aci_rest_managed" "contract_to_epgs" {
   depends_on = [
-    aci_application_epg.application_epgs,
-    aci_contract.contracts,
-    aci_taboo_contract.contracts,
+    aci_application_epg.map,
+    aci_contract.map,
+    aci_taboo_contract.map,
   ]
   for_each   = { for k, v in local.contract_to_epgs : k => v if v.epg_type == "standard" }
   dn         = "uni/tn-${each.value.tenant}/ap-${each.value.application_profile}/epg-${each.value.application_epg}/${each.value.contract_dn}-${each.value.contract}"
@@ -311,9 +274,9 @@ resource "aci_rest_managed" "contract_to_epgs" {
 resource "aci_rest_managed" "contract_to_oob_epgs" {
   depends_on = [
     aci_node_mgmt_epg.mgmt_epgs,
-    aci_contract.contracts,
+    aci_contract.map,
     aci_rest_managed.oob_contracts,
-    aci_taboo_contract.contracts,
+    aci_taboo_contract.map,
   ]
   for_each   = { for k, v in local.contract_to_epgs : k => v if v.epg_type == "oob" && v.contract_type == "provided" }
   dn         = "uni/tn-${each.value.tenant}/mgmtp-default/oob-${each.value.application_epg}/${each.value.contract_dn}-${each.value.contract}"
@@ -327,9 +290,9 @@ resource "aci_rest_managed" "contract_to_oob_epgs" {
 resource "aci_rest_managed" "contract_to_inb_epgs" {
   depends_on = [
     aci_node_mgmt_epg.mgmt_epgs,
-    aci_contract.contracts,
+    aci_contract.map,
     aci_rest_managed.oob_contracts,
-    aci_taboo_contract.contracts,
+    aci_taboo_contract.map,
   ]
   for_each   = { for k, v in local.contract_to_epgs : k => v if v.epg_type == "inb" }
   dn         = "uni/tn-${each.value.tenant}/mgmtp-default/inb-${each.value.application_epg}/${each.value.contract_dn}-${each.value.contract}"
@@ -377,17 +340,15 @@ Tenants > {tenant} > Application Profiles > {application_profile} > Application 
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "epg_to_static_paths" {
-  depends_on = [
-    aci_application_epg.application_epgs
-  ]
-  for_each = local.epg_to_static_paths
+  depends_on = [aci_application_epg.map]
+  for_each   = local.epg_to_static_paths
   dn = length(
     regexall("^pc$", each.value.path_type)
-    ) > 0 ? "${aci_application_epg.application_epgs[each.value.application_epg].id}/rspathAtt-[topology/pod-${each.value.pod}/paths-${element(each.value.nodes, 0)}/pathep-[${each.value.name}]]" : length(
+    ) > 0 ? "${aci_application_epg.map[each.value.application_epg].id}/rspathAtt-[topology/pod-${each.value.pod}/paths-${element(each.value.nodes, 0)}/pathep-[${each.value.name}]]" : length(
     regexall("^port$", each.value.path_type)
-    ) > 0 ? "${aci_application_epg.application_epgs[each.value.application_epg].id}/rspathAtt-[topology/pod-${each.value.pod}/paths-${element(each.value.nodes, 0)}/pathep-[eth${each.value.name}]]" : length(
+    ) > 0 ? "${aci_application_epg.map[each.value.application_epg].id}/rspathAtt-[topology/pod-${each.value.pod}/paths-${element(each.value.nodes, 0)}/pathep-[eth${each.value.name}]]" : length(
     regexall("^vpc$", each.value.path_type)
-  ) > 0 ? "${aci_application_epg.application_epgs[each.value.application_epg].id}/rspathAtt-[topology/pod-${each.value.pod}/protpaths-${element(each.value.nodes, 0)}-${element(each.value.nodes, 1)}/pathep-[${each.value.name}]]" : ""
+  ) > 0 ? "${aci_application_epg.map[each.value.application_epg].id}/rspathAtt-[topology/pod-${each.value.pod}/protpaths-${element(each.value.nodes, 0)}-${element(each.value.nodes, 1)}/pathep-[${each.value.name}]]" : ""
   class_name = "fvRsPathAtt"
   content = {
     encap = length(
@@ -430,16 +391,14 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_epgs_using_function" "epg_to_aaeps" {
-  depends_on = [
-    aci_application_epg.application_epgs
-  ]
-  for_each          = { for k, v in local.epg_to_aaeps : k => v if local.controller_type == "apic" }
+  depends_on        = [aci_application_epg.map]
+  for_each          = { for k, v in local.epg_to_aaeps : k => v if var.controller_type == "apic" }
   access_generic_dn = "uni/infra/attentp-${each.value.aaep}/gen-default"
   encap             = length(each.value.vlans) > 0 ? "vlan-${element(each.value.vlans, 0)}" : "unknown"
   instr_imedcy      = each.value.instrumentation_immediacy == "on-demand" ? "lazy" : each.value.instrumentation_immediacy
   mode              = each.value.mode == "trunk" ? "regular" : each.value.mode == "access" ? "untagged" : "native"
   primary_encap     = length(each.value.vlans) > 1 ? "vlan-${element(each.value.vlans, 1)}" : "unknown"
-  tdn               = aci_application_epg.application_epgs[each.value.application_epg].id
+  tdn               = aci_application_epg.map[each.value.application_epg].id
 }
 
 
@@ -448,38 +407,36 @@ resource "aci_epgs_using_function" "epg_to_aaeps" {
 Nexus Dashboard — Application Endpoint Group
 _______________________________________________________________________________________________________________________
 */
-resource "mso_schema_template_anp_epg" "application_epgs" {
-  provider = mso
-  depends_on = [
-    mso_schema_template_anp.application_profiles
-  ]
-  for_each         = { for k, v in local.application_epgs : k => v if local.controller_type == "ndo" }
+resource "mso_schema_template_anp_epg" "map" {
+  provider         = mso
+  depends_on       = [mso_schema_template_anp.map]
+  for_each         = { for k, v in local.application_epgs : k => v if var.controller_type == "ndo" }
   anp_name         = each.value.application_profile
   bd_name          = each.value.bd.name
-  bd_schema_id     = data.mso_schema.schemas[each.value.bd.schema].id
+  bd_schema_id     = data.mso_schema.map[each.value.bd.schema].id
   bd_template_name = each.value.bd.template
-  #description                = each.value.general.description
-  display_name               = each.value.combine_description == true ? "${each.value.name}-${each.value.description}" : each.value.name
-  intra_epg                  = each.value.intra_epg_isolation
+  description      = each.value.general.description
+  display_name     = each.value.combine_description == true ? "${each.value.name}-${each.value.description}" : each.value.name
+  intra_epg        = each.value.intra_epg_isolation
+  #
   intersite_multicast_source = false
-  name                       = each.value.name
-  preferred_group            = each.value.preferred_group_member
-  proxy_arp                  = each.value.intra_epg_isolation == "enforced" ? true : false
-  schema_id                  = data.mso_schema.schemas[each.value.ndo.schema].id
-  template_name              = each.value.ndo.template
-  useg_epg                   = each.value.useg_epg
+  #
+  name            = each.value.name
+  preferred_group = each.value.preferred_group_member
+  proxy_arp       = each.value.intra_epg_isolation == "enforced" ? true : false
+  schema_id       = data.mso_schema.map[each.value.ndo.schema].id
+  template_name   = each.value.ndo.template
+  useg_epg        = each.value.useg_epg
   #vrf_name                   = each.value.general.vrf.name
   #vrf_schema_id              = data.mso_schema.schemas[each.value.general.vrf.schema].id
   #vrf_template_name          = each.value.general.vrf.template
 }
 
-resource "mso_schema_site_anp_epg_domain" "epg_to_domains" {
-  provider = mso
-  depends_on = [
-    mso_schema_template_anp_epg.application_epgs
-  ]
+resource "mso_schema_site_anp_epg_domain" "map" {
+  provider   = mso
+  depends_on = [mso_schema_template_anp_epg.map]
   for_each = {
-    for k, v in local.ndo_epg_to_domains : k => v if local.controller_type == "ndo"
+    for k, v in local.ndo_epg_to_domains : k => v if var.controller_type == "ndo"
   }
   allow_micro_segmentation = length(regexall("vmm", each.value.domain_type)
   ) > 0 ? each.value.allow_micro_segmentation : null
@@ -492,17 +449,17 @@ resource "mso_schema_site_anp_epg_domain" "epg_to_domains" {
     compact([each.value.enhanced_lag_policy])
   ) > 0 ? "uni/vmmp-${each.value.switch_provider}/dom-${each.value.domain}/vswitchpolcont/enlacplagp-${each.value.enhanced_lag_policy}" : null
   epg_name = each.value.application_epg
-  micro_seg_vlan_type = length(regexall("vmm", each.value.domain_type)) > 0 && length(
-  regexall("static", each.value.vlan_mode)) > 0 ? "vlan" : null
-  micro_seg_vlan = length(regexall("vmm", each.value.domain_type)) > 0 && length(
-  regexall("static", each.value.vlan_mode)) > 0 && length(each.value.vlans) > 1 ? element(each.value.vlans, 2) : null
-  port_encap_vlan_type = length(regexall("vmm", each.value.domain_type)) > 0 && length(
-  regexall("static", each.value.vlan_mode)) > 0 ? "vlan" : null
-  port_encap_vlan = length(regexall("vmm", each.value.domain_type)) > 0 && length(
-  regexall("static", each.value.vlan_mode)) > 0 && length(each.value.vlans) > 0 ? element(each.value.vlans, 1) : null
+  micro_seg_vlan_type = length(regexall("vmm", each.value.domain_type)
+  ) > 0 && length(regexall("static", each.value.vlan_mode)) > 0 ? "vlan" : null
+  micro_seg_vlan = length(regexall("vmm", each.value.domain_type)) > 0 && length(regexall("static", each.value.vlan_mode)
+  ) > 0 && length(each.value.vlans) > 1 ? element(each.value.vlans, 2) : null
+  port_encap_vlan_type = length(regexall("vmm", each.value.domain_type)
+  ) > 0 && length(regexall("static", each.value.vlan_mode)) > 0 ? "vlan" : null
+  port_encap_vlan = length(regexall("vmm", each.value.domain_type)) > 0 && length(regexall("static", each.value.vlan_mode)
+  ) > 0 && length(each.value.vlans) > 0 ? element(each.value.vlans, 1) : null
   resolution_immediacy = each.value.resolution_immediacy == "on-demand" ? "lazy" : each.value.resolution_immediacy
-  schema_id            = data.mso_schema.schemas[each.value.schema].id
-  site_id              = data.mso_site.sites[each.value.site].id
+  schema_id            = data.mso_schema.map[each.value.schema].id
+  site_id              = data.mso_site.map[each.value.site].id
   switching_mode       = length(regexall("vmm", each.value.domain_type)) > 0 ? "native" : null
   switch_type          = length(regexall("vmm", each.value.domain_type)) > 0 ? "default" : null
   template_name        = each.value.template

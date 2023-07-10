@@ -7,9 +7,9 @@ GUI Location:
  - Tenants > Create Tenant > {tenant}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_tenant" "tenants" {
+resource "aci_tenant" "map" {
   for_each = {
-    for k, v in local.tenants : k => v if local.controller_type == "apic" && v.create == true
+    for k, v in local.tenants : k => v if var.controller_type == "apic" && v.create == true
   }
   description                   = each.value.description
   name                          = each.key
@@ -27,19 +27,13 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "tenant_annotations" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
+  depends_on = [aci_tenant.map]
   for_each = {
     for i in flatten([
       for a, b in local.tenants : [
-        for v in b.annotations : {
-          key    = v.key
-          tenant = a
-          value  = v.value
-        }
+        for v in b.annotations : { key = v.key, tenant = a, value = v.value }
       ]
-    ]) : "${i.tenant}:${i.key}" => i if local.controller_type == "apic"
+    ]) : "${i.tenant}:${i.key}" => i if var.controller_type == "apic"
   }
   dn         = "uni/tn-${each.value.tenant}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
@@ -61,10 +55,8 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "tenant_global_alias" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
-  for_each   = { for k, v in local.tenants : k => v if v.global_alias != "" && local.controller_type == "apic" }
+  depends_on = [aci_tenant.map]
+  for_each   = { for k, v in local.tenants : k => v if v.global_alias != "" && var.controller_type == "apic" }
   class_name = "tagAliasInst"
   dn         = "uni/tn-${each.key}/alias"
   content = {
@@ -78,28 +70,28 @@ resource "aci_rest_managed" "tenant_global_alias" {
 Nexus Dashboard — Tenants
 _______________________________________________________________________________________________________________________
 */
-data "mso_site" "sites" {
+data "mso_site" "map" {
   provider = mso
-  for_each = { for k, v in local.sites : v => v if local.controller_type == "ndo" }
+  for_each = { for k, v in local.sites : v => v if var.controller_type == "ndo" }
   name     = each.value
 }
 
-data "mso_tenant" "tenants" {
+data "mso_tenant" "map" {
   provider = mso
-  for_each = { for k, v in local.tenants : k => v if local.controller_type == "ndo" }
+  for_each = { for k, v in local.tenants : k => v if var.controller_type == "ndo" }
   name     = each.value.name
 }
 
-data "mso_user" "users" {
+data "mso_user" "map" {
   provider = mso
-  for_each = { for v in local.users : v => v if local.controller_type == "ndo" }
+  for_each = { for v in local.users : v => v if var.controller_type == "ndo" }
   username = each.value
 }
 
-resource "mso_tenant" "tenants" {
+resource "mso_tenant" "map" {
   provider = mso
   for_each = {
-    for k, v in local.tenants : k => v if local.controller_type == "ndo" && v.create == true
+    for k, v in local.tenants : k => v if var.controller_type == "ndo" && v.create == true
   }
   description  = each.value.description
   name         = each.key

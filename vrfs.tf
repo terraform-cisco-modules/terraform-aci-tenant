@@ -7,11 +7,9 @@ GUI Location:
  - Tenants > {tenant} > Networking > VRFs > {vrf}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_vrf" "vrfs" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
-  for_each = { for k, v in local.vrfs : k => v if local.controller_type == "apic" && v.create == true }
+resource "aci_vrf" "map" {
+  depends_on = [aci_tenant.map]
+  for_each   = { for k, v in local.vrfs : k => v if var.controller_type == "apic" && v.create == true }
   #  bd_enforced_enable     = each.value.bd_enforcement_status == true ? "yes" : "no"
   description            = each.value.description
   ip_data_plane_learning = each.value.ip_data_plane_learning
@@ -92,20 +90,13 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_any" "vz_any" {
-  depends_on = [
-    aci_vrf.vrfs
-  ]
-  for_each     = { for k, v in local.vrfs : k => v if local.controller_type == "apic" && v.create == true }
+  depends_on   = [aci_vrf.map]
+  for_each     = { for k, v in local.vrfs : k => v if var.controller_type == "apic" && v.create == true }
   description  = each.value.description
   pref_gr_memb = each.value.preferred_group == true ? "enabled" : "disabled"
   match_t      = each.value.epg_esg_collection_for_vrfs.label_match_criteria
-  vrf_dn       = aci_vrf.vrfs[each.key].id
-  lifecycle {
-    ignore_changes = [
-      relation_vz_rs_any_to_cons,
-      relation_vz_rs_any_to_prov
-    ]
-  }
+  vrf_dn       = aci_vrf.map[each.key].id
+  lifecycle { ignore_changes = [relation_vz_rs_any_to_cons, relation_vz_rs_any_to_prov] }
 }
 
 /*_____________________________________________________________________________________________________________________
@@ -118,21 +109,13 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "vrf_annotations" {
-  depends_on = [
-    aci_vrf.vrfs
-  ]
+  depends_on = [aci_vrf.map]
   for_each = {
     for i in flatten([
       for a, b in local.vrfs : [
-        for v in b.annotations : {
-          create = b.create
-          key    = v.key
-          tenant = b.tenant
-          vrf    = a
-          value  = v.value
-        }
+        for v in b.annotations : { create = b.create, key = v.key, tenant = b.tenant, vrf = a, value = v.value }
       ]
-    ]) : "${i.tenant}:${i.vrf}:${i.key}" => i if local.controller_type == "apic" && i.create == true
+    ]) : "${i.tenant}:${i.vrf}:${i.key}" => i if var.controller_type == "apic" && i.create == true
   }
   dn         = "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
@@ -153,10 +136,8 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "vrf_global_alias" {
-  depends_on = [
-    aci_vrf.vrfs
-  ]
-  for_each   = { for k, v in local.vrfs : k => v if v.global_alias != "" && local.controller_type == "apic" && v.create == true }
+  depends_on = [aci_vrf.map]
+  for_each   = { for k, v in local.vrfs : k => v if v.global_alias != "" && var.controller_type == "apic" && v.create == true }
   class_name = "tagAliasInst"
   dn         = "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/alias"
   content = {
@@ -174,13 +155,11 @@ GUI Location:
  - Tenants > {tenant} > Networking > VRFs > {vrf} > Create SNMP Context
 _______________________________________________________________________________________________________________________
 */
-resource "aci_vrf_snmp_context" "vrf_snmp_contexts" {
-  depends_on = [
-    aci_vrf.vrfs
-  ]
-  for_each = { for k, v in local.vrfs : k => v if local.controller_type == "apic" && v.create == true }
-  name     = each.key
-  vrf_dn   = aci_vrf.vrfs[each.key].id
+resource "aci_vrf_snmp_context" "map" {
+  depends_on = [aci_vrf.map]
+  for_each   = { for k, v in local.vrfs : k => v if var.controller_type == "apic" && v.create == true }
+  name       = each.key
+  vrf_dn     = aci_vrf.map[each.key].id
 }
 
 
@@ -191,9 +170,7 @@ Tenants > {tenant} > Networking > VRFs > {vrf} > Create SNMP Context: Community 
 _______________________________________________________________________________________________________________________
 */
 resource "aci_snmp_community" "vrf_communities" {
-  depends_on = [
-    aci_vrf_snmp_context.vrf_snmp_contexts
-  ]
+  depends_on = [aci_vrf_snmp_context.map]
   for_each = { for i in flatten([
     for k, v in local.vrfs : [
       for s in v.communities : {
@@ -202,7 +179,7 @@ resource "aci_snmp_community" "vrf_communities" {
         vrf                = k
       }
     ]
-    ]) : "${i.vrf}:${i.community_variable}" => i if local.controller_type == "apic"
+    ]) : "${i.vrf}:${i.community_variable}" => i if var.controller_type == "apic"
   }
   description = each.value.description
   name = length(regexall(
@@ -210,7 +187,7 @@ resource "aci_snmp_community" "vrf_communities" {
     4, each.value.community_variable)) > 0 ? var.vrf_snmp_community_4 : length(regexall(
     3, each.value.community_variable)) > 0 ? var.vrf_snmp_community_3 : length(regexall(
   2, each.value.community_variable)) > 0 ? var.vrf_snmp_community_2 : var.vrf_snmp_community_1
-  parent_dn = aci_vrf_snmp_context.vrf_snmp_contexts[each.value.vrf].id
+  parent_dn = aci_vrf_snmp_context.map[each.value.vrf].id
 }
 /*_____________________________________________________________________________________________________________________
 
@@ -220,9 +197,9 @@ ________________________________________________________________________________
 */
 resource "aci_rest_managed" "vzany_provider_contracts" {
   depends_on = [
-    aci_contract.contracts
+    aci_contract.map
   ]
-  for_each   = { for k, v in local.vzany_contracts : k => v if local.controller_type == "apic" && v.contract_type == "provided" }
+  for_each   = { for k, v in local.vzany_contracts : k => v if var.controller_type == "apic" && v.contract_type == "provided" }
   dn         = "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/any/rsanyToProv-${each.value.contract}"
   class_name = "vzRsAnyToProv"
   content = {
@@ -233,10 +210,8 @@ resource "aci_rest_managed" "vzany_provider_contracts" {
 }
 
 resource "aci_rest_managed" "vzany_contracts" {
-  depends_on = [
-    aci_contract.contracts
-  ]
-  for_each = { for k, v in local.vzany_contracts : k => v if local.controller_type == "apic" && v.contract_type != "provided" }
+  depends_on = [aci_contract.map]
+  for_each   = { for k, v in local.vzany_contracts : k => v if var.controller_type == "apic" && v.contract_type != "provided" }
   dn = length(regexall(
     "consumed", each.value.contract_type)
     ) > 0 ? "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/any/rsanyToCons-${each.value.contract}" : length(regexall(
@@ -259,67 +234,47 @@ resource "aci_rest_managed" "vzany_contracts" {
 Nexus Dashboard — VRFs
 _______________________________________________________________________________________________________________________
 */
-resource "mso_schema_template_vrf" "vrfs" {
-  provider = mso
-  depends_on = [
-    mso_tenant.tenants,
-    mso_schema.schemas
-  ]
-  for_each               = { for k, v in local.vrfs : k => v if local.controller_type == "ndo" && v.create == true }
+resource "mso_schema_template_vrf" "map" {
+  provider               = mso
+  depends_on             = [mso_tenant.map, mso_schema.map]
+  for_each               = { for k, v in local.vrfs : k => v if var.controller_type == "ndo" && v.create == true }
   display_name           = each.key
   ip_data_plane_learning = each.value.ip_data_plane_learning
   name                   = each.key
   layer3_multicast       = each.value.layer3_multicast
   preferred_group        = each.value.preferred_group
-  schema_id              = data.mso_schema.schemas[each.value.schema].id
-  template               = each.value.template
+  schema_id              = data.mso_schema.map[each.value.ndo.schema].id
+  template               = each.value.ndo.template
   vzany                  = length(each.value.epg_esg_collection_for_vrfs.contracts) > 0 ? true : false
-  lifecycle {
-    ignore_changes = [
-      schema_id
-    ]
-  }
+  lifecycle { ignore_changes = [schema_id] }
 }
 
-resource "mso_schema_site_vrf" "vrfs" {
-  provider = mso
-  depends_on = [
-    mso_schema_template_vrf.vrfs,
-  ]
-  for_each      = { for k, v in local.vrf_sites : k => v if local.controller_type == "ndo" && v.create == true }
-  schema_id     = data.mso_schema.schemas[each.value.schema].id
-  site_id       = data.mso_site.sites[each.value.site].id
+resource "mso_schema_site_vrf" "map" {
+  provider      = mso
+  depends_on    = [mso_schema_template_vrf.map, ]
+  for_each      = { for k, v in local.vrf_sites : k => v if var.controller_type == "ndo" && v.create == true }
+  schema_id     = data.mso_schema.map[each.value.schema].id
+  site_id       = data.mso_site.map[each.value.site].id
   template_name = each.value.template
   vrf_name      = each.value.vrf
-  lifecycle {
-    ignore_changes = [
-      schema_id,
-      site_id
-    ]
-  }
+  lifecycle { ignore_changes = [schema_id, site_id] }
 }
 
-resource "mso_schema_template_vrf_contract" "vzany_contracts" {
-  depends_on = [
-    mso_schema_template_vrf.vrfs
-  ]
-  for_each          = { for k, v in local.vzany_contracts : k => v if local.controller_type == "ndo" }
-  schema_id         = data.mso_schema.schemas[each.value.schema].id
+resource "mso_schema_template_vrf_contract" "map" {
+  provider          = mso
+  depends_on        = [mso_schema_template_vrf.map]
+  for_each          = { for k, v in local.vzany_contracts : k => v if var.controller_type == "ndo" }
+  schema_id         = data.mso_schema.map[each.value.schema].id
   template_name     = each.value.template
   vrf_name          = each.value.vrf
   relationship_type = each.value.contract_type
   contract_name     = each.value.contract
   contract_schema_id = length(regexall(
     each.value.tenant, each.value.contract_tenant)
-    ) > 0 ? data.mso_schema.schemas[each.value.contract_schema].id : length(regexall(
+    ) > 0 ? data.mso_schema.map[each.value.contract_schema].id : length(regexall(
     "[[:alnum:]]+", each.value.contract_tenant)
-  ) > 0 ? data.mso_schema.schemas[each.value.contract_schema].id : ""
+  ) > 0 ? data.mso_schema.map[each.value.contract_schema].id : ""
   contract_template_name = each.value.contract_template
-  lifecycle {
-    ignore_changes = [
-      contract_schema_id,
-      schema_id
-    ]
-  }
+  lifecycle { ignore_changes = [contract_schema_id, schema_id] }
 }
 

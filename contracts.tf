@@ -10,11 +10,9 @@ GUI Location:
  - Tenants > {tenant} > Contracts > Standard: {contract}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_contract" "contracts" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
-  for_each    = { for k, v in local.contracts : k => v if local.controller_type == "apic" && v.contract_type == "standard" }
+resource "aci_contract" "map" {
+  depends_on  = [aci_tenant.map]
+  for_each    = { for k, v in local.contracts : k => v if var.controller_type == "apic" && v.contract_type == "standard" }
   tenant_dn   = "uni/tn-${each.value.tenant}"
   description = each.value.description
   name        = each.key
@@ -38,10 +36,8 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "oob_contracts" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
-  for_each   = { for k, v in local.contracts : k => v if local.controller_type == "apic" && v.contract_type == "oob" }
+  depends_on = [aci_tenant.map]
+  for_each   = { for k, v in local.contracts : k => v if var.controller_type == "apic" && v.contract_type == "oob" }
   dn         = "uni/tn-${each.value.tenant}/oobbrc-${each.key}"
   class_name = "vzOOBBrCP"
   content = {
@@ -67,11 +63,9 @@ GUI Location:
  - Tenants > {tenant} > Contracts > Taboos: {contract}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_taboo_contract" "contracts" {
-  depends_on = [
-    aci_tenant.tenants,
-  ]
-  for_each    = { for k, v in local.contracts : k => v if local.controller_type == "apic" && v.contract_type == "taboo" }
+resource "aci_taboo_contract" "map" {
+  depends_on  = [aci_tenant.map, ]
+  for_each    = { for k, v in local.contracts : k => v if var.controller_type == "apic" && v.contract_type == "taboo" }
   tenant_dn   = "uni/tn-${each.value.tenant}"
   description = each.value.description
   name        = each.key
@@ -87,15 +81,15 @@ GUI Locations:
  - Tenants > mgmt > Contracts > Standard: {contract} > {subject}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_contract_subject" "contract_subjects" {
+resource "aci_contract_subject" "map" {
   depends_on = [
-    aci_contract.contracts,
-    aci_filter.filters,
+    aci_contract.map,
+    aci_filter.map,
     aci_rest_managed.oob_contracts,
-    aci_taboo_contract.contracts,
+    aci_taboo_contract.map,
   ]
   for_each      = { for k, v in local.contract_subjects : k => v if v.contract_type == "standard" }
-  contract_dn   = aci_contract.contracts[each.value.contract].id
+  contract_dn   = aci_contract.map[each.value.contract].id
   cons_match_t  = each.value.label_match_criteria
   description   = each.value.description
   name          = each.value.name
@@ -147,7 +141,7 @@ resource "aci_rest_managed" "taboo_contract_subjects" {
     aci_rest_managed.oob_contracts
   ]
   for_each   = { for k, v in local.contract_subjects : k => v if v.contract_type == "taboo" }
-  dn         = "${aci_taboo_contract.contracts[each.value.contract].id}/tsubj-${each.value.name}"
+  dn         = "${aci_taboo_contract.map[each.value.contract].id}/tsubj-${each.value.name}"
   class_name = "vzTSubj"
   content = {
     descr = each.value.description
@@ -165,14 +159,10 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "contract_subject_filter" {
-  depends_on = [
-    #aci_rest_managed.contract_subjects,
-    aci_contract_subject.contract_subjects,
-    aci_rest_managed.oob_contract_subjects,
-  ]
-  for_each = { for k, v in local.subject_filters : k => v if v.contract_type != "taboo" }
+  depends_on = [aci_contract_subject.map, aci_rest_managed.oob_contract_subjects, ]
+  for_each   = { for k, v in local.subject_filters : k => v if v.contract_type != "taboo" }
   dn = length(regexall("standard", each.value.contract_type)
-    ) > 0 ? "${aci_contract.contracts[each.value.contract].id}/subj-${each.value.subject}/rssubjFiltAtt-${each.value.filter}" : length(
+    ) > 0 ? "${aci_contract.map[each.value.contract].id}/subj-${each.value.subject}/rssubjFiltAtt-${each.value.filter}" : length(
     regexall("oob", each.value.contract_type)
   ) > 0 ? "${aci_rest_managed.oob_contracts[each.value.contract].id}/subj-${each.value.subject}/rssubjFiltAtt-${each.value.filter}" : ""
   class_name = "vzRsSubjFiltAtt"
@@ -190,11 +180,9 @@ resource "aci_rest_managed" "contract_subject_filter" {
 }
 
 resource "aci_rest_managed" "taboo_subject_filter" {
-  depends_on = [
-    aci_rest_managed.taboo_contract_subjects,
-  ]
+  depends_on = [aci_rest_managed.taboo_contract_subjects, ]
   for_each   = { for k, v in local.subject_filters : k => v if v.contract_type == "taboo" }
-  dn         = "${aci_taboo_contract.contracts[each.value.contract].id}/tsubj-${each.value.subject}/rsdenyRule-${each.value.filter}"
+  dn         = "${aci_taboo_contract.map[each.value.contract].id}/tsubj-${each.value.subject}/rsdenyRule-${each.value.filter}"
   class_name = "vzRsDenyRule"
   content = {
     directives = anytrue(
@@ -214,24 +202,24 @@ resource "aci_rest_managed" "taboo_subject_filter" {
 Nexus Dashboard — Contracts
 _______________________________________________________________________________________________________________________
 */
-resource "mso_schema_template_contract" "contracts" {
+resource "mso_schema_template_contract" "map" {
   provider = mso
   depends_on = [
-    mso_schema.schemas,
-    mso_schema_template_filter_entry.filter_entries
+    mso_schema.map,
+    mso_schema_template_filter_entry.map
   ]
-  for_each      = { for k, v in local.contracts : k => v if local.controller_type == "ndo" }
+  for_each      = { for k, v in local.contracts : k => v if var.controller_type == "ndo" }
   contract_name = each.key
   directives    = each.value.log == true ? ["log"] : ["none"]
   display_name  = each.key
   filter_type   = each.value.apply_both_directions == true ? "bothWay" : "oneWay"
-  schema_id     = data.mso_schema.schemas[each.value.schema].id
+  schema_id     = data.mso_schema.map[each.value.schema].id
   scope         = each.value.scope
   template_name = each.value.template
   dynamic "filter_relationship" {
     for_each = toset(each.value.filters)
     content {
-      filter_schema_id     = mso_schema.schemas[each.value.schema].id
+      filter_schema_id     = mso_schema.map[each.value.schema].id
       filter_template_name = each.value.template
       filter_name          = filter_relationship.value
     }

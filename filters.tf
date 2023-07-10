@@ -7,11 +7,9 @@ GUI Location:
  - Tenants > {tenant} > Contracts > Filters: {filter}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_filter" "filters" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
-  for_each                       = { for k, v in local.filters : k => v if local.controller_type == "apic" }
+resource "aci_filter" "map" {
+  depends_on                     = [aci_tenant.map]
+  for_each                       = { for k, v in local.filters : k => v if var.controller_type == "apic" }
   tenant_dn                      = "uni/tn-${each.value.tenant}"
   description                    = each.value.description
   name                           = each.key
@@ -30,13 +28,10 @@ GUI Location:
  - Tenants > {tenant} > Contracts > Filters: {filter} > Filter Entry: {filter_entry}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_filter_entry" "filter_entries" {
-  depends_on = [
-    aci_tenant.tenants,
-    aci_filter.filters
-  ]
-  for_each      = { for k, v in local.filter_entries : k => v if local.controller_type == "apic" }
-  filter_dn     = aci_filter.filters[each.value.filter_name].id
+resource "aci_filter_entry" "map" {
+  depends_on    = [aci_tenant.map, aci_filter.map]
+  for_each      = { for k, v in local.filter_entries : k => v if var.controller_type == "apic" }
+  filter_dn     = aci_filter.map[each.value.filter_name].id
   description   = each.value.description
   name          = each.key
   name_alias    = each.value.alias
@@ -74,11 +69,11 @@ resource "aci_filter_entry" "filter_entries" {
 Nexus Dashboard — Filters
 _______________________________________________________________________________________________________________________
 */
-resource "mso_schema_template_filter_entry" "filter_entries" {
+resource "mso_schema_template_filter_entry" "map" {
   provider   = mso
-  depends_on = [mso_schema.schemas]
+  depends_on = [mso_schema.map]
   for_each = {
-    for k, v in local.filter_entries : k => v if local.controller_type == "ndo"
+    for k, v in local.filter_entries : k => v if var.controller_type == "ndo"
   }
   arp_flag             = each.value.arp_flag
   destination_from     = each.value.destination_port_from
@@ -90,7 +85,7 @@ resource "mso_schema_template_filter_entry" "filter_entries" {
   ip_protocol          = each.value.ip_protocol
   match_only_fragments = each.value.match_only_fragments
   name                 = each.value.filter_name
-  schema_id            = data.mso_schema.schemas[each.value.schema].id
+  schema_id            = data.mso_schema.map[each.value.schema].id
   source_from          = each.value.source_port_from
   source_to            = each.value.source_port_to
   stateful             = each.value.stateful
@@ -110,10 +105,6 @@ resource "mso_schema_template_filter_entry" "filter_entries" {
       length(regexall(true, each.value.tcp_session_rules.synchronize)) > 0 ? "synchronize" : ""]
   )) : ["unspecified"]
   template_name = each.value.template
-  lifecycle {
-    ignore_changes = [
-      schema_id
-    ]
-  }
+  lifecycle { ignore_changes = [schema_id] }
 }
 

@@ -4,9 +4,7 @@ Tenant — Policies — Route-Map Match Rules — Variables
 _______________________________________________________________________________________________________________________
 */
 resource "aci_match_rule" "route_map_match_rules" {
-  depends_on = [
-    aci_tenant.tenants
-  ]
+  depends_on  = [aci_tenant.map]
   for_each    = local.route_map_match_rules
   description = each.value.description
   name        = each.key
@@ -15,9 +13,7 @@ resource "aci_match_rule" "route_map_match_rules" {
 }
 
 resource "aci_rest_managed" "match_rules_match_community_terms" {
-  depends_on = [
-    aci_match_rule.route_map_match_rules
-  ]
+  depends_on = [aci_match_rule.route_map_match_rules]
   for_each   = local.match_rules_match_community_terms
   dn         = "uni/tn-${each.value.tenant}/subj-${each.value.match_rule}/commtrm-${each.value.name}"
   class_name = "rtctrlMatchCommTerm"
@@ -42,9 +38,7 @@ resource "aci_rest_managed" "match_rules_match_community_terms" {
 }
 
 resource "aci_rest_managed" "match_rules_match_regex_community_terms" {
-  depends_on = [
-    aci_match_rule.route_map_match_rules
-  ]
+  depends_on = [aci_match_rule.route_map_match_rules]
   for_each   = local.match_rules_match_regex_community_terms
   dn         = "uni/tn-${each.value.tenant}/subj-${each.value.match_rule}/commrxtrm-${each.value.community_type}"
   class_name = "rtctrlMatchCommRegexTerm"
@@ -66,10 +60,8 @@ GUI Location:
  - Tenants > {tenant} > Networking > Policies > Protocol > Match Rules > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_match_route_destination_rule" "match_rules_match_route_destination_rule" {
-  depends_on = [
-    aci_match_rule.route_map_match_rules
-  ]
+resource "aci_match_route_destination_rule" "map" {
+  depends_on        = [aci_match_rule.route_map_match_rules]
   for_each          = local.match_rules_match_route_destination_rule
   aggregate         = each.value.greater_than_mask == 0 && each.value.less_than_mask == 0 ? "no" : "yes"
   match_rule_dn     = aci_match_rule.route_map_match_rules[each.value.match_rule].id
