@@ -811,8 +811,8 @@ resource "aci_l3out_static_route" "map" {
   pref           = each.value.fallback_preference
   rt_ctrl        = each.value.route_control.bfd == true ? "bfd" : "unspecified"
   # class fvTrackList
-  relation_ip_rs_route_track = length(compact([each.value.track_list])
-  ) > 0 ? "uni/tn-${each.value.tenant}/tracklist-${each.value.track_list}" : ""
+  relation_ip_rs_route_track = length(compact([each.value.track_policy])
+  ) > 0 ? "uni/tn-${each.value.tenant}/tracklist-${each.value.track_policy}" : ""
 }
 
 /*_____________________________________________________________________________________________________________________
@@ -836,8 +836,8 @@ resource "aci_l3out_static_route_next_hop" "map" {
   pref                 = each.value.preference == 0 ? "unspecified" : each.value.preference
   static_route_dn      = aci_l3out_static_route.map[each.value.static_route].id
   # class fvTrackList
-  relation_ip_rs_nexthop_route_track = length(compact([each.value.track_list])
-  ) > 0 ? "uni/tn-${each.value.tenant}/tracklist-${each.value.track_list}" : ""
+  relation_ip_rs_nexthop_route_track = length(compact([each.value.track_policy])
+  ) > 0 ? "uni/tn-${each.value.tenant}/tracklist-${each.value.track_policy}" : ""
   # Class "ipRsNHTrackMember"
   relation_ip_rs_nh_track_member = length(compact([each.value.track_member])
   ) > 0 ? "uni/tn-${each.value.tenant}/trackmember-${each.value.track_member}" : ""

@@ -603,8 +603,8 @@ locals {
         external_epgs         = lookup(v, "external_epgs", [])
         logical_node_profiles = lookup(v, "logical_node_profiles", [])
         ndo = {
-          schema   = lookup(lookup(v, "ndo", {}), "schema", "")
-          sites    = lookup(lookup(v, "ndo", {}), "sites", local.l3out.ndo.sites)
+          schema   = lookup(lookup(v, "ndo", {}), "schema", local.schema)
+          sites    = lookup(lookup(v, "ndo", {}), "sites", local.sites)
           template = lookup(lookup(v, "ndo", {}), "template", local.l3out.ndo.template)
         }
         ospf_external_profile = lookup(v, "ospf_external_profile", [])
@@ -646,6 +646,11 @@ locals {
           l3out_contract_masters = [
             for s in lookup(v, "l3out_contract_masters", []) : { external_epg = s.external_epg, l3out = s.l3out }
           ]
+          ndo = {
+            schema   = lookup(lookup(v, "ndo", {}), "schema", value.ndo.schema)
+            sites    = lookup(lookup(v, "ndo", {}), "sites", value.ndo.sites)
+            template = lookup(lookup(v, "ndo", {}), "template", value.ndo.template)
+          }
           subnets = lookup(v, "subnets", [])
           route_control_profiles = [
             for s in lookup(v, "route_control_profiles", []) : { direction = s.direction, route_map = s.route_map }
@@ -660,7 +665,13 @@ locals {
     for key, value in local.l3out_external_epgs : [
       for v in value.contracts : merge(
         local.l3out.external_epgs.contracts, v, {
-          contract = v.name, external_epg = value.name, l3out = value.l3out, tenant = value.tenant
+          contract = v.name, external_epg = value.name, l3out = value.l3out,
+          ndo = {
+            schema   = lookup(lookup(v, "ndo", {}), "schema", value.ndo.schema)
+            sites    = lookup(lookup(v, "ndo", {}), "sites", value.ndo.sites)
+            template = lookup(lookup(v, "ndo", {}), "template", value.ndo.template)
+          }
+          tenant = value.tenant
         }
       )
     ]
@@ -679,6 +690,7 @@ locals {
             external_epg_classification = merge(
               local.subnets.external_epg_classification, lookup(v, "external_epg_classification", {})
             )
+            ndo           = value.ndo
             route_control = merge(local.subnets.route_control, lookup(v, "route_control", {}))
             subnet        = s
           }
@@ -712,6 +724,7 @@ locals {
         local.lnp, v, {
           l3out              = key, tenant = value.tenant
           interface_profiles = lookup(v, "logical_interface_profiles", [])
+          ndo                = value.ndo
           nodes = [
             for s in lookup(v, "nodes", []) : {
               l3out         = key, node_id = s.node_id, router_id = s.router_id, tenant = var.tenant
@@ -745,6 +758,7 @@ locals {
           description         = lookup(v, "description", local.lnpstrt.description)
           fallback_preference = lookup(v, "fallback_preference", local.lnpstrt.fallback_preference)
           key                 = key
+          ndo                 = value.ndo
           next_hop_addresses = [
             for x in range(0, length(lookup(lookup(v, "next_hop_addresses", {}), "next_hop_ips", []))) : {
               alias         = lookup(lookup(v, "next_hop_addresses", {}), "alias", local.lnpsrnh.alias)
@@ -753,10 +767,8 @@ locals {
               next_hop_type = lookup(lookup(v, "next_hop_addresses", {}), "next_hop_type", local.lnpsrnh.next_hop_type)
               preference    = lookup(lookup(v, "next_hop_addresses", {}), "preference", local.lnpsrnh.preference)
               static_route  = "${key}:${e}"
-              track_list    = lookup(lookup(v, "next_hop_addresses", {}), "track_list", local.lnpsrnh.track_list)
-              track_member = length(
-                lookup(lookup(v, "next_hop_addresses", {}), "track_members", [])
-              ) > 0 ? lookup(lookup(v, "next_hop_addresses", {}), "track_members", [])[x] : ""
+              track_policy  = lookup(lookup(v, "next_hop_addresses", {}), "track_policy", local.lnpsrnh.track_policy)
+              track_member = lookup(lookup(v, "next_hop_addresses", {}), "track_member", local.lnpsrnh.track_member)
             }
           ]
           node_id = value.node_id
@@ -766,7 +778,7 @@ locals {
           }
           description = lookup(v, "description", local.lnpstrt.description)
           tenant      = var.tenant
-          track_list  = lookup(v, "track_list", local.lnpstrt.track_list)
+          track_policy  = lookup(v, "track_policy", local.lnpstrt.track_policy)
         }
       ]
     ]
@@ -794,6 +806,7 @@ locals {
               netflow_policy = s.netflow_policy
             }
           ]
+          ndo                    = value.ndo
           node_profile           = key
           nodes                  = [for keys, values in value.nodes : value.nodes[keys]["node_id"]]
           ospf_interface_profile = lookup(v, "ospf_interface_profile", [])
@@ -814,6 +827,7 @@ locals {
           link_local_address = length(lookup(v, "link_local_addresses", [])
           ) == 2 ? element(v.link_local_addresses, s) : "::"
           l3out_interface_profile   = key
+          ndo                       = value.ndo
           primary_preferred_address = element(v.primary_preferred_addresses, s)
           secondary_addresses       = lookup(v, "secondary_addresses", [])
           side                      = length(regexall("false", tostring(s % 2 == 0))) > 0 ? "A" : "B"
@@ -856,6 +870,7 @@ locals {
             address_type_controls   = merge(local.bgppeer.address_type_controls, lookup(v, "address_type_controls", {}))
             bgp_controls            = merge(local.bgppeer.bgp_controls, lookup(v, "bgp_controls", {}))
             l3out_interface_profile = key
+            ndo                     = value.ndo
             node_profile            = value.node_profile
             peer_address            = element(v.peer_addresses, s)
             peer_asn                = v.peer_asn
@@ -902,16 +917,16 @@ locals {
 
   l3out_ospf_interface_profiles = { for i in flatten([
     for key, value in local.l3out_interface_profiles : [
-      for v in value.ospf_interface_profile : merge(
+      for v in [value.ospf_interface_profile] : merge(
         local.ospfip, v, {
           l3out_interface_profile = key
           l3out                   = value.l3out
-          name                    = v.name
+          ndo                     = value.ndo
           tenant                  = value.tenant
         }
       )
     ]
-  ]) : "${i.l3out_interface_profile}:ospf:${i.name}" => i }
+  ]) : "${i.l3out_interface_profile}:ospf" => i }
 
 
   #__________________________________________________________
