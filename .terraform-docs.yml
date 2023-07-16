@@ -10,7 +10,7 @@ content: |-
 
   A Terraform module to configure ACI Tenant Policies.
 
-  ## THIS MODULE IS DESIGNED TO BE CONSUMED USING THE "EASY ACI" Module
+  ### NOTE: THIS MODULE IS DESIGNED TO BE CONSUMED USING "EASY ACI"
 
   ### A comprehensive example using this module is available below:
   
