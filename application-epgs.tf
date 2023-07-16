@@ -328,53 +328,6 @@ ________________________________________________________________________________
 # }
 
 
-/*_____________________________________________________________________________________________________________________
-
-API Information:
- - Class: "fvRsPathAtt"
- - Distinguished Name: "uni/tn-{tenant}/ap-{application_profile}/epg-{application_epg}/{static_path}"
-GUI Location:
-Tenants > {tenant} > Application Profiles > {application_profile} > Application EPGs > {application_epg} > Static Ports > {GUI_Static}
-_______________________________________________________________________________________________________________________
-*/
-resource "aci_rest_managed" "epg_to_static_paths" {
-  depends_on = [aci_application_epg.map]
-  for_each   = local.epg_to_static_paths
-  dn = length(
-    regexall("^pc$", each.value.path_type)
-    ) > 0 ? "${aci_application_epg.map[each.value.application_epg].id}/rspathAtt-[topology/pod-${each.value.pod}/paths-${element(each.value.nodes, 0)}/pathep-[${each.value.name}]]" : length(
-    regexall("^port$", each.value.path_type)
-    ) > 0 ? "${aci_application_epg.map[each.value.application_epg].id}/rspathAtt-[topology/pod-${each.value.pod}/paths-${element(each.value.nodes, 0)}/pathep-[eth${each.value.name}]]" : length(
-    regexall("^vpc$", each.value.path_type)
-  ) > 0 ? "${aci_application_epg.map[each.value.application_epg].id}/rspathAtt-[topology/pod-${each.value.pod}/protpaths-${element(each.value.nodes, 0)}-${element(each.value.nodes, 1)}/pathep-[${each.value.name}]]" : ""
-  class_name = "fvRsPathAtt"
-  content = {
-    encap = length(
-      regexall("micro_seg", each.value.encapsulation_type)
-      ) > 0 ? "vlan-${element(each.value.vlans, 0)}" : length(
-      regexall("qinq", each.value.encapsulation_type)
-      ) > 0 ? "qinq-${element(each.value.vlans, 0)}-${element(each.value.vlans, 1)}" : length(
-      regexall("vlan", each.value.encapsulation_type)
-      ) > 0 ? "vlan-${element(each.value.vlans, 0)}" : length(
-      regexall("vxlan", each.value.encapsulation_type)
-    ) > 0 ? "vxlan-${element(each.value.vlans, 0)}" : ""
-    mode = length(
-      regexall("dot1p", each.value.mode)
-      ) > 0 ? "native" : length(
-      regexall("access", each.value.mode)
-    ) > 0 ? "untagged" : "regular"
-    primaryEncap = each.value.encapsulation_type == "micro_seg" ? "vlan-${element(each.value.vlans, 1)}" : "unknown"
-    tDn = length(
-      regexall("^pc$", each.value.path_type)
-      ) > 0 ? "topology/pod-${each.value.pod}/paths-${element(each.value.nodes, 0)}/pathep-[${each.value.name}]" : length(
-      regexall("^port$", each.value.path_type)
-      ) > 0 ? "topology/pod-${each.value.pod}/paths-${element(each.value.nodes, 0)}/pathep-[eth${each.value.name}]" : length(
-      regexall("^vpc$", each.value.path_type)
-    ) > 0 ? "topology/pod-${each.value.pod}/protpaths-${element(each.value.nodes, 0)}-${element(each.value.nodes, 1)}/pathep-[${each.value.name}]" : ""
-  }
-}
-
-
 #------------------------------------------------------
 # Create Attachable Access Entity Generic Encap Policy
 #------------------------------------------------------
@@ -397,6 +350,37 @@ resource "aci_epgs_using_function" "epg_to_aaeps" {
   mode              = each.value.mode == "trunk" ? "regular" : each.value.mode == "access" ? "untagged" : "native"
   primary_encap     = length(each.value.vlans) > 1 ? "vlan-${element(each.value.vlans, 1)}" : "unknown"
   tdn               = aci_application_epg.map[each.value.application_epg].id
+}
+
+
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "fvRsPathAtt"
+ - Distinguished Name: "uni/tn-{tenant}/ap-{application_profile}/epg-{application_epg}/{static_path}"
+GUI Location:
+Tenants > {tenant} > Application Profiles > {application_profile} > Application EPGs > {application_epg} > Static Ports > {GUI_Static}
+_______________________________________________________________________________________________________________________
+*/
+resource "aci_rest_managed" "epg_to_static_paths" {
+  depends_on = [aci_application_epg.map]
+  for_each   = { for k, v in local.epg_to_static_paths : k => v if var.controller_type == "apic" }
+  dn         = each.value.distinguished_name
+  class_name = "fvRsPathAtt"
+  content = {
+    encap = length(
+      regexall("micro_seg", each.value.encapsulation_type)
+      ) > 0 ? "vlan-${element(each.value.vlans, 0)}" : length(
+      regexall("qinq", each.value.encapsulation_type)
+      ) > 0 ? "qinq-${element(each.value.vlans, 0)}-${element(each.value.vlans, 1)}" : length(
+      regexall("vlan", each.value.encapsulation_type)
+      ) > 0 ? "vlan-${element(each.value.vlans, 0)}" : length(
+      regexall("vxlan", each.value.encapsulation_type)
+    ) > 0 ? "vxlan-${element(each.value.vlans, 0)}" : ""
+    mode         = each.value.mode
+    primaryEncap = each.value.encapsulation_type == "micro_seg" ? "vlan-${element(each.value.vlans, 1)}" : "unknown"
+    tDn          = each.value.distinguished_name
+  }
 }
 
 
@@ -485,4 +469,30 @@ resource "mso_schema_template_anp_epg_contract" "map" {
   schema_id              = data.mso_schema.map[each.value.ndo.schema].id
   template_name          = each.value.ndo.template
   lifecycle { ignore_changes = [contract_schema_id, schema_id] }
+}
+
+resource "mso_schema_site_anp_epg_static_port" "static_port" {
+  provider             = mso
+  depends_on           = [mso_schema_template_anp_epg.map]
+  for_each             = { for k, v in local.epg_to_static_paths : k => v if var.controller_type == "ndo" }
+  anp_name             = each.value.application_profile
+  deployment_immediacy = each.value.instrumentation_immediacy
+  epg_name             = each.value.application_epg
+  leaf                 = each.value.path_type == "vpc" ? each.value.vpc_pair : each.value.node_id
+  micro_seg_vlan = each.value.encapsulation_type == "micro_seg" && length(each.value.vlans
+  ) == 2 ? element(each.value.vlans, 1) : null
+  mode          = each.value.node
+  path          = each.value.interface
+  path_type     = each.value.path_type
+  pod           = each.value.pod_id
+  schema_id     = data.mso_schema.map[each.value.ndo.schema].id
+  site_id       = data.mso_site.map[each.value.site].id
+  template_name = each.value.ndo.template
+  vlan          = element(each.value.vlans, 0)
+  lifecycle {
+    ignore_changes = [
+      schema_id,
+      site_id
+    ]
+  }
 }

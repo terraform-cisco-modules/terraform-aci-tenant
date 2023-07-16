@@ -352,42 +352,39 @@ locals {
 
   merged_epgs = merge(local.bd_to_epg, local.epgs, local.merge_templates)
 
-  application_epgs = {
-    for k, v in local.merged_epgs : "${local.npfx.application_epgs}${v.name}${local.nsfx.application_epgs}" => merge(
-      local.epg, v, {
-        annotations = length(lookup(v, "annotations", local.epg.annotations)
-        ) > 0 ? lookup(v, "annotations", local.epg.annotations) : var.annotations
-        application_profile = "${local.npfx.application_profiles}${v.application_profile}${local.nsfx.application_profiles}"
-        bd = length(compact([lookup(v, "bridge_domain", "")])) > 0 ? {
-          name = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].name
-          ndo  = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].ndo
-        } : { name = "", ndo = { schema = "", sites = [], template = "" } }
-        contracts       = lookup(v, "contracts", [])
-        controller_type = var.controller_type
-        domains         = lookup(v, "domains", [])
-        epg_contract_masters = [
-          for s in lookup(v, "epg_contract_masters", []) : {
-            application_profile = "${local.npfx.application_profiles}${lookup(s, "application_profile", v.application_profile)}${local.nsfx.application_profiles}"
-            application_epg     = s.application_epg
-          }
-        ]
-        name = "${local.npfx.application_epgs}${v.name}${local.nsfx.application_epgs}"
-        ndo = {
-          schema   = lookup(lookup(v, "ndo", {}), "schema", "")
-          sites    = local.sites
-          template = lookup(lookup(v, "ndo", {}), "template", "")
+  application_epgs = { for i in flatten([
+    for k, v in local.merged_epgs : merge(local.epg, v, {
+      annotations = length(lookup(v, "annotations", local.epg.annotations)
+      ) > 0 ? lookup(v, "annotations", local.epg.annotations) : var.annotations
+      application_profile = "${local.npfx.application_profiles}${v.application_profile}${local.nsfx.application_profiles}"
+      bd = length(compact([lookup(v, "bridge_domain", "")])) > 0 ? {
+        name = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].name
+        ndo  = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].ndo
+      } : { name = "", ndo = { schema = "", sites = [], template = "" } }
+      contracts       = lookup(v, "contracts", [])
+      controller_type = var.controller_type
+      domains         = lookup(v, "domains", [])
+      epg_contract_masters = [
+        for s in lookup(v, "epg_contract_masters", []) : {
+          application_profile = "${local.npfx.application_profiles}${lookup(s, "application_profile", v.application_profile)}${local.nsfx.application_profiles}"
+          application_epg     = s.application_epg
         }
-        static_paths = lookup(v, "static_paths", [])
-        tenant       = var.tenant
-        vrf = length(compact([lookup(v, "bridge_domain", "")])) > 0 ? {
-          name   = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.name
-          ndo    = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.ndo
-          tenant = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.tenant
-        } : { name = "", ndo = { schema = "", template = "" }, tenant = "" }
-
+      ]
+      name = "${local.npfx.application_epgs}${v.name}${local.nsfx.application_epgs}"
+      ndo = {
+        schema   = lookup(lookup(v, "ndo", {}), "schema", "")
+        sites    = local.sites
+        template = lookup(lookup(v, "ndo", {}), "template", "")
       }
-    )
-  }
+      static_paths = lookup(v, "static_paths", [])
+      tenant       = var.tenant
+      vrf = length(compact([lookup(v, "bridge_domain", "")])) > 0 ? {
+        name   = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.name
+        ndo    = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.ndo
+        tenant = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.tenant
+      } : { name = "", ndo = { schema = "", template = "" }, tenant = "" }
+    })
+  ]) : "${i.application_profile}:${i.application_epg}" => i }
 
   epg_to_domains = { for i in flatten([
     for key, value in local.application_epgs : [
@@ -411,32 +408,19 @@ locals {
     ]
   ]) : "${i.application_profile}:${i.application_epg}:${i.domain}:${i.site}" => i if i.controller_type == "ndo" }
 
-  epg_to_static_paths = { for i in flatten([
-    for key, value in local.application_epgs : [
-      for v in value.static_paths : [
-        for s in v.names : merge(
-          local.epg.static_paths, v,
-          {
-            application_epg     = key
-            application_profile = value.application_profile
-            name                = s
-          }
-        )
-      ]
-    ]
-  ]) : "${i.application_profile}:${i.application_epg}:${i.name}" => i }
-
   aaep_to_epgs_loop = [
     for v in var.aaep_to_epgs : {
       aaep                      = v.name
       access                    = lookup(v, "access_or_native_vlan", 0)
-      allowed_vlans             = v.allowed_vlans
+      allowed_vlans             = lookup(v, "allowed_vlans", "")
       instrumentation_immediacy = lookup(v, "instrumentation_immediacy", "on-demand")
-      mode                      = length(regexall("(,|-)", jsonencode(v.allowed_vlans))) > 0 ? "trunk" : "native"
-      vlan_split = length(regexall("-", v.allowed_vlans)) > 0 ? tolist(split(",", v.allowed_vlans)) : length(
-        regexall(",", v.allowed_vlans)) > 0 ? tolist(split(",", v.allowed_vlans)
-      ) : [v.allowed_vlans]
-    } if lookup(v, "access_or_native_vlan", 0) > 0 || length(compact([v.allowed_vlans])) > 0
+      mode = length(regexall("(,|-)", jsonencode(lookup(v, "allowed_vlans", "")))
+      ) > 0 ? "trunk" : "native"
+      vlan_split = length(regexall("-", lookup(v, "allowed_vlans", ""))
+        ) > 0 ? tolist(split(",", lookup(v, "allowed_vlans", ""))) : length(
+        regexall(",", lookup(v, "allowed_vlans", ""))) > 0 ? tolist(split(",", lookup(v, "allowed_vlans", ""))
+      ) : [lookup(v, "allowed_vlans", "")]
+    } if lookup(v, "access_or_native_vlan", 0) > 0 || length(compact([lookup(v, "allowed_vlans", "")])) > 0
   ]
   aaep_to_epgs_loop_2 = [for v in local.aaep_to_epgs_loop : merge(v, {
     vlan_list = length(regexall("(,|-)", jsonencode(v.allowed_vlans))) > 0 ? flatten([
@@ -449,21 +433,86 @@ locals {
       for e in local.aaep_to_epgs_loop_2 : {
         aaep                      = e.aaep
         access                    = e.access
-        application_epg           = k
+        application_epg           = v.name
         application_profile       = v.application_profile
         instrumentation_immediacy = e.instrumentation_immediacy
         mode                      = contains(v.vlans, tonumber(e.access)) ? "native" : e.mode
         vlans                     = lookup(v, "vlans", [])
         } if length(v.vlans) == 2 ? contains(e.vlan_list, tonumber(element(v.vlans, 0))) && contains(
-        e.vlan_list, tonumber(element(v.vlans, 1))) : length(v.vlans) == 1 ? contains(e.vlan_list, tonumber(element(v.vlans, 0))
+        e.vlan_list, tonumber(element(v.vlans, 1))) : length(v.vlans) == 1 ? contains(
+        e.vlan_list, tonumber(element(v.vlans, 0))
       ) : false
     ] if v.epg_type == "standard"
   ]) : "${i.application_profile}:${i.application_epg}:${i.aaep}" => i }
 
+  switch_loop_1 = [
+    for v in lookup(var.switch, "switch_profiles", []) : [
+      for i in lookup(v, "interfaces", []) : {
+        access                    = lookup(v, "access_or_native_vlan", 0)
+        allowed_vlans             = lookup(v, "allowed_vlans", "")
+        encapsulation_type        = lookup(i, "encapsulation_type", "vlan")
+        interface                 = lookup(i, "policy_group_type", "access") == "bundle" ? i.policy_group : i.interface
+        interface_type            = lookup(i, "policy_group_type", "access")
+        node_id                   = v.node_id
+        pod_id                    = lookup(v, "pod_id", 1)
+        site                      = lookup(v, "site", "")
+        instrumentation_immediacy = lookup(i, "instrumentation_immediacy", lookup(v, "instrumentation_immediacy", "immediate"))
+        vpc_pair = flatten([for e in lookup(var.switch, "vpc_domains", []
+        ) : e.switches if contains(e.switches, v.node_id)])
+        mode = length(regexall("(,|-)", jsonencode(lookup(v, "allowed_vlans", "")))
+        ) > 0 ? "trunk" : "native"
+        vlan_split = length(regexall("-", lookup(v, "allowed_vlans", ""))
+          ) > 0 ? tolist(split(",", lookup(v, "allowed_vlans", ""))) : length(
+          regexall(",", lookup(v, "allowed_vlans", ""))) > 0 ? tolist(split(",", lookup(v, "allowed_vlans", ""))
+        ) : [lookup(v, "allowed_vlans", "")]
+        } if lookup(v, "access_or_native_vlan", 0) > 0 && v.node_type != "spine" || length(
+        compact([lookup(v, "allowed_vlans", "")])
+      ) > 0 && v.node_type != "spine"
+    ]
+  ]
+  switch_loop_2 = [for v in local.switch_loop_1 : merge(v, { path_type = length(v.vpc_pair
+    ) == 2 && v.interface_type == "bundle" ? "vpc" : v.interface_type == "bundle" ? "dpc" : "port" }
+    ) if length(v.vpc_pair) == 2 ? element(
+    v.vpc_pair, 1) == v.node_id && v.interface_type == "bundle" ? false : true : true
+  ]
+  switch_loop_3 = [for v in local.switch_loop_1 : merge(v, {
+    vlan_list = length(regexall("(,|-)", jsonencode(v.allowed_vlans))) > 0 ? flatten([
+      for s in v.vlan_split : length(regexall("-", s)) > 0 ? [for v in range(tonumber(
+      element(split("-", s), 0)), (tonumber(element(split("-", s), 1)) + 1)) : tonumber(v)] : [tonumber(s)]
+    ]) : tonumber(v.vlan_split)
+  })]
+  epg_to_static_paths = { for i in flatten([
+    for k, v in local.application_epgs : [
+      for e in local.switch_loop_3 : {
+        access              = e.access
+        application_epg     = k
+        application_profile = v.application_profile
+        distinguished_name = length(regexall("^vpc$", v.path_type)
+          ) > 0 ? "${aci_application_epg.map[k].id}/rspathAtt-[topology/pod-${v.pod_id}/protpaths-${element(v.vpc_pair, 0)}-${element(v.vpc_pair, 1)}/pathep-[${v.interface}]]" : length(
+          regexall("^dpc$", v.path_type)
+          ) > 0 ? "${aci_application_epg.map[k].id}/rspathAtt-[topology/pod-${v.pod_id}/paths-${v.node_id}/pathep-[${v.interface}]]" : length(1
+        ) > 0 ? "${aci_application_epg.map[k].id}/rspathAtt-[topology/pod-${v.pod_id}/paths-${v.node_id}/pathep-[eth${v.interface}]]" : ""
+        encapsulation_type        = e.encapsulation_type
+        instrumentation_immediacy = e.instrumentation_immediacy == "on-demand" ? "lazy" : "immediate"
+        interface                 = e.interface
+        mode                      = contains(v.vlans, tonumber(e.access)) ? "native" : e.mode
+        ndo                       = v.ndo
+        node_id                   = e.node_id
+        path_type                 = e.path_type
+        pod_id                    = e.pod_id
+        site                      = e.site
+        vpc_pair                  = length(e.vpc_pair) == 2 ? "${element(e.vpc_pair, 0)}-${element(e.vpc_pair, 1)}" : ""
+        } if length(v.vlans) == 2 ? contains(e.vlan_list, tonumber(element(v.vlans, 0))) && contains(
+        e.vlan_list, tonumber(element(v.vlans, 1))) : length(v.vlans) == 1 ? contains(
+        e.vlan_list, tonumber(element(v.vlans, 0))
+      ) : false
+    ] if v.epg_type == "standard"
+  ]) : "${i.application_profile}:${i.application_epg}:${i.node_id}:${i.interface}" => i }
+
   contract_to_epgs = { for i in flatten([
     for key, value in local.application_epgs : [
       for v in value.contracts : {
-        application_epg     = key
+        application_epg     = value.application_epg
         application_profile = value.application_profile
         contract            = "${local.npfx.contracts}${v.name}${local.nsfx.contracts}"
         contract_class = length(regexall(

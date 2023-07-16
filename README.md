@@ -2,13 +2,13 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Developed by: Cisco](https://img.shields.io/badge/Developed%20by-Cisco-blue)](https://developer.cisco.com)
 
-# Terraform ACI - Admin Module
+# Terraform ACI - Tenant Module
 
-A Terraform module to configure ACI Admin Policies.
+A Terraform module to configure ACI Tenant Policies.
 
-This module is part of the Cisco [*Intersight as Code*](https://cisco.com/go/intersightascode) project. Its goal is to allow users to instantiate network fabrics in minutes using an easy to use, opinionated data model. It takes away the complexity of having to deal with references, dependencies or loops. By completely separating data (defining variables) from logic (infrastructure declaration), it allows the user to focus on describing the intended configuration while using a set of maintained and tested Terraform Modules without the need to understand the low-level Intersight object model.
+## THIS MODULE IS DESIGNED TO BE CONSUMED FROM THE FRONT END "EASY ACI" Module
 
-A comprehensive example using this module is available here: https://github.com/terraform-cisco-modules/easy-aci-complete
+A comprehensive example using this module is available here: ![Easy ACI](https://github.com/terraform-cisco-modules/easy-aci-complete)
 
 ## Requirements
 
@@ -21,16 +21,17 @@ A comprehensive example using this module is available here: https://github.com/
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aci"></a> [aci](#provider\_aci) | 2.9.0 |
 | <a name="provider_mso"></a> [mso](#provider\_mso) | 0.11.0 |
+| <a name="provider_aci"></a> [aci](#provider\_aci) | 2.9.0 |
 ## Inputs
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_model"></a> [model](#input\_model) | Model data. | `any` | n/a | yes |
-| <a name="input_templates"></a> [templates](#input\_templates) | Name of the Tenant | `any` | n/a | yes |
+| <a name="input_switch"></a> [switch](#input\_switch) | List of Switch Objects. | `any` | `{}` | no |
+| <a name="input_templates"></a> [templates](#input\_templates) | List of Templates. | `any` | n/a | yes |
 | <a name="input_aaep_to_epgs"></a> [aaep\_to\_epgs](#input\_aaep\_to\_epgs) | AAEP to EPGs VLAN Mapping from Access Module. | `any` | `{}` | no |
-| <a name="input_tenant"></a> [tenant](#input\_tenant) | Name of the Tenant | `any` | n/a | yes |
+| <a name="input_tenant"></a> [tenant](#input\_tenant) | Name of the Tenant. | `any` | n/a | yes |
 | <a name="input_annotations"></a> [annotations](#input\_annotations) | The Version of this Script. | <pre>list(object(<br>    {<br>      key   = string<br>      value = string<br>    }<br>  ))</pre> | <pre>[<br>  {<br>    "key": "orchestrator",<br>    "value": "terraform:easy-aci:v2.0"<br>  }<br>]</pre> | no |
 | <a name="input_controller_type"></a> [controller\_type](#input\_controller\_type) | The Type of Controller for this Site.<br>- apic<br>- ndo | `string` | `"apic"` | no |
 | <a name="input_management_epgs"></a> [management\_epgs](#input\_management\_epgs) | The Management EPG's that will be used by the script.<br>- name: Name of the EPG<br>- type: Type of EPG<br>  * inb<br>  * oob | <pre>list(object(<br>    {<br>      name = string<br>      type = string<br>    }<br>  ))</pre> | <pre>[<br>  {<br>    "name": "default",<br>    "type": "oob"<br>  }<br>]</pre> | no |
@@ -182,6 +183,7 @@ A comprehensive example using this module is available here: https://github.com/
 | [mso_schema.map](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema) | resource |
 | [mso_schema_site.map](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site) | resource |
 | [mso_schema_site_anp_epg_domain.map](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site_anp_epg_domain) | resource |
+| [mso_schema_site_anp_epg_static_port.static_port](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site_anp_epg_static_port) | resource |
 | [mso_schema_site_bd.map](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site_bd) | resource |
 | [mso_schema_site_bd_l3out.map](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site_bd_l3out) | resource |
 | [mso_schema_site_vrf.map](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site_vrf) | resource |

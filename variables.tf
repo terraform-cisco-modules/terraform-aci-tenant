@@ -8,8 +8,14 @@ variable "model" {
   type        = any
 }
 
+variable "switch" {
+  default     = {}
+  description = "List of Switch Objects."
+  type        = any
+}
+
 variable "templates" {
-  description = "Name of the Tenant"
+  description = "List of Templates."
   type        = any
 }
 
@@ -19,7 +25,7 @@ variable "aaep_to_epgs" {
   type        = any
 }
 variable "tenant" {
-  description = "Name of the Tenant"
+  description = "Name of the Tenant."
   type        = any
 }
 
