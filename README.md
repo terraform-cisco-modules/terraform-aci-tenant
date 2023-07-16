@@ -6,7 +6,7 @@
 
 A Terraform module to configure ACI Tenant Policies.
 
-## THIS MODULE IS DESIGNED TO BE CONSUMED FROM THE FRONT END "EASY ACI" Module
+## THIS MODULE IS DESIGNED TO BE CONSUMED USING THE "EASY ACI" Module
 
 ### A comprehensive example using this module is available below:
 
@@ -23,8 +23,8 @@ A Terraform module to configure ACI Tenant Policies.
 
 | Name | Version |
 |------|---------|
-| <a name="provider_mso"></a> [mso](#provider\_mso) | 0.11.0 |
 | <a name="provider_aci"></a> [aci](#provider\_aci) | 2.9.0 |
+| <a name="provider_mso"></a> [mso](#provider\_mso) | 0.11.0 |
 ## Inputs
 
 | Name | Description | Type | Default | Required |
