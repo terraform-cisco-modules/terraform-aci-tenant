@@ -10,7 +10,7 @@ A Terraform module to configure ACI Tenant Policies.
 
 A comprehensive example using this module is available here:
 
-## ![Easy ACI](https://github.com/terraform-cisco-modules/easy-aci-complete)
+## [Easy ACI](https://github.com/terraform-cisco-modules/easy-aci-complete)
 
 ## Requirements
 
@@ -23,8 +23,8 @@ A comprehensive example using this module is available here:
 
 | Name | Version |
 |------|---------|
-| <a name="provider_mso"></a> [mso](#provider\_mso) | 0.11.0 |
 | <a name="provider_aci"></a> [aci](#provider\_aci) | 2.9.0 |
+| <a name="provider_mso"></a> [mso](#provider\_mso) | 0.11.0 |
 ## Inputs
 
 | Name | Description | Type | Default | Required |
