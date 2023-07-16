@@ -12,7 +12,9 @@ content: |-
 
   ## THIS MODULE IS DESIGNED TO BE CONSUMED FROM THE FRONT END "EASY ACI" Module
 
-  A comprehensive example using this module is available here: ![Easy ACI](https://github.com/terraform-cisco-modules/easy-aci-complete)
+  A comprehensive example using this module is available here:
+  
+  ## ![Easy ACI](https://github.com/terraform-cisco-modules/easy-aci-complete)
 
   {{ .Requirements }}
   {{ .Providers }}
