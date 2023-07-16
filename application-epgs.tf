@@ -37,7 +37,6 @@ resource "aci_application_epg" "map" {
   ) > 0 ? "uni/tn-${local.policy_tenant}/monepg-${each.value.monitoring_policy}" : ""
   relation_fv_rs_trust_ctrl = length(compact([each.value.fhs_trust_control_policy])
   ) > 0 ? "uni/tn-${local.policy_tenant}/trustctrlpol-${each.value.fhs_trust_control_policy}" : ""
-  # relation_fv_rs_graph_def     = each.value.vzGraphCont
 }
 
 
@@ -182,12 +181,11 @@ resource "aci_epg_to_domain" "map" {
       "dynamic_binding", each.value.port_binding)) > 0 ? "dynamicBinding" : length(regexall(
       "default", each.value.port_binding)) > 0 ? "none" : length(regexall(
   "static_binding", each.value.port_binding)) > 0 ? "staticBinding" : each.value.port_binding
-  allow_micro_seg = length(
-    regexall("vmm", each.value.domain_type)
-  ) > 0 ? each.value.allow_micro_segmentation : false
+  allow_micro_seg = length(regexall("vmm", each.value.domain_type)) > 0 ? each.value.allow_micro_segmentation : false
   #delimiter = length(
   #  regexall("vmm", each.value.domain_type)
   #) > 0 ? each.value.delimiter : ""
+  custom_epg_name = length(regexall("vmm", each.value.domain_type)) > 0 ? each.value.custom_epg_name : ""
   encap = each.value.vlan_mode != "dynamic" && length(
     regexall("vmm", each.value.domain_type)
   ) > 0 ? "vlan-${element(each.value.vlans, 0)}" : "unknown"
@@ -205,16 +203,16 @@ resource "aci_epg_to_domain" "map" {
   port_allocation = length(regexall("vmm", each.value.domain_type)) > 0 && length(regexall(
     "static_binding", each.value.port_binding)
   ) > 0 ? each.value.port_allocation : "none"
-  primary_encap = length(regexall("vmm", each.value.domain_type)) > 0 && length(regexall(
+  primary_encap = length(regexall("vmm", each.value.domain_type)) > 0 && length(regexall( # Represents the primary encap when the EPG is isolated
     "static", each.value.vlan_mode)) > 0 && length(each.value.vlans
-  ) > 0 ? "vlan-${element(each.value.vlans, 1)}" : "unknown"
+  ) >= 1 ? "vlan-${element(each.value.vlans, 0)}" : "unknown"
   primary_encap_inner = length(regexall("vmm", each.value.domain_type)) > 0 && length(regexall(
     "static", each.value.vlan_mode)) > 0 && length(each.value.vlans
-  ) > 1 ? "vlan-${element(each.value.vlans, 2)}" : "unknown"
+  ) >= 2 ? "vlan-${element(each.value.vlans, 1)}" : "unknown"
   res_imedcy = each.value.resolution_immediacy == "on-demand" ? "lazy" : each.value.resolution_immediacy
   secondary_encap_inner = length(regexall("vmm", each.value.domain_type)) > 0 && length(regexall(
     "static", each.value.vlan_mode)) > 0 && length(each.value.vlans
-  ) > 3 ? "vlan-${element(each.value.vlans, 3)}" : "unknown"
+  ) >= 3 ? "vlan-${element(each.value.vlans, 2)}" : "unknown"
   switching_mode        = "native"
   vmm_allow_promiscuous = length(regexall("vmm", each.value.domain_type)) > 0 ? each.value.security.allow_promiscuous : ""
   vmm_forged_transmits  = length(regexall("vmm", each.value.domain_type)) > 0 ? each.value.security.forged_transmits : ""
@@ -413,8 +411,8 @@ resource "mso_schema_template_anp_epg" "map" {
   for_each         = { for k, v in local.application_epgs : k => v if var.controller_type == "ndo" }
   anp_name         = each.value.application_profile
   bd_name          = each.value.bd.name
-  bd_schema_id     = data.mso_schema.map[each.value.bd.schema].id
-  bd_template_name = each.value.bd.template
+  bd_schema_id     = data.mso_schema.map[each.value.bd.ndo.schema].id
+  bd_template_name = each.value.bd.ndo.template
   description      = each.value.general.description
   display_name     = each.value.combine_description == true ? "${each.value.name}-${each.value.description}" : each.value.name
   intra_epg        = each.value.intra_epg_isolation
@@ -458,11 +456,11 @@ resource "mso_schema_site_anp_epg_domain" "map" {
   port_encap_vlan = length(regexall("vmm", each.value.domain_type)) > 0 && length(regexall("static", each.value.vlan_mode)
   ) > 0 && length(each.value.vlans) > 0 ? element(each.value.vlans, 1) : null
   resolution_immediacy = each.value.resolution_immediacy == "on-demand" ? "lazy" : each.value.resolution_immediacy
-  schema_id            = data.mso_schema.map[each.value.schema].id
+  schema_id            = data.mso_schema.map[each.value.ndo.schema].id
   site_id              = data.mso_site.map[each.value.site].id
   switching_mode       = length(regexall("vmm", each.value.domain_type)) > 0 ? "native" : null
   switch_type          = length(regexall("vmm", each.value.domain_type)) > 0 ? "default" : null
-  template_name        = each.value.template
+  template_name        = each.value.ndo.template
   vlan_encap_mode = length(regexall("vmm", each.value.domain_type)
   ) > 0 ? each.value.vlan_mode : null
   vmm_domain_type = length(regexall("vmm", each.value.domain_type)) > 0 ? each.value.switch_provider : null

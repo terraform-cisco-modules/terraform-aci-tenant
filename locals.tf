@@ -8,57 +8,57 @@ locals {
   npfx              = merge(local.defaults.name_prefix, lookup(var.model, "name_prefix", {}))
   nsfx              = merge(local.defaults.name_suffix, lookup(var.model, "name_suffix", {}))
   networking        = lookup(var.model, "networking", {})
+  node_mgmt_add     = lookup(var.model, "node_management_addresses", {})
   policies          = lookup(var.model, "policies", {})
-  static_mgmt_add   = lookup(lookup(var.model, "node_management_addresses", {}), "static_node_management_addresses", {})
   templates_bds     = lookup(var.templates, "bridge_domains", {})
   templates_epgs    = lookup(var.templates, "application_epgs", {})
   templates_subnets = lookup(var.templates, "subnets", {})
   tenant_contracts  = lookup(var.model, "contracts", {})
 
   # Defaults
-  apic_inb = local.defaults.node_management_addresses.static_node_management_addresses.apics_inband
-  app      = local.defaults.application_profiles
-  adv      = local.bd.advanced_troubleshooting
-  bd       = local.defaults.networking.bridge_domains
-  bfd      = local.defaults.policies.protocol.bfd_interface
-  bgpa     = local.defaults.policies.protocol.bgp.bgp_address_family_context
-  bgpb     = local.defaults.policies.protocol.bgp.bgp_best_path
-  bgpp     = local.defaults.policies.protocol.bgp.bgp_peer_prefix
-  bgppeer  = local.lip.bgp_peers
-  bgps     = local.defaults.policies.protocol.bgp.bgp_route_summarization
-  bgpt     = local.defaults.policies.protocol.bgp.bgp_timers
-  contract = local.defaults.contracts.contracts
-  dhcpo    = local.defaults.policies.protocol.dhcp.option_policies
-  dhcpr    = local.defaults.policies.protocol.dhcp.relay_policies
-  ep       = local.defaults.policies.protocol.endpoint_retention
-  epg      = local.app.application_epgs
-  filter   = local.defaults.contracts.filters
-  general  = local.bd.general
-  hip      = local.lip.hsrp_interface_profiles
-  hsrpg    = local.defaults.policies.protocol.hsrp.group_policies
-  hsrpi    = local.defaults.policies.protocol.hsrp.interface_policies
-  l3       = local.bd.l3_configurations
-  l3ospf   = local.l3out.ospf_external_profile
-  l3out    = local.defaults.networking.l3outs
-  l4l7pbr  = local.defaults.policies.protocol.l4-l7_policy-based_redirect
-  l4l7rhg  = local.defaults.policies.protocol.l4-l7_redirect_health_groups
-  lnp      = local.l3out.logical_node_profiles
-  lnpstrt  = local.l3out.logical_node_profiles.static_routes
-  lnpsrnh  = local.l3out.logical_node_profiles.static_routes.next_hop_addresses
-  lip      = local.lnp.logical_interface_profiles
-  netflow  = local.defaults.netflow_monitor_policies
-  ospfi    = local.defaults.policies.protocol.ospf.ospf_interface
-  ospfs    = local.defaults.policies.protocol.ospf.ospf_route_summarization
-  ospft    = local.defaults.policies.protocol.ospf.ospf_timers
-  ospfip   = local.lnp.logical_interface_profiles.ospf_interface_profile
-  sla      = local.defaults.policies.protocol.ip_sla.ip_sla_monitoring_policies
-  subnet   = local.l3.subnets
-  subnets  = local.l3out.external_epgs.subnets
-  rm       = local.defaults.policies.protocol.route_maps_for_route_control
-  rmmr     = local.defaults.policies.protocol.route_map_match_rules
-  rmsr     = local.defaults.policies.protocol.route_map_set_rules
-  tnt      = local.defaults
-  vrf      = local.defaults.networking.vrfs
+  app         = local.defaults.application_profiles
+  adv         = local.bd.advanced_troubleshooting
+  bd          = local.defaults.networking.bridge_domains
+  bfd         = local.defaults.policies.protocol.bfd_interface
+  bgpa        = local.defaults.policies.protocol.bgp.bgp_address_family_context
+  bgpb        = local.defaults.policies.protocol.bgp.bgp_best_path
+  bgpp        = local.defaults.policies.protocol.bgp.bgp_peer_prefix
+  bgppeer     = local.lip.bgp_peers
+  bgps        = local.defaults.policies.protocol.bgp.bgp_route_summarization
+  bgpt        = local.defaults.policies.protocol.bgp.bgp_timers
+  contract    = local.defaults.contracts.contracts
+  dhcpo       = local.defaults.policies.protocol.dhcp.option_policies
+  dhcpr       = local.defaults.policies.protocol.dhcp.relay_policies
+  ep          = local.defaults.policies.protocol.endpoint_retention
+  epg         = local.app.application_epgs
+  filter      = local.defaults.contracts.filters
+  general     = local.bd.general
+  hip         = local.lip.hsrp_interface_profiles
+  hsrpg       = local.defaults.policies.protocol.hsrp.group_policies
+  hsrpi       = local.defaults.policies.protocol.hsrp.interface_policies
+  l3          = local.bd.l3_configurations
+  l3ospf      = local.l3out.ospf_external_profile
+  l3out       = local.defaults.networking.l3outs
+  l4l7pbr     = local.defaults.policies.protocol.l4-l7_policy-based_redirect
+  l4l7rhg     = local.defaults.policies.protocol.l4-l7_redirect_health_groups
+  lnp         = local.l3out.logical_node_profiles
+  lnpstrt     = local.l3out.logical_node_profiles.static_routes
+  lnpsrnh     = local.l3out.logical_node_profiles.static_routes.next_hop_addresses
+  lip         = local.lnp.logical_interface_profiles
+  netflow     = local.defaults.netflow_monitor_policies
+  ospfi       = local.defaults.policies.protocol.ospf.ospf_interface
+  ospfs       = local.defaults.policies.protocol.ospf.ospf_route_summarization
+  ospft       = local.defaults.policies.protocol.ospf.ospf_timers
+  ospfip      = local.lnp.logical_interface_profiles.ospf_interface_profile
+  sla         = local.defaults.policies.protocol.ip_sla.ip_sla_monitoring_policies
+  static_mgmt = local.defaults.node_management_addresses.static_node_management_addresses
+  subnet      = local.l3.subnets
+  subnets     = local.l3out.external_epgs.subnets
+  rm          = local.defaults.policies.protocol.route_maps_for_route_control
+  rmmr        = local.defaults.policies.protocol.route_map_match_rules
+  rmsr        = local.defaults.policies.protocol.route_map_set_rules
+  tnt         = local.defaults
+  vrf         = local.defaults.networking.vrfs
 
   # Local Values
   policy_tenant = local.tenants[var.tenant].policy_tenant
@@ -113,8 +113,11 @@ locals {
     ]
   ]) : "${i.schema}:${i.template}:${i.site}" => i }
 
-  apics_inband_mgmt_addresses = {
-    for v in lookup(local.static_mgmt_add, "apics_inband", []) : v.node_id => merge(local.apic_inb, v)
+  static_node_management_addresses = {
+    for v in lookup(local.node_mgmt_add, "static_node_management_addresses", []) : v.node_id => merge(
+      local.static_mgmt, v, { mgmt_epg_type = var.management_epgs[index(var.management_epgs.*.name, lookup(
+      v, "management_epg", local.static_mgmt.management_epg))].type }
+    )
   }
   #__________________________________________________________
   #
@@ -127,12 +130,18 @@ locals {
       local.vrf, v,
       { annotations = length(lookup(v, "annotations", local.vrf.annotations)
       ) > 0 ? lookup(v, "annotations", local.vrf.annotations) : var.annotations },
+      { bgp_timers_per_address_family = [for e in lookup(v, "bgp_timers_per_address_family", []
+      ) : merge(local.vrf.bgp_timers_per_address_family, e)] },
+      { eigrp_timers_per_address_family = [for e in lookup(v, "eigrp_timers_per_address_family", []
+      ) : merge(local.vrf.eigrp_timers_per_address_family, e)] },
       { epg_esg_collection_for_vrfs = {
         contracts = lookup(lookup(v, "epg_esg_collection_for_vrfs", {}), "contracts", [])
         label_match_criteria = lookup(lookup(v, "epg_esg_collection_for_vrfs", {}
           ), "label_match_criteria", local.vrf.epg_esg_collection_for_vrfs.label_match_criteria
         ) }
       }, { name = "${local.npfx.vrfs}${v.name}${local.nsfx.vrfs}" },
+      { ospf_timers_per_address_family = [for e in lookup(v, "ospf_timers_per_address_family", []
+      ) : merge(local.vrf.ospf_timers_per_address_family, e)] },
       { policy_tenant = local.policy_tenant }, { tenant = var.tenant }
     )
   }
@@ -202,7 +211,7 @@ locals {
       combine_description = lookup(v, "combine_description", local.bd.combine_description)
       dhcp_relay_labels = flatten([
         for s in lookup(v, "dhcp_relay_labels", {}) : [
-          for i in lookup(s, "names", []) : merge(local.bd.dhcp_relay_labels, s, { name = i })
+          for i in lookup(s, "dhcp_servers", []) : merge(local.bd.dhcp_relay_labels, s, { name = i })
         ]
       ])
       general = merge(
@@ -243,8 +252,8 @@ locals {
         advertise_host_routes = s % 2 != 0 ? false : v.general.advertise_host_routes
         bridge_domain         = v.name
         l3out                 = element(v.l3_configurations.associated_l3outs[0].l3outs, s + 1)
-        l3out_schema          = v.general.vrf.schema
-        l3out_template        = v.general.vrf.template
+        l3out_schema          = v.general.vrf.ndo.schema
+        l3out_template        = v.general.vrf.ndo.template
         schema                = v.ndo.schema
         site                  = element(v.ndo.sites, s + 1)
         template              = v.ndo.template
@@ -350,10 +359,9 @@ locals {
         ) > 0 ? lookup(v, "annotations", local.epg.annotations) : var.annotations
         application_profile = "${local.npfx.application_profiles}${v.application_profile}${local.nsfx.application_profiles}"
         bd = length(compact([lookup(v, "bridge_domain", "")])) > 0 ? {
-          name     = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].name
-          schema   = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].ndo.schema
-          template = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].ndo.template
-        } : { name = "", schema = "", tempalte = "" }
+          name = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].name
+          ndo  = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].ndo
+        } : { name = "", ndo = { schema = "", sites = [], template = "" } }
         contracts       = lookup(v, "contracts", [])
         controller_type = var.controller_type
         domains         = lookup(v, "domains", [])
@@ -372,11 +380,10 @@ locals {
         static_paths = lookup(v, "static_paths", [])
         tenant       = var.tenant
         vrf = length(compact([lookup(v, "bridge_domain", "")])) > 0 ? {
-          name     = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.name
-          schema   = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.schema
-          template = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.template
-          tenant   = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.tenant
-        } : { name = "", schema = "", template = "", tenant = "" }
+          name   = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.name
+          ndo    = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.ndo
+          tenant = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.tenant
+        } : { name = "", ndo = { schema = "", template = "" }, tenant = "" }
 
       }
     )
@@ -400,7 +407,7 @@ locals {
   ]) : "${i.application_profile}:${i.application_epg}:${i.domain}" => i }
   ndo_epg_to_domains = { for i in flatten([
     for k, v in local.epg_to_domains : [
-      for s in range(length(v.sites)) : merge(v, { site = element(v.sites, s) })
+      for s in range(length(v.ndo.sites)) : merge(v, { site = element(v.ndo.sites, s) })
     ]
   ]) : "${i.application_profile}:${i.application_epg}:${i.domain}:${i.site}" => i if i.controller_type == "ndo" }
 
@@ -768,7 +775,7 @@ locals {
               preference    = lookup(lookup(v, "next_hop_addresses", {}), "preference", local.lnpsrnh.preference)
               static_route  = "${key}:${e}"
               track_policy  = lookup(lookup(v, "next_hop_addresses", {}), "track_policy", local.lnpsrnh.track_policy)
-              track_member = lookup(lookup(v, "next_hop_addresses", {}), "track_member", local.lnpsrnh.track_member)
+              track_member  = lookup(lookup(v, "next_hop_addresses", {}), "track_member", local.lnpsrnh.track_member)
             }
           ]
           node_id = value.node_id
@@ -776,9 +783,9 @@ locals {
           route_control = {
             bfd = lookup(lookup(v, "route_control", {}), "bfd", local.lnpstrt.route_control.bfd)
           }
-          description = lookup(v, "description", local.lnpstrt.description)
-          tenant      = var.tenant
-          track_policy  = lookup(v, "track_policy", local.lnpstrt.track_policy)
+          description  = lookup(v, "description", local.lnpstrt.description)
+          tenant       = var.tenant
+          track_policy = lookup(v, "track_policy", local.lnpstrt.track_policy)
         }
       ]
     ]
@@ -799,7 +806,7 @@ locals {
           color_tag              = value.color_tag
           bgp_peers              = lookup(v, "bgp_peers", [])
           l3out                  = value.l3out
-          hsrp_interface_profile = lookup(v, "hsrp_interface_profile", [])
+          hsrp_interface_profile = lookup(v, "hsrp_interface_profile", {})
           netflow_monitor_policies = [
             for s in lookup(v, "netflow_monitor_policies", []) : {
               filter_type    = s.filter_type != null ? s.filter_type : "ipv4"
@@ -809,7 +816,7 @@ locals {
           ndo                    = value.ndo
           node_profile           = key
           nodes                  = [for keys, values in value.nodes : value.nodes[keys]["node_id"]]
-          ospf_interface_profile = lookup(v, "ospf_interface_profile", [])
+          ospf_interface_profile = lookup(v, "ospf_interface_profile", {})
           pod_id                 = value.pod_id
           svi_addresses          = lookup(v, "svi_addresses", {})
           target_dscp            = value.target_dscp
@@ -892,8 +899,9 @@ locals {
 
   hsrp_interface_profile = { for i in flatten([
     for key, value in local.l3out_interface_profiles : [
-      for v in value.hsrp_interface_profile : merge(local.hip, v, { l3out_interface_profile = key })
-    ]
+      for v in [value.hsrp_interface_profile] : merge(local.hip, v, { groups = lookup(v, "groups", []) },
+      { l3out_interface_profile = key })
+    ] if length(value.hsrp_interface_profile) > 0
   ]) : "${i.l3out_interface_profile}-hsrp" => i }
 
   hsrp_interface_profile_groups = { for i in flatten([
@@ -925,7 +933,7 @@ locals {
           tenant                  = value.tenant
         }
       )
-    ]
+    ] if length(value.ospf_interface_profile) > 0
   ]) : "${i.l3out_interface_profile}:ospf" => i }
 
 
@@ -985,25 +993,18 @@ locals {
   policies_dhcp_option = {
     for v in lookup(lookup(local.policies, "dhcp", {}), "option_policies", []) : v.name => {
       description = lookup(v, "description", local.dhcpo.description)
-      options = { for value in lookup(v, "options", []) : v.name =>
-        { data = value.data, dhcp_option_id = value.dhcp_option_id, name = value.name }
+      options = { for value in lookup(v, "options", []) : value.option_id =>
+        { data = value.data, name = lookup(value, "name", value.option_id), option_id = value.option_id }
       }
       tenant = var.tenant
     }
   }
 
-  policies_dhcp_relay = {
-    for v in lookup(lookup(local.policies, "dhcp", {}), "relay_policies", []) : v.name => {
-      description = lookup(v, "description", local.dhcpr.description)
-      dhcp_relay_providers = {
-        for value in v.dhcp_relay_providers : value.address => merge(
-          local.dhcpr.dhcp.relay_providers, value, { tenant = var.tenant }
-        )
-      }
-      mode   = lookup(v, "mode", local.dhcpr.mode)
-      tenant = var.tenant
-    }
-  }
+  policies_dhcp_relay = flatten([
+    for v in lookup(lookup(local.policies, "dhcp", {}), "relay_policies", []) : [
+      for e in v.dhcp_servers : merge(local.dhcpr, v, { dhcp_server = e }, { tenant = var.tenant })
+    ]
+  ])
 
 
   #__________________________________________________________
@@ -1272,8 +1273,8 @@ locals {
       for k, v in value.contexts : {
         action      = v.action
         description = lookup(v, "description", local.rm.contexts.description)
-        match_rules = [
-          for i in lookup(v, "match_rules", []) : {
+        associated_match_rules = [
+          for i in lookup(v, "associated_match_rules", []) : {
             rule_name = i
           }
         ]

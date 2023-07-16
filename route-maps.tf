@@ -1,9 +1,13 @@
 /*_____________________________________________________________________________________________________________________
 
-Tenant — Policies — Route-Map Match Rules — Variables
+API Information:
+ - Class: "rtctrlSubjP"
+ - Distinguised Name: "uni/tn-{name}/subj-{name}"
+GUI Location:
+ - Tenants > {tenant} > Policies > Protocol > Match Rules > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_match_rule" "route_map_match_rules" {
+resource "aci_match_rule" "map" {
   depends_on  = [aci_tenant.map]
   for_each    = local.route_map_match_rules
   description = each.value.description
@@ -12,43 +16,49 @@ resource "aci_match_rule" "route_map_match_rules" {
   tenant_dn   = "uni/tn-${each.value.tenant}"
 }
 
-resource "aci_rest_managed" "match_rules_match_community_terms" {
-  depends_on = [aci_match_rule.route_map_match_rules]
-  for_each   = local.match_rules_match_community_terms
-  dn         = "uni/tn-${each.value.tenant}/subj-${each.value.match_rule}/commtrm-${each.value.name}"
-  class_name = "rtctrlMatchCommTerm"
-  content = {
-    descr = each.value.description
-    name  = each.value.name
-    type  = "community"
-  }
-  dynamic "child" {
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlMatchCommTerm"
+ - Distinguised Name: "uni/tn-{name}/subj-{match_rule}/commtrm-{name}"
+GUI Location:
+ - Tenants > {tenant} > Policies > Protocol > Match Rules > {name}: Match Community Terms
+_______________________________________________________________________________________________________________________
+*/
+resource "aci_match_community_terms" "map" {
+  depends_on    = [aci_match_rule.map]
+  for_each      = local.match_rules_match_community_terms
+  description   = each.value.description
+  match_rule_dn = aci_match_rule.map[each.value.match_rule].id
+  name          = each.value.name
+  dynamic "match_community_factors" {
     for_each = each.value.match_community_factors
     content {
-      class_name = "rtctrlMatchCommTerm"
-      rn         = "commfct-${each.value.community}"
-      content = {
-        community = each.value.community
-        descr     = each.value.description
-        scope     = each.value.scope
-        type      = "community"
-      }
+      community   = each.value.community
+      description = each.value.description
+      scope       = each.value.scope
     }
   }
 }
 
-resource "aci_rest_managed" "match_rules_match_regex_community_terms" {
-  depends_on = [aci_match_rule.route_map_match_rules]
-  for_each   = local.match_rules_match_regex_community_terms
-  dn         = "uni/tn-${each.value.tenant}/subj-${each.value.match_rule}/commrxtrm-${each.value.community_type}"
-  class_name = "rtctrlMatchCommRegexTerm"
-  content = {
-    commType = each.value.community_type # regular|extended
-    descr    = each.value.description
-    name     = each.value.name
-    regex    = each.value.regular_expression
-    type     = "community-regex"
-  }
+
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlMatchCommRegexTerm"
+ - Distinguised Name: "uni/tn-{name}/subj-{match_rule}/commrxtrm-{name}"
+GUI Location:
+ - Tenants > {tenant} > Policies > Protocol > Match Rules > {name}: Match Regex Community Terms
+_______________________________________________________________________________________________________________________
+*/
+resource "aci_match_regex_community_terms" "map" {
+  depends_on     = [aci_match_rule.map]
+  for_each       = local.match_rules_match_regex_community_terms
+  community_type = each.value.community_type
+  description    = each.value.description
+  match_rule_dn  = aci_match_rule.map[each.value.match_rule].id
+  name           = each.value.name
+  regex          = each.value.regular_expression
 }
 
 /*_____________________________________________________________________________________________________________________
@@ -57,21 +67,27 @@ API Information:
  - Class: "rtctrlMatchRtDest"
  - Distinguished Name: "uni/tn-{tenant}/subj-{match_rule}/dest-[{network}]"
 GUI Location:
- - Tenants > {tenant} > Networking > Policies > Protocol > Match Rules > {name}
+ - Tenants > {tenant} > Networking > Policies > Protocol > Match Rules > {name}: Match Prefix
 _______________________________________________________________________________________________________________________
 */
 resource "aci_match_route_destination_rule" "map" {
-  depends_on        = [aci_match_rule.route_map_match_rules]
+  depends_on        = [aci_match_rule.map]
   for_each          = local.match_rules_match_route_destination_rule
   aggregate         = each.value.greater_than_mask == 0 && each.value.less_than_mask == 0 ? "no" : "yes"
-  match_rule_dn     = aci_match_rule.route_map_match_rules[each.value.match_rule].id
+  match_rule_dn     = aci_match_rule.map[each.value.match_rule].id
   greater_than_mask = each.value.greater_than_mask
   ip                = each.value.ip
   less_than_mask    = each.value.less_than_mask
 }
+
+
 /*_____________________________________________________________________________________________________________________
 
-Tenant — Policies — Route-Map Set Rules — Variables
+API Information:
+ - Class: "rtctrlAttrP"
+ - Distinguished Name: "uni/tn-{tenant}/attr-{name}"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Set Rules > {name}
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "route_map_set_rules" {
@@ -90,7 +106,7 @@ resource "aci_rest_managed" "set_rules_additional_communities" {
     aci_rest_managed.route_map_set_rules
   ]
   for_each   = local.set_rules_additional_communities
-  dn         = "uni/tn-${each.value.tenant}/attr-${each.value.set_rule}/saddcomm-${each.value.community}"
+  dn         = "${aci_rest_managed.route_map_set_rules[each.value.set_rule].id}/saddcomm-${each.value.community}"
   class_name = "rtctrlSetAddComm"
   content = {
     community   = each.value.community
@@ -105,7 +121,7 @@ resource "aci_rest_managed" "set_rules_multipath" {
     aci_rest_managed.route_map_set_rules
   ]
   for_each   = { for k, v in local.route_map_set_rules : k => v if v.multipath == true }
-  dn         = "uni/tn-${each.value.tenant}/attr-${each.value.set_rule}/redistmpath"
+  dn         = "${aci_rest_managed.route_map_set_rules[each.value.set_rule].id}/redistmpath"
   class_name = "rtctrlSetRedistMultipath"
   content = {
     type = "redist-multipath"
@@ -117,7 +133,7 @@ resource "aci_rest_managed" "set_rules_next_hop_propegation" {
     aci_rest_managed.route_map_set_rules
   ]
   for_each   = { for k, v in local.route_map_set_rules : k => v if v.next_hop_propegation == true }
-  dn         = "uni/tn-${each.value.tenant}/attr-${each.value.set_rule}/nhunchanged"
+  dn         = "${aci_rest_managed.route_map_set_rules[each.value.set_rule].id}/nhunchanged"
   class_name = "rtctrlSetNhUnchanged"
   content = {
     type = "nh-unchanged"
@@ -129,7 +145,7 @@ resource "aci_rest_managed" "set_rules_set_as_path" {
     aci_rest_managed.route_map_set_rules
   ]
   for_each   = local.set_rules_set_as_path
-  dn         = "uni/tn-${each.value.tenant}/attr-${each.value.set_rule}/saspath-${each.value.set_criteria}"
+  dn         = "${aci_rest_managed.route_map_set_rules[each.value.set_rule].id}/saspath-${each.value.criteria}"
   class_name = "rtctrlSetASPath"
   content = {
     criteria = each.value.criteria # prepend|prepend-last-as
@@ -154,12 +170,11 @@ resource "aci_rest_managed" "route_map_set_rules_set_communities" {
     aci_rest_managed.route_map_set_rules
   ]
   for_each   = local.set_rules_set_communities
-  dn         = "uni/tn-${each.value.tenant}/attr-${each.value.set_rule}/scomm"
+  dn         = "${aci_rest_managed.route_map_set_rules[each.value.set_rule].id}/scomm"
   class_name = "rtctrlSetAddComm"
   content = {
     community   = each.value.criteria == "none" ? "unknown:unknown:0:0" : each.value.community
-    descr       = each.value.description
-    setCriteria = each.value.criteria # append|none|replace
+    setCriteria = each.value.criteria
     type        = "community"
   }
 }
@@ -169,7 +184,7 @@ resource "aci_rest_managed" "route_map_set_rules_set_external_epg" {
     aci_rest_managed.route_map_set_rules
   ]
   for_each   = local.set_rules_set_external_epg
-  dn         = "uni/tn-${each.value.tenant}/attr-${each.value.set_rule}/sptag"
+  dn         = "${aci_rest_managed.route_map_set_rules[each.value.set_rule].id}/sptag"
   class_name = "rtctrlSetPolicyTag"
   content = {
     type = "policy-tag"
@@ -178,11 +193,7 @@ resource "aci_rest_managed" "route_map_set_rules_set_external_epg" {
     class_name = "rtctrlRsSetPolicyTagToInstP"
     rn         = "rssetPolicyTagToInstP"
     content = {
-      # forceResolve = "yes"
-      # rType        = "mo"
-      # tCl          = "l3extInstP"
       tDn = "uni/tn-${each.value.epg_tenant}/out-${each.value.l3out}/instP-${each.value.external_epg}"
-      # tType        = "mo"
     }
   }
 }
@@ -192,7 +203,7 @@ resource "aci_rest_managed" "route_map_set_rules_set_dampening" {
     aci_rest_managed.route_map_set_rules
   ]
   for_each   = local.set_rules_set_dampening
-  dn         = "uni/tn-${each.value.tenant}/attr-${each.value.set_rule}/sdamp"
+  dn         = "${aci_rest_managed.route_map_set_rules[each.value.set_rule].id}/sdamp"
   class_name = "rtctrlSetDamp"
   content = {
     halfLife        = each.value.half_life         # 15 1-60
@@ -208,7 +219,7 @@ resource "aci_rest_managed" "route_map_set_rules_set_metric" {
     aci_rest_managed.route_map_set_rules
   ]
   for_each   = { for k, v in local.route_map_set_rules : k => v if v.set_metric > 0 }
-  dn         = "uni/tn-${each.value.tenant}/attr-${each.value.set_rule}/smetric"
+  dn         = "${aci_rest_managed.route_map_set_rules[each.value.set_rule].id}/smetric"
   class_name = "rtctrlSetRtMetric"
   content = {
     metric = each.value.metric # 1 minimum
@@ -221,7 +232,7 @@ resource "aci_rest_managed" "route_map_set_rules_set_metric_type" {
     aci_rest_managed.route_map_set_rules
   ]
   for_each   = { for k, v in local.route_map_set_rules : k => v if v.set_metric_type != "" }
-  dn         = "uni/tn-${each.value.tenant}/attr-${each.value.set_rule}/smetrict"
+  dn         = "${aci_rest_managed.route_map_set_rules[each.value.set_rule].id}/smetrict"
   class_name = "rtctrlSetRtMetricType"
   content = {
     metricType = each.value.metric_type # ospf-type1|ospf-type2
@@ -234,7 +245,7 @@ resource "aci_rest_managed" "route_map_set_rules_set_next_hop_address" {
     aci_rest_managed.route_map_set_rules
   ]
   for_each   = { for k, v in local.route_map_set_rules : k => v if v.set_next_hop_address != "" }
-  dn         = "uni/tn-${each.value.tenant}/attr-${each.value.set_rule}/nh"
+  dn         = "${aci_rest_managed.route_map_set_rules[each.value.set_rule].id}/nh"
   class_name = "rtctrlSetNh"
   content = {
     addr = each.value.address
@@ -247,7 +258,7 @@ resource "aci_rest_managed" "route_map_set_rules_set_preference" {
     aci_rest_managed.route_map_set_rules
   ]
   for_each   = { for k, v in local.route_map_set_rules : k => v if v.set_preference > 0 }
-  dn         = "uni/tn-${each.value.tenant}/attr-${each.value.set_rule}/spref"
+  dn         = "${aci_rest_managed.route_map_set_rules[each.value.set_rule].id}/spref"
   class_name = "rtctrlSetPref"
   content = {
     localPref = each.value.preference
@@ -260,7 +271,7 @@ resource "aci_rest_managed" "route_map_set_rules_set_route_tag" {
     aci_rest_managed.route_map_set_rules
   ]
   for_each   = { for k, v in local.route_map_set_rules : k => v if v.set_route_tag > 0 }
-  dn         = "uni/tn-${each.value.tenant}/attr-${each.value.set_rule}/srttag"
+  dn         = "${aci_rest_managed.route_map_set_rules[each.value.set_rule].id}/srttag"
   class_name = "rtctrlSetTag"
   content = {
     tag  = each.value.route_tag
@@ -273,7 +284,7 @@ resource "aci_rest_managed" "route_map_set_rules_set_weight" {
     aci_rest_managed.route_map_set_rules
   ]
   for_each   = { for k, v in local.route_map_set_rules : k => v if v.set_weight > 0 }
-  dn         = "uni/tn-${each.value.tenant}/attr-${each.value.set_rule}/sweight"
+  dn         = "${aci_rest_managed.route_map_set_rules[each.value.set_rule].id}/sweight"
   class_name = "rtctrlSetWeight"
   content = {
     weight = each.value.weight
@@ -294,12 +305,13 @@ resource "aci_rest_managed" "route_maps_for_route_control" {
     #    autoContinue = each.value.route_map_continue == true ? "yes" : "no"
     descr = each.value.description
     name  = each.key
+    type  = each.value.type
   }
 }
 
 resource "aci_rest_managed" "route_maps_contexts" {
   depends_on = [
-    aci_match_rule.route_map_match_rules
+    aci_match_rule.map
   ]
   for_each   = local.route_map_contexts
   dn         = "uni/tn-${each.value.tenant}/prof-${each.value.route_map}/ctx-${each.value.ctx_name}"
@@ -311,7 +323,7 @@ resource "aci_rest_managed" "route_maps_contexts" {
     order = each.value.order
   }
   dynamic "child" {
-    for_each = { for v in each.value.match_rules : v.rule_name => v }
+    for_each = { for v in each.value.associated_match_rules : v.rule_name => v }
     content {
       class_name = "rtctrlRsCtxPToSubjP"
       rn         = "rsctxPToSubjP-${each.value.rule_name}"

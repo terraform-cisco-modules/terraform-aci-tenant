@@ -701,13 +701,12 @@ resource "aci_l3out_hsrp_interface_profile" "map" {
   depends_on = [
     aci_logical_interface_profile.map
   ]
-  for_each = local.hsrp_interface_profile
-  logical_interface_profile_dn = length(compact([each.value.interface_profile])
-  ) > 0 ? aci_logical_interface_profile.map[each.value.interface_profile].id : ""
-  description             = each.value.description
-  name_alias              = each.value.alias
-  relation_hsrp_rs_if_pol = "uni/tn-${local.policy_tenant}/hsrpIfPol-${each.value.hsrp_interface_policy}"
-  version                 = each.value.version
+  for_each                     = local.hsrp_interface_profile
+  logical_interface_profile_dn = aci_logical_interface_profile.map[each.value.l3out_interface_profile].id
+  description                  = each.value.description
+  name_alias                   = each.value.alias
+  relation_hsrp_rs_if_pol      = "uni/tn-${local.policy_tenant}/hsrpIfPol-${each.value.hsrp_interface_policy}"
+  version                      = each.value.version
 }
 
 /*_____________________________________________________________________________________________________________________

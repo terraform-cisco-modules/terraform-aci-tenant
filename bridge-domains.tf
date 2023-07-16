@@ -85,7 +85,7 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_bd_dhcp_label" "map" {
-  depends_on       = [aci_bridge_domain.map, ]
+  depends_on       = [aci_bridge_domain.map]
   for_each         = { for k, v in local.bridge_domain_dhcp_labels : k => v if var.controller_type == "apic" }
   bridge_domain_dn = "uni/tn-${each.value.tenant}/BD-${each.value.bridge_domain}"
   name             = each.value.name
@@ -247,8 +247,8 @@ resource "mso_schema_template_bd" "map" {
   virtual_mac_address        = each.value.l3_configurations.virtual_mac_address
   vrf_name                   = each.value.general.vrf.name
   vrf_schema_id = length(compact([each.value.general.vrf.schema])
-  ) > 0 ? data.mso_schema.map[each.value.general.vrf.schema].id : data.mso_schema.map[each.value.ndo.schema].id
-  vrf_template_name = each.value.general.vrf.template
+  ) > 0 ? data.mso_schema.map[each.value.general.vrf.ndo.schema].id : data.mso_schema.map[each.value.ndo.schema].id
+  vrf_template_name = each.value.general.vrf.ndo.template
   lifecycle { ignore_changes = [schema_id] }
 }
 

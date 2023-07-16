@@ -40,6 +40,7 @@ defaults:
         description: ''
         domains:
           allow_micro_segmentation: false
+          custom_epg_name: ''
           delimiter: '|'
           deploy_immediacy: on-demand
           domain: '**REQUIRED**' # Name of the Domain
@@ -60,11 +61,6 @@ defaults:
         epg_admin_state: admin_up
         epg_contract_masters: []
         epg_template: ''
-        epg_to_aaeps:
-          aaep: default
-          instrumentation_immediacy: on-demand
-          mode: trunk
-          vlans: [] # The list should contain One VLAN for typical deployments, encapsulation VLAN.  If doing micro-segmentation/private-vlan then the list should contain two vlans with the first VLAN for encapsulation and the second VLAN for primary encapsulation.
         epg_type: standard # inb, oob, standard
         fhs_trust_control_policy: ''
         flood_in_encapsulation: disabled # disabled, enabled
@@ -86,7 +82,6 @@ defaults:
           vlans: [1] # For VLAN and VXLAN this is a list of One.  For micro_seg and qinq this is a list of Two.
         useg_epg: false
         vlans: [] # This is just used for the Inband Management EPG
-        vzGraphCont: ''
     #=============================
     # Contracts
     #=============================
@@ -95,10 +90,10 @@ defaults:
         alias: ''
         annotations: []
         contract_type: standard # oob|taboo
-        controller_type: apic
         description: ''
         global_alias: ''
         log: false
+        name: '**REQUIRED**'
         qos_class: unspecified
         scope: context # application-profile|context|global|tenant
         subjects:
@@ -219,8 +214,8 @@ defaults:
         dhcp_relay_labels:
           dhcp_option_policy: ''
           dhcp_option_policy_version: 1 # Used by NDO
-          #names: []
-          scope: infra
+          dhcp_servers: []
+          scope: tenant
           version: 1 # Used by NDO
         general:
           advertise_host_routes: false
@@ -233,7 +228,7 @@ defaults:
           igmp_interface_policy: ''
           igmp_snooping_policy: ''
           ipv6_l3_unknown_multicast: flood
-          l2_unknown_unicast: flood
+          l2_unknown_unicast: proxy
           l3_unknown_multicast_flooding: flood
           limit_ip_learn_to_subnets: true
           mld_snoop_policy: ''
@@ -242,13 +237,14 @@ defaults:
           pimv6: false
           type: regular
           vrf:
-            #name: '**REQUIRED**'
-            schema: ''
-            template: ''
+            name: '**REQUIRED**'
+            ndo:
+              schema: ''
+              template: ''
             tenant: ''
         l3_configurations:
           associated_l3outs:
-            l3out: [default]
+            l3outs: [default]
             route_profile: '' # Only one L3out can have a route_profile associated to it for the BD
             tenant: '' # Use if the L3Out is in a different Tenant
           custom_mac_address: ''
@@ -257,7 +253,7 @@ defaults:
           subnets:
             address: '**REQUIRED**'
             description: ''
-            ip_data_plane_learning: enabled
+            ip_data_plane_learning: disabled
             make_this_ip_address_primary: false
             scope:
               advertise_externally: false
@@ -409,8 +405,8 @@ defaults:
             netflow_monitor_policies: []
             nodes: [201]
             ospf_interface_profile:
-                description: ''
                 authentication_type: none # md5,none,simple
+                description: ''
                 ospf_key: 0
                 ospf_interface_policy: default
             primary_preferred_address: 198.18.1.1/24
@@ -478,12 +474,13 @@ defaults:
         annotations: []
         bd_enforcement_status: false
         bgp_timers: default
-        bgp_timers_per_address_family: []
+        bgp_timers_per_address_family:
+          address_family: ipv4
         communities: []
-        controller_type: apic
         create: true
         description: ''
-        eigrp_timers_per_address_family: []
+        eigrp_timers_per_address_family:
+          address_family: ipv4
         endpoint_retention_policy: default
         epg_esg_collection_for_vrfs:
           contracts:
@@ -504,24 +501,24 @@ defaults:
           sites: []
           template: ''
         ospf_timers: default
-        ospf_timers_per_address_family: []
+        ospf_timers_per_address_family:
+          address_family: ipv4
         policy_control_enforcement_direction: ingress  # egress
         policy_control_enforcement_preference: enforced # unenforced
         preferred_group: false
         transit_route_tag_policy: ''
     #=============================
-    # APIC Inband MGMT Address
+    # Node MGMT Addresses
     #=============================
     node_management_addresses:
       static_node_management_addresses:
-        apics_inband:
-          ipv4_address: ''
-          ipv4_gateway: ''
-          ipv6_address: ''
-          ipv6_gateway: ''
-          management_epg: default
-          node_id: 1 # Required
-          pod_id: 1
+        ipv4_address: ''
+        ipv4_gateway: ''
+        ipv6_address: ''
+        ipv6_gateway: ''
+        management_epg: default
+        node_id: 1 # Required
+        pod_id: 1
     #=============================
     # Policies
     #=============================
@@ -573,11 +570,15 @@ defaults:
         dhcp:
           option_policies:
             description: ''
-            options: []
+            name: '**REQUIRED**'
+            options:
+              data: '**REQUIRED**'
+              name: ''
+              option_id: '**REQUIRED**'
           relay_policies:
-            name_addr_list: ['**REQUIRED**']
-            description: ''
             application_profile: default
+            description: ''
+            dhcp_servers: ['**REQUIRED**']
             epg: '**REQUIRED**'
             epg_type: application_epg
             l3out: ''
@@ -653,7 +654,7 @@ defaults:
             interface_controls:
               advertise_subnet: true
               bfd: true
-              mtu_ignore: false
+              mtu_ignore: true
               passive_participation: false
             network_type: bcast
             priority: 1
@@ -690,11 +691,13 @@ defaults:
           description: ''
           contexts:
             action: permit # deny, permit
+            associated_match_rules:
+              rule_name: '**REQUIRED**'
             description: ''
-            match_rules:
             name: default
             set_rule: ''
           name: '**REQUIRED**'
+          route_map_continue: false
           type: combinable # combinable or global
         route_map_match_rules: # UI Just shows 'Match Rules'
           alias: ''
@@ -702,11 +705,11 @@ defaults:
           name: '**REQUIRED**'
           match_community_terms:
             description: ''
-            name: '**REQUIRED**'
             match_community_factors:
               community: '**REQUIRED**' # e.g., regular:as2-nn2:4:15, e.g., extended:as4-nn2:5:16, e.g., no-export, e.g., no-advertise
               description: ''
               scope: 'transitive' # transitive, non-transitive
+            name: '**REQUIRED**'
           match_regex_community_terms:
             community_type: regular # extended and regular
             description: ''
@@ -719,22 +722,22 @@ defaults:
             less_than_mask: 0
         route_map_set_rules: # UI Just shows 'Set Rules'
           alias: ''
-          description: ''
-          name: '**REQUIRED**'
           additional_communities:
             community: '**REQUIRED**'
-              # e.g., regular:as2-nn2:4:15, e.g., extended:as4-nn2:5:16, e.g., no-export, e.g., no-advertise
+            # e.g., regular:as2-nn2:4:15, e.g., extended:as4-nn2:5:16, e.g., no-export, e.g., no-advertise
             description: ''
+          description: ''
           multipath: false
+          name: '**REQUIRED**'
           next_hop_propegation: false
           set_as_path:
             criteria: prepend # prepend|prepend-last-as
             autonomous_systems: [] # Used when criteria is prepend
             last_as_count: 0 # Used when criteria is prepend-last-as
           set_communities:
+            community: 'unknown:unknown:0:0' # REQUIRED for append and replace.
+            # e.g., regular:as2-nn2:4:15, e.g., extended:as4-nn2:5:16, e.g., no-export, e.g., no-advertise
             criteria: none # append|none|replace
-            community: '' # REQUIRED for append and replace.
-              # e.g., regular:as2-nn2:4:15, e.g., extended:as4-nn2:5:16, e.g., no-export, e.g., no-advertise
           set_dampening:
             half_life: 15 # 15 1-60
             max_suprress_time: 60 # 60 1-255

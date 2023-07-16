@@ -57,6 +57,30 @@ variable "controller_type" {
   type        = string
 }
 
+
+variable "management_epgs" {
+  default = [
+    {
+      name = "default"
+      type = "oob"
+    }
+  ]
+  description = <<-EOT
+    The Management EPG's that will be used by the script.
+    - name: Name of the EPG
+    - type: Type of EPG
+      * inb
+      * oob
+  EOT
+  type = list(object(
+    {
+      name = string
+      type = string
+    }
+  ))
+}
+
+
 /*_____________________________________________________________________________________________________________________
 
 Tenants - Nexus Dashboard Orchestrator - Cloud Connector - Sensitive Variables

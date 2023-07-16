@@ -32,7 +32,7 @@ resource "aci_vrf" "map" {
     "[[:alnum:]]", each.value.bgp_timers)
   ) > 0 ? "uni/tn-${each.value.policy_tenant}/bgpCtxP-${each.value.bgp_timers}" : ""
   dynamic "relation_fv_rs_ctx_to_bgp_ctx_af_pol" {
-    for_each = each.value.bgp_timers_per_address_family
+    for_each = { for v in each.value.bgp_timers_per_address_family : v.policy => v }
     content {
       af = "${relation_fv_rs_ctx_to_bgp_ctx_af_pol.value.address_family}-ucast"
       tn_bgp_ctx_af_pol_name = length(regexall(
@@ -43,7 +43,7 @@ resource "aci_vrf" "map" {
     }
   }
   dynamic "relation_fv_rs_ctx_to_eigrp_ctx_af_pol" {
-    for_each = each.value.eigrp_timers_per_address_family
+    for_each = { for v in each.value.eigrp_timers_per_address_family : v.policy => v }
     content {
       af = "${relation_fv_rs_ctx_to_eigrp_ctx_af_pol.value.address_family}-ucast"
       tn_eigrp_ctx_af_pol_name = length(regexall(
@@ -59,7 +59,7 @@ resource "aci_vrf" "map" {
     "[[:alnum:]]", each.value.ospf_timers)
   ) > 0 ? "uni/tn-${each.value.policy_tenant}/ospfCtxP-${each.value.ospf_timers}" : ""
   dynamic "relation_fv_rs_ctx_to_ospf_ctx_pol" {
-    for_each = each.value.ospf_timers_per_address_family
+    for_each = { for v in each.value.ospf_timers_per_address_family : v.policy => v }
     content {
       af = "${relation_fv_rs_ctx_to_ospf_ctx_pol.value.address_family}-ucast"
       tn_ospf_ctx_pol_name = length(regexall(

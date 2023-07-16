@@ -169,7 +169,7 @@ resource "aci_dhcp_option_policy" "map" {
     for_each = each.value.options
     content {
       data           = dhcp_option.value.data
-      dhcp_option_id = dhcp_option.value.dhcp_option_id
+      dhcp_option_id = dhcp_option.value.option_id
       name           = dhcp_option.value.name
     }
   }
@@ -187,21 +187,21 @@ ________________________________________________________________________________
 */
 resource "aci_dhcp_relay_policy" "map" {
   depends_on  = [aci_tenant.map]
-  for_each    = local.policies_dhcp_relay
+  for_each    = { for v in local.policies_dhcp_relay : v.dhcp_server => v }
   description = each.value.description
   mode        = each.value.mode
   name        = each.key
   owner       = "tenant"
   tenant_dn   = "uni/tn-${each.value.tenant}"
   dynamic "relation_dhcp_rs_prov" {
-    for_each = each.value.dhcp_relay_providers
+    for_each = { for v in [each.value.dhcp_server] : v => v }
     content {
-      addr = relation_dhcp_rs_prov.value.address
+      addr = relation_dhcp_rs_prov.key
       tdn = length(
-        regexall("external_epg", relation_dhcp_rs_prov.value.epg_type)
-        ) > 0 ? "uni/tn-${relation_dhcp_rs_prov.value.tenant}/out-${relation_dhcp_rs_prov.value.l3out}/instP-${relation_dhcp_rs_prov.value.epg}" : length(
-        regexall("application_epg", relation_dhcp_rs_prov.value.epg_type)
-      ) > 0 ? "uni/tn-${relation_dhcp_rs_prov.value.tenant}/ap-${relation_dhcp_rs_prov.value.application_profile}/epg-${relation_dhcp_rs_prov.value.epg}" : ""
+        regexall("external_epg", each.value.epg_type)
+        ) > 0 ? "uni/tn-${each.value.tenant}/out-${each.value.l3out}/instP-${each.value.epg}" : length(
+        regexall("application_epg", each.value.epg_type)
+      ) > 0 ? "uni/tn-${each.value.tenant}/ap-${each.value.application_profile}/epg-${each.value.epg}" : ""
     }
   }
 }
@@ -304,14 +304,13 @@ resource "aci_ip_sla_monitoring_policy" "map" {
   #req_data_size         = each.value.request_data_size      # 0-17512, default 28 
   sla_detect_multiplier = each.value.detect_multiplier # 1-100, default 3
   sla_frequency         = each.value.sla_frequency     # 1-300, default is 60
-  sla_port = length(regexall("tcp", each.value.sla_type)
-  ) > 0 ? each.value.sla_port : null
-  sla_type            = each.value.sla_type # http, icmp, l2ping, tcp, default is icmp
-  tenant_dn           = "uni/tn-${each.value.tenant}"
-  threshold           = each.value.threshold           # 0-604800000, default is 900
-  timeout             = each.value.operation_timeout   # 0-604800000, default is 900
-  traffic_class_value = each.value.traffic_class_value # 0-255, default is 0
-  type_of_service     = each.value.type_of_service     # 0-255 (QoS) default 0
+  sla_port              = length(regexall("tcp", each.value.sla_type)) > 0 ? each.value.sla_port : null
+  sla_type              = each.value.sla_type # http, icmp, l2ping, tcp, default is icmp
+  tenant_dn             = "uni/tn-${each.value.tenant}"
+  threshold             = each.value.threshold           # 0-604800000, default is 900
+  timeout               = each.value.operation_timeout   # 0-604800000, default is 900
+  traffic_class_value   = each.value.traffic_class_value # 0-255, IPv6 (QoS) default is 0
+  type_of_service       = each.value.type_of_service     # 0-255 IPv4 (QoS) default 0
 }
 
 

@@ -65,7 +65,42 @@ output "networking" {
       ) : v => aci_subnet.bridge_domain_subnets[v].id } : var.controller_type == "ndo" ? {
       for v in sort(keys(mso_schema_template_bd_subnet.map)) : v => mso_schema_template_bd_subnet.map[v].id
     } : {}
-    l3outs = {}
+    l3outs = {
+      l3out = var.controller_type == "apic" ? {
+        for v in sort(keys(aci_l3_outside.map)) : v => aci_l3_outside.map[v].id
+      } : {}
+      l3out_bgp_external_policy = var.controller_type == "apic" ? {
+        for v in sort(keys(aci_l3out_bgp_external_policy.map)) : v => aci_l3out_bgp_external_policy.map[v].id
+      } : {}
+      l3out_external_epgs = var.controller_type == "apic" ? { for v in sort(keys(aci_external_network_instance_profile.map)
+      ) : v => aci_external_network_instance_profile.map[v].id } : {}
+      l3out_external_epg_subnets = var.controller_type == "apic" ? { for v in sort(keys(aci_l3_ext_subnet.map)
+      ) : v => aci_l3_ext_subnet.map[v].id } : {}
+      l3out_interface_profiles = var.controller_type == "apic" ? {
+        for v in sort(keys(aci_logical_interface_profile.map)) : v => aci_logical_interface_profile.map[v].id
+      } : {}
+      l3out_interface_profile_ospf_interfaces = var.controller_type == "apic" ? {
+        for v in sort(keys(aci_l3out_ospf_interface_profile.map)) : v => aci_l3out_ospf_interface_profile.map[v].id
+      } : {}
+      l3out_interface_profile_path_attachment = var.controller_type == "apic" ? {
+        for v in sort(keys(aci_l3out_path_attachment.map)) : v => aci_l3out_path_attachment.map[v].id
+      } : {}
+      l3out_node_profiles = var.controller_type == "apic" ? {
+        for v in sort(keys(aci_logical_node_profile.map)) : v => aci_logical_node_profile.map[v].id
+      } : {}
+      l3out_node_profile_bgp_peers = var.controller_type == "apic" ? {
+        for v in sort(keys(aci_bgp_peer_connectivity_profile.map)) : v => aci_bgp_peer_connectivity_profile.map[v].id
+      } : {}
+      l3out_node_profile_nodes = var.controller_type == "apic" ? {
+        for v in sort(keys(aci_logical_node_to_fabric_node.map)) : v => aci_logical_node_to_fabric_node.map[v].id
+      } : {}
+      l3out_node_profile_static_routes = var.controller_type == "apic" ? {
+        for v in sort(keys(aci_l3out_static_route.map)) : v => aci_l3out_static_route.map[v].id
+      } : {}
+      l3out_ospf_external_policy = var.controller_type == "apic" ? {
+        for v in sort(keys(aci_l3out_ospf_external_policy.map)) : v => aci_l3out_ospf_external_policy.map[v].id
+      } : {}
+    }
     vrf = var.controller_type == "apic" ? {
       for v in sort(keys(aci_vrf.map)) : v => aci_vrf.map[v].id } : var.controller_type == "ndo" ? {
       for v in sort(keys(mso_schema_template_vrf.map)) : v => mso_schema_template_vrf.map[v].id
