@@ -253,7 +253,7 @@ defaults:
           subnets:
             gateway_ip: '**REQUIRED**'
             description: ''
-            ip_data_plane_learning: disabled
+            ip_data_plane_learning: enabled
             make_this_ip_address_primary: false
             scope:
               advertise_externally: false
