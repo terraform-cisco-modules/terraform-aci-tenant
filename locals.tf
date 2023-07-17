@@ -231,10 +231,9 @@ locals {
             tenant        = lookup(s, "tenant", var.tenant)
           }
         ] },
-        { subnets = concat(lookup(lookup(v, "l3_configurations", {}), "subnets", []), flatten(
-          [length(lookup(v, "subnets", [])) > 0 ? [for i in v.subnets : merge(
-          i, local.templates_subnets[index(local.templates_subnets[*].template_name, i.template)])] : []]
-        )) }
+        { subnets = [for i in lookup(v, "subnets", []) : length(compact([lookup(i, "template", "")])
+          ) > 0 ? merge(local.subnet, merge(i, local.templates_subnets[index(local.templates_subnets[*
+        ].template_name, i.template)])) : merge(local.subnet, i)] }
       )
       name = "${local.npfx.bridge_domains}${v.name}${local.nsfx.bridge_domains}"
       ndo = {
@@ -384,7 +383,7 @@ locals {
         tenant = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.tenant
       } : { name = "", ndo = { schema = "", template = "" }, tenant = "" }
     })
-  ]) : "${i.application_profile}:${i.application_epg}" => i }
+  ]) : "${i.application_profile}:${i.name}" => i }
 
   epg_to_domains = { for i in flatten([
     for key, value in local.application_epgs : [
@@ -485,7 +484,7 @@ locals {
     for k, v in local.application_epgs : [
       for e in local.switch_loop_3 : {
         access              = e.access
-        application_epg     = k
+        application_epg     = v.name
         application_profile = v.application_profile
         distinguished_name = length(regexall("^vpc$", v.path_type)
           ) > 0 ? "${aci_application_epg.map[k].id}/rspathAtt-[topology/pod-${v.pod_id}/protpaths-${element(v.vpc_pair, 0)}-${element(v.vpc_pair, 1)}/pathep-[${v.interface}]]" : length(
@@ -512,7 +511,7 @@ locals {
   contract_to_epgs = { for i in flatten([
     for key, value in local.application_epgs : [
       for v in value.contracts : {
-        application_epg     = value.application_epg
+        application_epg     = value.name
         application_profile = value.application_profile
         contract            = "${local.npfx.contracts}${v.name}${local.nsfx.contracts}"
         contract_class = length(regexall(

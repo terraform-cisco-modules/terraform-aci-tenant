@@ -251,7 +251,7 @@ defaults:
           ep_move_detection_mode: false
           link_local_ipv6_address: '::'
           subnets:
-            address: '**REQUIRED**'
+            gateway_ip: '**REQUIRED**'
             description: ''
             ip_data_plane_learning: disabled
             make_this_ip_address_primary: false
@@ -262,6 +262,7 @@ defaults:
               neighbor_discovery: true
               no_default_svi_gateway: false
               querier_ip: false
+            template_name: ''
             treat_as_virtual_ip_address: false
           unicast_routing: true
           virtual_mac_address: ''
