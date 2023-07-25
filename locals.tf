@@ -396,6 +396,7 @@ locals {
           controller_type     = value.controller_type
           domain              = v.name
           epg_type            = value.epg_type
+          key                 = key
           ndo                 = value.ndo
         }
       )
@@ -435,6 +436,7 @@ locals {
         application_epg           = v.name
         application_profile       = v.application_profile
         instrumentation_immediacy = e.instrumentation_immediacy
+        key                       = k
         mode                      = contains(v.vlans, tonumber(e.access)) ? "native" : e.mode
         vlans                     = lookup(v, "vlans", [])
         } if length(v.vlans) == 2 ? contains(e.vlan_list, tonumber(element(v.vlans, 0))) && contains(
@@ -486,11 +488,7 @@ locals {
         access              = e.access
         application_epg     = v.name
         application_profile = v.application_profile
-        distinguished_name = length(regexall("^vpc$", v.path_type)
-          ) > 0 ? "${aci_application_epg.map[k].id}/rspathAtt-[topology/pod-${v.pod_id}/protpaths-${element(v.vpc_pair, 0)}-${element(v.vpc_pair, 1)}/pathep-[${v.interface}]]" : length(
-          regexall("^dpc$", v.path_type)
-          ) > 0 ? "${aci_application_epg.map[k].id}/rspathAtt-[topology/pod-${v.pod_id}/paths-${v.node_id}/pathep-[${v.interface}]]" : length(1
-        ) > 0 ? "${aci_application_epg.map[k].id}/rspathAtt-[topology/pod-${v.pod_id}/paths-${v.node_id}/pathep-[eth${v.interface}]]" : ""
+        distinguished_name = "${aci_application_epg.map[k].id}/rspathAtt-"
         encapsulation_type        = e.encapsulation_type
         instrumentation_immediacy = e.instrumentation_immediacy == "on-demand" ? "lazy" : "immediate"
         interface                 = e.interface
@@ -500,6 +498,11 @@ locals {
         path_type                 = e.path_type
         pod_id                    = e.pod_id
         site                      = e.site
+        tdn                       = length(regexall("^vpc$", v.path_type)
+          ) > 0 ? "topology/pod-${v.pod_id}/protpaths-${element(v.vpc_pair, 0)}-${element(v.vpc_pair, 1)}/pathep-[${v.interface}]" : length(
+          regexall("^dpc$", v.path_type)
+          ) > 0 ? "topology/pod-${v.pod_id}/paths-${v.node_id}/pathep-[${v.interface}]" : length(1
+        ) > 0 ? "topology/pod-${v.pod_id}/paths-${v.node_id}/pathep-[eth${v.interface}]" : ""
         vpc_pair                  = length(e.vpc_pair) == 2 ? "${element(e.vpc_pair, 0)}-${element(e.vpc_pair, 1)}" : ""
         } if length(v.vlans) == 2 ? contains(e.vlan_list, tonumber(element(v.vlans, 0))) && contains(
         e.vlan_list, tonumber(element(v.vlans, 1))) : length(v.vlans) == 1 ? contains(

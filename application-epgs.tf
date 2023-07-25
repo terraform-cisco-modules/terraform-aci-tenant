@@ -64,7 +64,7 @@ resource "aci_node_mgmt_epg" "mgmt_epgs" {
     ) > 0 && var.controller_type == "apic"
   }
   management_profile_dn    = "uni/tn-mgmt/mgmtp-default"
-  name                     = each.key
+  name                     = each.value.name
   encap                    = each.value.epg_type == "inb" ? "vlan-${element(each.value.vlans, 0)}" : ""
   match_t                  = each.value.epg_type == "inb" ? each.value.label_match_criteria : "AtleastOne"
   name_alias               = each.value.alias
@@ -148,7 +148,7 @@ resource "aci_rest_managed" "application_epgs_global_alias" {
   depends_on = [aci_application_epg.map]
   for_each   = { for k, v in local.application_epgs : k => v if v.global_alias != "" && var.controller_type == "apic" }
   class_name = "tagAliasInst"
-  dn         = "uni/tn-${each.key}/ap-${each.value.application_profile}/epg-${each.value.application_epg}/alias"
+  dn         = "uni/tn-${each.value.tenant}/ap-${each.value.application_profile}/epg-${each.value.name}/alias"
   content = {
     name = each.value.global_alias
   }
@@ -169,7 +169,7 @@ resource "aci_epg_to_domain" "map" {
   for_each = {
     for k, v in local.epg_to_domains : k => v if var.controller_type == "apic" && v.epg_type == "standard"
   }
-  application_epg_dn = aci_application_epg.map[each.value.application_epg].id
+  application_epg_dn = aci_application_epg.map[each.value.key].id
   tdn = length(
     regexall("physical", each.value.domain_type)
     ) > 0 ? "uni/phys-${each.value.domain}" : length(
@@ -349,7 +349,7 @@ resource "aci_epgs_using_function" "epg_to_aaeps" {
   instr_imedcy      = each.value.instrumentation_immediacy == "on-demand" ? "lazy" : each.value.instrumentation_immediacy
   mode              = each.value.mode == "trunk" ? "regular" : each.value.mode == "access" ? "untagged" : "native"
   primary_encap     = length(each.value.vlans) > 1 ? "vlan-${element(each.value.vlans, 1)}" : "unknown"
-  tdn               = aci_application_epg.map[each.value.application_epg].id
+  tdn               = aci_application_epg.map[each.value.key].id
 }
 
 
@@ -365,7 +365,7 @@ ________________________________________________________________________________
 resource "aci_rest_managed" "epg_to_static_paths" {
   depends_on = [aci_application_epg.map]
   for_each   = { for k, v in local.epg_to_static_paths : k => v if var.controller_type == "apic" }
-  dn         = each.value.distinguished_name
+  dn         = "each.value.distinguished_name[${each.value.tdn}]"
   class_name = "fvRsPathAtt"
   content = {
     encap = length(
@@ -379,7 +379,7 @@ resource "aci_rest_managed" "epg_to_static_paths" {
     ) > 0 ? "vxlan-${element(each.value.vlans, 0)}" : ""
     mode         = each.value.mode
     primaryEncap = each.value.encapsulation_type == "micro_seg" ? "vlan-${element(each.value.vlans, 1)}" : "unknown"
-    tDn          = each.value.distinguished_name
+    tDn          = each.value.tdn
   }
 }
 
