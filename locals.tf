@@ -4,16 +4,16 @@ locals {
   # Model Inputs
   #__________________________________________________________
 
-  defaults          = yamldecode(file("${path.module}/defaults.yaml")).defaults.tenants
-  npfx              = merge(local.defaults.name_prefix, lookup(var.model, "name_prefix", {}))
-  nsfx              = merge(local.defaults.name_suffix, lookup(var.model, "name_suffix", {}))
-  networking        = lookup(var.model, "networking", {})
-  node_mgmt_add     = lookup(var.model, "node_management_addresses", {})
-  policies          = lookup(var.model, "policies", {})
-  templates_bds     = lookup(var.templates, "bridge_domains", {})
-  templates_epgs    = lookup(var.templates, "application_epgs", {})
-  templates_subnets = lookup(var.templates, "subnets", {})
-  tenant_contracts  = lookup(var.model, "contracts", {})
+  defaults         = yamldecode(file("${path.module}/defaults.yaml")).defaults.tenants
+  npfx             = merge(local.defaults.name_prefix, lookup(var.model, "name_prefix", {}))
+  nsfx             = merge(local.defaults.name_suffix, lookup(var.model, "name_suffix", {}))
+  networking       = lookup(var.model, "networking", {})
+  node_mgmt_add    = lookup(var.model, "node_management_addresses", {})
+  policies         = lookup(var.model, "policies", {})
+  template_bds     = lookup(var.templates, "bridge_domains", {})
+  template_epgs    = lookup(var.templates, "application_epgs", {})
+  template_subnets = lookup(var.templates, "subnets", {})
+  tenant_contracts = lookup(var.model, "contracts", {})
 
   # Defaults
   app         = local.defaults.application_profiles
@@ -75,9 +75,16 @@ locals {
         annotations = length(lookup(v, "annotations", local.tnt.annotations)
         ) > 0 ? lookup(v, "annotations", local.tnt.annotations) : var.annotations
         controller_type = var.controller_type
-        sites           = [for i in lookup(lookup(v, "ndo", {}), "sites", []) : merge(local.tnt.ndo.sites, i)]
-        schemas         = lookup(lookup(v, "ndo", {}), "schemas", [])
-        users           = lookup(lookup(v, "ndo", {}), "users", [])
+        sites = [
+          for i in lookup(lookup(v, "ndo", {}), "sites", []) : merge(
+            local.tnt.ndo.sites, i,
+            { aws = merge(local.tnt.ndo.sites.aws, lookup(i, "aws", {})) },
+            { azure = merge(local.tnt.ndo.sites.azure, lookup(i, "azure", {})) },
+            { gcp = merge(local.tnt.ndo.sites.gcp, lookup(i, "gcp", {})) }
+          )
+        ]
+        schemas = lookup(lookup(v, "ndo", {}), "schemas", [])
+        users   = lookup(lookup(v, "ndo", {}), "users", [])
       }
     ) if v.name == var.tenant
   }
@@ -189,7 +196,7 @@ locals {
   merge_bds_template = { for i in flatten([
     for v in local.bds_with_template : [
       merge(local.networking.bridge_domains[index(local.networking.bridge_domains[*].name, v.name)
-      ], local.templates_bds[index(local.templates_bds[*].template_name, v.template)])
+      ], local.template_bds[index(local.template_bds[*].template_name, v.template)])
     ]
   ]) : i.name => i }
 
@@ -199,9 +206,9 @@ locals {
 
   bridge_domains = {
     for k, v in local.merged_bds : "${local.npfx.bridge_domains}${v.name}${local.nsfx.bridge_domains}" => {
-      advanced_troubleshooting = merge(local.adv, lookup(v, "advanced/troubleshooting", {}),
+      advanced_troubleshooting = merge(local.adv, lookup(v, "advanced_troubleshooting", {}),
         { netflow_monitor_policies = [
-          for e in lookup(lookup(v, "advanced/troubleshooting", {}
+          for e in lookup(lookup(v, "advanced_troubleshooting", {}
             ), "netflow_monitor_policies", []) : {
             ip_filter_type         = lookup(e, "ip_filter_type", local.netflow.ip_filter_type)
             netflow_monitor_policy = e.netflow_monitor_policy
@@ -215,8 +222,10 @@ locals {
         ]
       ])
       general = merge(
-        local.general, lookup(v, "general", {}),
-        { tenant = var.tenant },
+        local.general, lookup(v, "general", {}), {
+          description = lookup(lookup(v, "general", {}), "description", lookup(v, "description", ""))
+          tenant      = var.tenant
+        },
         { vrf = merge(
           local.general.vrf, lookup(lookup(v, "general", {}), "vrf", {}),
           { tenant = lookup(lookup(lookup(v, "general", {}), "vrf", {}), "tenant", var.tenant) }
@@ -232,15 +241,11 @@ locals {
           }
         ] },
         { subnets = [for i in lookup(v, "subnets", []) : length(compact([lookup(i, "template", "")])
-          ) > 0 ? merge(local.subnet, merge(i, local.templates_subnets[index(local.templates_subnets[*
+          ) > 0 ? merge(local.subnet, merge(i, local.template_subnets[index(local.template_subnets[*
         ].template_name, i.template)])) : merge(local.subnet, i)] }
       )
-      name = "${local.npfx.bridge_domains}${v.name}${local.nsfx.bridge_domains}"
-      ndo = {
-        schema   = lookup(lookup(v, "ndo", {}), "schema", "")
-        sites    = lookup(lookup(v, "ndo", {}), "sites", local.sites)
-        template = lookup(lookup(v, "ndo", {}), "template", "")
-      }
+      name   = "${local.npfx.bridge_domains}${v.name}${local.nsfx.bridge_domains}"
+      ndo    = merge({ sites = local.sites }, lookup(v, "ndo", {}))
       tenant = var.tenant
     }
   }
@@ -269,8 +274,8 @@ locals {
   bridge_domain_subnets = { for i in flatten([
     for key, value in local.bridge_domains : [
       for v in value.l3_configurations.subnets : merge(
-        { bridge_domain = value.name },
-        value.ndo, local.subnet, v,
+        { bridge_domain = value.name, ndo = value.ndo },
+        local.subnet, v,
         { scope = merge(local.subnet.scope, lookup(v, "scope", {})) },
         { subnet_control = merge(local.subnet.subnet_control, lookup(v, "subnet_control", {})) },
       )
@@ -311,19 +316,21 @@ locals {
     )
   }
 
-  bd_with_epgs = [
-    for k, v in local.bridge_domains : {
-      application_epg = lookup(v, "application_epg", {})
-      name            = k
-      template        = lookup(lookup(v, "application_epg", ), "template", "")
-    } if length(v.application_epg) > 0
-  ]
+  bd_with_epgs = flatten([
+    for k, v in local.bridge_domains : [
+      for e in [v.application_epg] : {
+        application_epg = e
+        name            = k
+        template        = lookup(e, "template", "")
+      } if length(v.application_epg) > 0
+    ]
+  ])
   bd_to_epg = { for i in flatten([
     for v in local.bd_with_epgs : [
       merge(
-        { application_profile = lookup(v.application_epg, "application_profile", "") },
+        { application_profile = v.application_epg.application_profile },
         local.networking.bridge_domains[index(local.networking.bridge_domains[*].name, v.name)],
-        local.templates_epgs[index(local.templates_epgs[*].template_name, v.template)],
+        local.template_epgs[index(local.template_epgs[*].template_name, v.template)],
         { name = v.name }, { bridge_domain = v.name },
         { vlans = lookup(v.application_epg, "vlans", []) }
       )
@@ -345,7 +352,7 @@ locals {
 
   merge_templates = { for i in flatten([
     for v in local.epgs_with_template : [
-      merge(local.epgs[v.name], local.templates_epgs[index(local.templates_epgs[*].template_name, v.template)])
+      merge(local.template_epgs[index(local.template_epgs[*].template_name, v.template)], local.epgs[v.name])
     ]
   ]) : i.name => i }
 
@@ -369,19 +376,15 @@ locals {
           application_epg     = s.application_epg
         }
       ]
-      name = "${local.npfx.application_epgs}${v.name}${local.nsfx.application_epgs}"
-      ndo = {
-        schema   = lookup(lookup(v, "ndo", {}), "schema", "")
-        sites    = local.sites
-        template = lookup(lookup(v, "ndo", {}), "template", "")
-      }
+      name         = "${local.npfx.application_epgs}${v.name}${local.nsfx.application_epgs}"
+      ndo          = merge({ sites = local.sites }, lookup(v, "ndo", {}))
       static_paths = lookup(v, "static_paths", [])
       tenant       = var.tenant
       vrf = length(compact([lookup(v, "bridge_domain", "")])) > 0 ? {
         name   = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.name
         ndo    = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.ndo
         tenant = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.tenant
-      } : { name = "", ndo = { schema = "", template = "" }, tenant = "" }
+      } : { name = "", ndo = { schema = "", sites = [], template = "" }, tenant = "" }
     })
   ]) : "${i.application_profile}:${i.name}" => i }
 
@@ -404,7 +407,7 @@ locals {
   ]) : "${i.application_profile}:${i.application_epg}:${i.domain}" => i }
   ndo_epg_to_domains = { for i in flatten([
     for k, v in local.epg_to_domains : [
-      for s in range(length(v.ndo.sites)) : merge(v, { site = element(v.ndo.sites, s) })
+      for s in range(length(v.sites)) : merge(v, { site = element(v.sites, s) })
     ]
   ]) : "${i.application_profile}:${i.application_epg}:${i.domain}:${i.site}" => i if i.controller_type == "ndo" }
 
@@ -485,10 +488,10 @@ locals {
   epg_to_static_paths = { for i in flatten([
     for k, v in local.application_epgs : [
       for e in local.switch_loop_3 : {
-        access              = e.access
-        application_epg     = v.name
-        application_profile = v.application_profile
-        distinguished_name = "${aci_application_epg.map[k].id}/rspathAtt-"
+        access                    = e.access
+        application_epg           = v.name
+        application_profile       = v.application_profile
+        distinguished_name        = "${aci_application_epg.map[k].id}/rspathAtt-"
         encapsulation_type        = e.encapsulation_type
         instrumentation_immediacy = e.instrumentation_immediacy == "on-demand" ? "lazy" : "immediate"
         interface                 = e.interface
@@ -498,12 +501,12 @@ locals {
         path_type                 = e.path_type
         pod_id                    = e.pod_id
         site                      = e.site
-        tdn                       = length(regexall("^vpc$", v.path_type)
+        tdn = length(regexall("^vpc$", v.path_type)
           ) > 0 ? "topology/pod-${v.pod_id}/protpaths-${element(v.vpc_pair, 0)}-${element(v.vpc_pair, 1)}/pathep-[${v.interface}]" : length(
           regexall("^dpc$", v.path_type)
           ) > 0 ? "topology/pod-${v.pod_id}/paths-${v.node_id}/pathep-[${v.interface}]" : length(1
         ) > 0 ? "topology/pod-${v.pod_id}/paths-${v.node_id}/pathep-[eth${v.interface}]" : ""
-        vpc_pair                  = length(e.vpc_pair) == 2 ? "${element(e.vpc_pair, 0)}-${element(e.vpc_pair, 1)}" : ""
+        vpc_pair = length(e.vpc_pair) == 2 ? "${element(e.vpc_pair, 0)}-${element(e.vpc_pair, 1)}" : ""
         } if length(v.vlans) == 2 ? contains(e.vlan_list, tonumber(element(v.vlans, 0))) && contains(
         e.vlan_list, tonumber(element(v.vlans, 1))) : length(v.vlans) == 1 ? contains(
         e.vlan_list, tonumber(element(v.vlans, 0))

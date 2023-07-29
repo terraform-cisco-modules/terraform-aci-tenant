@@ -108,7 +108,7 @@ output "networking" {
   }
 }
 
-output "nexus_dashboard_orchestrator" {
+output "nd_orchestrator" {
   value = {
     schemas      = { for v in sort(keys(data.mso_schema.map)) : v => data.mso_schema.map[v].id }
     schema_sites = { for v in sort(keys(mso_schema_site.map)) : v => mso_schema_site.map[v].id }

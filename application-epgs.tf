@@ -390,14 +390,17 @@ Nexus Dashboard — Application Endpoint Group
 _______________________________________________________________________________________________________________________
 */
 resource "mso_schema_template_anp_epg" "map" {
-  provider         = mso
-  depends_on       = [mso_schema_template_anp.map]
+  provider = mso
+  depends_on = [
+    mso_schema_template_anp.map,
+    mso_schema_template_bd.map
+  ]
   for_each         = { for k, v in local.application_epgs : k => v if var.controller_type == "ndo" }
   anp_name         = each.value.application_profile
   bd_name          = each.value.bd.name
   bd_schema_id     = data.mso_schema.map[each.value.bd.ndo.schema].id
   bd_template_name = each.value.bd.ndo.template
-  description      = each.value.general.description
+  description      = each.value.description
   display_name     = each.value.combine_description == true ? "${each.value.name}-${each.value.description}" : each.value.name
   intra_epg        = each.value.intra_epg_isolation
   #

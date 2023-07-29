@@ -180,14 +180,23 @@ defaults:
           name: '**REQUIRED**'
           sites: []
       sites:
-        aws_access_key_id: ''
-        aws_account_id: ''
-        azure_access_type: managed # credentials, managed, shared
-        azure_active_directory_id: '' # REQUIRED for access_type credentials
-        azure_application_id: '' # REQUIRED for access_type credentials
-        azure_shared_account_id: '' # REQUIRED for access_type shared
-        azure_subscription_id: ''
-        is_aws_account_trusted: true
+        aws:
+          access_key_id: ''
+          account_id: ''
+          is_aws_account_trusted: true
+        azure:
+          access_type: managed # credentials, managed, shared
+          active_directory_id: '' # REQUIRED for access_type credentials
+          application_id: '' # REQUIRED for access_type credentials
+          shared_account_id: '' # REQUIRED for access_type shared
+          subscription_id: ''
+        gcp:
+          access_type: managed
+          client_id: ''
+          email: ''
+          key_id: ''
+          name: ''
+          private_key: ''
         vendor: cisco # azure, aws, cisco
       users: [] # REQUIRED FOR NDO
     netflow_monitor_policies:
@@ -250,6 +259,7 @@ defaults:
           custom_mac_address: ''
           ep_move_detection_mode: false
           link_local_ipv6_address: '::'
+          nd_policy: ''
           subnets:
             gateway_ip: '**REQUIRED**'
             description: ''

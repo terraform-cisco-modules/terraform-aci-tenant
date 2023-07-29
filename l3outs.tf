@@ -238,7 +238,7 @@ resource "aci_rest_managed" "external_epg_contracts" {
   ]
   for_each = {
     for k, v in local.l3out_ext_epg_contracts : k => v if length(regexall("(intra_epg|taboo)", v.contract_type)
-    ) > 0 && var.controller_type == "apic"
+    ) == 0 && var.controller_type == "apic"
   }
   dn = length(regexall(
     "consumed", each.value.contract_type)
@@ -255,7 +255,7 @@ resource "aci_rest_managed" "external_epg_contracts" {
     "provided", each.value.contract_type)
   ) > 0 ? "fvRsProv" : ""
   content = {
-    tDn          = "uni/tn-${each.value.tenant}/brc-${each.value.contract}"
+    #tDn          = "uni/tn-${each.value.tenant}/brc-${each.value.contract}"
     tnVzBrCPName = each.value.contract
     prio         = each.value.qos_class
   }

@@ -45,8 +45,8 @@ resource "aci_bridge_domain" "map" {
     for v in each.value.l3_configurations.associated_l3outs : "uni/tn-${v.tenant}/out-${v.l3out[0]}/prof-${v.route_profile}" if v.route_profile != ""
   ])
   # class: monEPGPol
-  # relation_fv_rs_bd_to_nd_p = length(
-  # [each.value.nd_policy]) > 0 ? "uni/tn-${local.policy_tenant}/ndifpol-${each.value.nd_policy}" : ""
+  #relation_fv_rs_bd_to_nd_p = length(compact([each.value.nd_policy])
+  #) > 0 ? "uni/tn-${local.policy_tenant}/ndifpol-${each.value.nd_policy}" : ""
   unicast_route = each.value.l3_configurations.unicast_routing == true ? "yes" : "no"
   vmac = length(compact([each.value.l3_configurations.virtual_mac_address])
   ) > 0 ? each.value.l3_configurations.virtual_mac_address : "not-applicable"
@@ -246,9 +246,10 @@ resource "mso_schema_template_bd" "map" {
   unicast_routing            = each.value.l3_configurations.unicast_routing
   virtual_mac_address        = each.value.l3_configurations.virtual_mac_address
   vrf_name                   = each.value.general.vrf.name
-  vrf_schema_id = length(compact([each.value.general.vrf.schema])
+  vrf_schema_id = length(compact([each.value.general.vrf.ndo.schema])
   ) > 0 ? data.mso_schema.map[each.value.general.vrf.ndo.schema].id : data.mso_schema.map[each.value.ndo.schema].id
-  vrf_template_name = each.value.general.vrf.ndo.template
+  vrf_template_name = length(compact([each.value.general.vrf.ndo.template])
+  ) > 0 ? each.value.general.vrf.ndo.template : each.value.ndo.template
   lifecycle { ignore_changes = [schema_id] }
 }
 

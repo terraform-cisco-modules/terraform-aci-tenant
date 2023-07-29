@@ -21,8 +21,11 @@ resource "mso_schema" "map" {
 }
 
 resource "mso_schema_site" "map" {
-  provider      = mso
-  depends_on    = [mso_schema.map]
+  provider = mso
+  depends_on = [
+    data.mso_site.map,
+    mso_schema.map
+  ]
   for_each      = { for k, v in local.template_sites : k => v if v.create == true }
   schema_id     = data.mso_schema.map[each.value.schema].id
   site_id       = data.mso_site.map[each.value.site].id

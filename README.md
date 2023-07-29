@@ -61,7 +61,7 @@ A Terraform module to configure ACI Tenant Policies.
 | <a name="output_application_profiles"></a> [application\_profiles](#output\_application\_profiles) | n/a |
 | <a name="output_contracts"></a> [contracts](#output\_contracts) | n/a |
 | <a name="output_networking"></a> [networking](#output\_networking) | n/a |
-| <a name="output_nexus_dashboard_orchestrator"></a> [nexus\_dashboard\_orchestrator](#output\_nexus\_dashboard\_orchestrator) | n/a |
+| <a name="output_nd_orchestrator"></a> [nd\_orchestrator](#output\_nd\_orchestrator) | n/a |
 | <a name="output_policies"></a> [policies](#output\_policies) | n/a |
 | <a name="output_tenants"></a> [tenants](#output\_tenants) | n/a |
 ## Resources
