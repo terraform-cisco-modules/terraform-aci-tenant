@@ -365,7 +365,8 @@ locals {
       application_profile = "${local.npfx.application_profiles}${v.application_profile}${local.nsfx.application_profiles}"
       bd = length(compact([lookup(v, "bridge_domain", "")])) > 0 ? {
         name = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].name
-        ndo  = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].ndo
+        ndo = merge({ schema = "", sites = [], template = "" },
+        local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].ndo)
       } : { name = "", ndo = { schema = "", sites = [], template = "" } }
       contracts       = lookup(v, "contracts", [])
       controller_type = var.controller_type
@@ -381,8 +382,10 @@ locals {
       static_paths = lookup(v, "static_paths", [])
       tenant       = var.tenant
       vrf = length(compact([lookup(v, "bridge_domain", "")])) > 0 ? {
-        name   = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.name
-        ndo    = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.ndo
+        name = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.name
+        ndo = merge({ schema = "", sites = [], template = "" },
+          local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.ndo
+        )
         tenant = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.tenant
       } : { name = "", ndo = { schema = "", sites = [], template = "" }, tenant = "" }
     })
@@ -546,10 +549,10 @@ locals {
         contract_tenant = lookup(v, "tenant", var.tenant)
         contract_type   = lookup(v, "contract_type", local.epg.contracts.contract_type)
         ndo = {
-          contract_schema   = lookup(lookup(v, "ndo", {}), "schema", value.ndo.schema)
-          contract_template = lookup(lookup(v, "ndo", {}), "template", value.ndo.template)
-          schema            = value.ndo.schema
-          template          = value.ndo.template
+          contract_schema   = lookup(lookup(v, "ndo", {}), "schema", lookup(value.ndo, "schema", ""))
+          contract_template = lookup(lookup(v, "ndo", {}), "template", lookup(value.ndo, "template", ""))
+          schema            = lookup(value.ndo, "schema", "")
+          template          = lookup(value.ndo, "template", "")
         }
         qos_class = lookup(v, "qos_class", local.epg.contracts.qos_class)
         epg_type  = value.epg_type
@@ -788,7 +791,7 @@ locals {
           ndo                = value.ndo
           nodes = [
             for s in lookup(v, "nodes", []) : {
-              l3out         = key, node_id = s.node_id, router_id = s.router_id, tenant = var.tenant
+              l3out         = key, node_id = s.node_id, router_id = s.router_id, tenant = value.tenant
               node_profile  = "${key}:${v.name}"
               pod_id        = lookup(v, "pod_id", local.lnp.pod_id)
               static_routes = lookup(v, "static_routes", [])
@@ -797,13 +800,22 @@ locals {
               )
             }
           ]
+          vrf = value.vrf
         }
       )
     ]
   ]) : "${i.l3out}:${i.name}" => i }
 
   l3out_node_profiles_nodes = { for i in flatten([
-    for key, value in local.l3out_node_profiles : [for v in value.nodes : v]
+    for key, value in local.l3out_node_profiles : [
+      for v in value.nodes : merge(v, {
+        l3out  = v.l3out
+        ndo    = value.ndo
+        pod_id = value.pod_id
+        tenant = value.tenant
+        vrf    = value.vrf
+      })
+    ]
   ]) : "${i.node_profile}:${i.node_id}" => i }
 
   #=======================================================================================
@@ -813,41 +825,49 @@ locals {
   l3out_node_profile_static_routes = { for i in flatten([
     for key, value in local.l3out_node_profiles_nodes : [
       for v in value.static_routes : [
-        for e in lookup(v, "prefixes", {}) : {
-          aggregate           = lookup(v, "aggregate", local.lnpstrt.aggregate)
-          alias               = lookup(v, "alias", local.lnpstrt.alias)
-          description         = lookup(v, "description", local.lnpstrt.description)
-          fallback_preference = lookup(v, "fallback_preference", local.lnpstrt.fallback_preference)
-          key                 = key
-          ndo                 = value.ndo
-          next_hop_addresses = [
-            for x in range(0, length(lookup(lookup(v, "next_hop_addresses", {}), "next_hop_ips", []))) : {
-              alias         = lookup(lookup(v, "next_hop_addresses", {}), "alias", local.lnpsrnh.alias)
-              description   = lookup(lookup(v, "next_hop_addresses", {}), "description", local.lnpsrnh.description)
-              next_hop_ip   = v.next_hop_addresses.next_hop_ips[x]
-              next_hop_type = lookup(lookup(v, "next_hop_addresses", {}), "next_hop_type", local.lnpsrnh.next_hop_type)
-              preference    = lookup(lookup(v, "next_hop_addresses", {}), "preference", local.lnpsrnh.preference)
-              static_route  = "${key}:${e}"
-              track_policy  = lookup(lookup(v, "next_hop_addresses", {}), "track_policy", local.lnpsrnh.track_policy)
-              track_member  = lookup(lookup(v, "next_hop_addresses", {}), "track_member", local.lnpsrnh.track_member)
-            }
-          ]
-          node_id = value.node_id
-          prefix  = e
+        for e in lookup(v, "prefixes", {}) : merge(local.lnpstrt, value, v, {
+          key                = key
+          next_hop_addresses = lookup(v, "next_hop_addresses", {})
+          prefix             = e
           route_control = {
             bfd = lookup(lookup(v, "route_control", {}), "bfd", local.lnpstrt.route_control.bfd)
           }
-          description  = lookup(v, "description", local.lnpstrt.description)
-          tenant       = var.tenant
-          track_policy = lookup(v, "track_policy", local.lnpstrt.track_policy)
-        }
+          track_list_policy = lookup(v, "track_list_policy", local.lnpstrt.track_list_policy)
+          vrf               = value.vrf
+        })
       ]
     ]
   ]) : "${i.key}:${i.prefix}" => i }
 
   l3out_static_routes_next_hop = { for i in flatten([
-    for key, value in local.l3out_node_profile_static_routes : [for v in value.next_hop_addresses : v]
-  ]) : "${i.static_route}:${i.next_hop_ip}" => i }
+    for key, value in local.l3out_node_profile_static_routes : [
+      for v in [value.next_hop_addresses] : [
+        for e in v.next_hop_ips : merge(local.lnpsrnh, value, v, {
+          key         = key
+          next_hop_ip = e.next_hop_ip
+          preference  = lookup(e, "preference", local.lnpsrnh.next_hop_ips.preference)
+          prefix_dn   = "${key}"
+          track_list  = lookup(v, "track_list", false) == true ? "${value.vrf}_${e.next_hop_ip}" : ""
+          track_member = lookup(v, "track_list", false) == true && lookup(v, "track_member", false
+          ) == true ? "${value.vrf}_${e.next_hop_ip}" : ""
+          vrf = value.vrf
+        })
+      ]
+    ]
+  ]) : "${i.key}:${i.next_hop_ip}" => i }
+
+  track_lists = merge({
+    for k, v in local.l3out_static_routes_next_hop : "${v.vrf}_${v.next_hop_ip}" => {
+      name            = "${v.vrf}_${v.next_hop_ip}"
+      percentage_down = 50
+      percentage_up   = 100
+      tenant          = v.tenant
+      type            = "percentage"
+      weight_down     = 0
+      weight_up       = 1
+    } if v.track_list == true }
+  )
+  track_members = []
 
   #=======================================================================================
   # L3Outs - Logical Node Profiles - Logical Interface Profiles
@@ -890,9 +910,12 @@ locals {
           l3out_interface_profile   = key
           ndo                       = value.ndo
           primary_preferred_address = element(v.primary_preferred_addresses, s)
-          secondary_addresses       = lookup(v, "secondary_addresses", [])
-          side                      = length(regexall("false", tostring(s % 2 == 0))) > 0 ? "A" : "B"
-          interface_type            = value.interface_type
+          secondary_addresses = length(lookup(v, "secondary_addresses", [])) % 2 == 0 && length(
+            lookup(v, "secondary_addresses", [])) > 0 ? element(chunklist(
+            v.secondary_addresses, length(v.secondary_addresses) / 2), s
+          ) : []
+          side           = length(regexall("false", tostring(s % 2 != 0))) > 0 ? "A" : "B"
+          interface_type = value.interface_type
         }
       ]
     ] if value.interface_type == "ext-svi"
@@ -903,6 +926,7 @@ locals {
       for s in range(length(v.secondary_addresses)) : {
         ipv6_dad                = v.ipv6_dad
         l3out_interface_profile = k
+        path_type = "other"
         secondary_ip_address    = element(v.secondary_addresses, s)
       }
     ]
@@ -913,6 +937,7 @@ locals {
       for s in range(length(v.secondary_addresses)) : {
         ipv6_dad                = v.ipv6_dad
         l3out_interface_profile = k
+        path_type = "svi"
         secondary_ip_address    = element(v.secondary_addresses, s)
       }
     ]

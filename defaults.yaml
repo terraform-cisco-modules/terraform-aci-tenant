@@ -310,6 +310,7 @@ defaults:
             tenant: '' # Required if Contract is not in the same Tenant
           description: ''
           flood_on_encapsulation: disabled
+          intra_ext_epg_isolation: unenforced
           label_match_criteria: AtleastOne
           name: default
           preferred_group_member: false
@@ -440,10 +441,12 @@ defaults:
               next_hop_addresses:
                   alias: ''
                   description: ''
-                  preference: 0
-                  next_hop_ips: ['**REQUIRED**']
+                  next_hop_ips:
+                    ip_address: '**REQUIRED**'
+                    preference: 0
                   next_hop_type: prefix
-                  track_list: ''
+                  track_list: false
+                  ip_sla_monitoring_policy: 'default'
                   track_member: false
               prefixes: ['**REQUIRED**']
               route_control:
@@ -626,6 +629,7 @@ defaults:
             detect_multiplier: 3 # 1-100
             http_uri: ''
             http_version: 1.0 # 1.0 or 1.1
+            name: '**REQUIRED**'
             operation_timeout: 900 # 0-604800000 (milliseconds)
             request_data_size: 28 # 0-17512
             sla_frequency: 60 # 1-300 (seconds)

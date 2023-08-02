@@ -546,9 +546,13 @@ ________________________________________________________________________________
 # Attach a Node Interface Path to a Logical Interface Profile
 #-------------------------------------------------------------
 resource "aci_l3out_path_attachment_secondary_ip" "map" {
-  depends_on               = [aci_l3out_path_attachment.map]
+  depends_on               = [
+    aci_l3out_path_attachment.map
+  ]
   for_each                 = local.l3out_paths_secondary_ips
-  l3out_path_attachment_dn = aci_l3out_path_attachment.map[each.value.l3out_interface_profile].id
+  l3out_path_attachment_dn = length(regexall("svi", each.value.path_type)
+  ) > 0 ? aci_l3out_vpc_member.map[each.value.l3out_interface_profile
+  ].id : aci_l3out_path_attachment.map[each.value.l3out_interface_profile].id
   addr                     = each.value.secondary_ip_address
   ipv6_dad                 = each.value.ipv6_dad
 }
@@ -810,8 +814,8 @@ resource "aci_l3out_static_route" "map" {
   pref           = each.value.fallback_preference
   rt_ctrl        = each.value.route_control.bfd == true ? "bfd" : "unspecified"
   # class fvTrackList
-  relation_ip_rs_route_track = length(compact([each.value.track_policy])
-  ) > 0 ? "uni/tn-${each.value.tenant}/tracklist-${each.value.track_policy}" : ""
+  relation_ip_rs_route_track = length(compact([each.value.track_list_policy])
+  ) > 0 ? "uni/tn-${each.value.tenant}/tracklist-${each.value.track_list_policy}" : ""
 }
 
 /*_____________________________________________________________________________________________________________________
@@ -825,7 +829,10 @@ ________________________________________________________________________________
 */
 resource "aci_l3out_static_route_next_hop" "map" {
   depends_on = [
-    aci_l3out_static_route.map
+    aci_ip_sla_monitoring_policy.map,
+    aci_l3out_static_route.map,
+    aci_rest_managed.track_lists,
+    aci_rest_managed.track_member
   ]
   for_each             = local.l3out_static_routes_next_hop
   description          = each.value.description
@@ -833,13 +840,12 @@ resource "aci_l3out_static_route_next_hop" "map" {
   nexthop_profile_type = each.value.next_hop_type
   nh_addr              = each.value.next_hop_ip
   pref                 = each.value.preference == 0 ? "unspecified" : each.value.preference
-  static_route_dn      = aci_l3out_static_route.map[each.value.static_route].id
+  static_route_dn      = aci_l3out_static_route.map[each.value.prefix_dn].id
   # class fvTrackList
-  relation_ip_rs_nexthop_route_track = length(compact([each.value.track_policy])
-  ) > 0 ? "uni/tn-${each.value.tenant}/tracklist-${each.value.track_policy}" : ""
+  relation_ip_rs_nexthop_route_track = length(compact([each.value.track_list_policy])
+  ) > 0 ? aci_rest_managed.track_lists[each.value.track_list_policy].id : ""
   # Class "ipRsNHTrackMember"
-  relation_ip_rs_nh_track_member = length(compact([each.value.track_member])
-  ) > 0 ? "uni/tn-${each.value.tenant}/trackmember-${each.value.track_member}" : ""
+  relation_ip_rs_nh_track_member = each.value.track_member
 }
 
 resource "mso_schema_template_l3out" "map" {

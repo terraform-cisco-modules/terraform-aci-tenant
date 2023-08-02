@@ -115,7 +115,7 @@ resource "aci_rest_managed" "application_epgs_annotations" {
       for a, b in local.application_epgs : [
         for v in b.annotations : {
           application_profile = b.application_profile
-          application_epg     = a
+          application_epg     = b.name
           key                 = v.key
           tenant              = b.tenant
           value               = v.value

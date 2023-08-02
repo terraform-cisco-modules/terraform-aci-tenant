@@ -219,7 +219,7 @@ resource "mso_schema_template_bd" "map" {
   dynamic "dhcp_policies" {
     for_each = each.value.dhcp_relay_labels
     content {
-      name                       = dhcp_policies.value.name
+      name = dhcp_policies.value.name
       #version                    = dhcp_policies.value.version
       #dhcp_option_policy_name    = dhcp_policies.value.dhcp_option_policy
       #dhcp_option_policy_version = dhcp_policies.value.dhcp_option_policy_version
