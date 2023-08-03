@@ -94,6 +94,7 @@ resource "aci_rest_managed" "external_management_network_instance_profiles" {
   dn         = "uni/tn-mgmt/extmgmt-default/instp-${each.value.name}"
   class_name = "mgmtInstP"
   content = {
+    #annotation = "orchestrator:terraform"
     #    name = each.value.name
   }
 }

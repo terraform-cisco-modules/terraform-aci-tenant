@@ -41,6 +41,7 @@ resource "aci_rest_managed" "oob_contracts" {
   dn         = "uni/tn-${each.value.tenant}/oobbrc-${each.key}"
   class_name = "vzOOBBrCP"
   content = {
+    #annotation = "orchestrator:terraform"
     #    descr      = each.value.description
     name       = each.key
     nameAlias  = each.value.alias
