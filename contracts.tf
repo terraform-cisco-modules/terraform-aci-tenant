@@ -30,9 +30,9 @@ resource "aci_contract" "map" {
 
 API Information:
  - Class: "vzOOBBrCP"
- - Distinguished Name: "uni/tn-{tenant}/oobbrc-{contract}"
+ - Distinguished Name: "uni/tn-mgmt/oobbrc-{contract}"
 GUI Location:
- - Tenants > {tenant} > Contracts > Out-Of-Band Contracts: {contract}
+ - Tenants > mgmt > Contracts > Out-Of-Band Contracts: {contract}
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "oob_contracts" {
@@ -58,7 +58,7 @@ resource "aci_rest_managed" "oob_contracts" {
 /*_____________________________________________________________________________________________________________________
 
 API Information:
- - Class: "vzBrCP"
+ - Class: "vzTaboo"
  - Distinguished Name: "uni/tn-{tenant}/taboo-{contract}"
 GUI Location:
  - Tenants > {tenant} > Contracts > Taboos: {contract}
@@ -77,7 +77,7 @@ resource "aci_taboo_contract" "map" {
 
 API Information:
  - Class: "vzSubj"
- - Distinguished Name: "uni/tn-{tenant}/brc-{contract}/subj-{subject}"
+ - Distinguished Name: "uni/tn-{tenant}/brc-{name}/subj-{subject}"
 GUI Locations:
  - Tenants > mgmt > Contracts > Standard: {contract} > {subject}
 _______________________________________________________________________________________________________________________
@@ -104,9 +104,9 @@ resource "aci_contract_subject" "map" {
 
 API Information:
  - Class: "vzSubj"
- - Distinguished Name: "uni/tn-{tenant}/taboo-{Name}/subj-{subject}"
+ - Distinguished Name: "uni/tn-mgmt/oobbrc-{name}/subj-{subject}"
 GUI Location:
- - Tenants > {tenant} > Contracts > Out-Of-Band Contracts: {name}: Subjects
+ - Tenants > mgmt > Contracts > Out-Of-Band Contracts: {name}: Subjects
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "oob_contract_subjects" {
@@ -132,7 +132,7 @@ resource "aci_rest_managed" "oob_contract_subjects" {
 
 API Information:
  - Class: "vzTSubj"
- - Distinguished Name: "uni/tn-{tenant}/taboo-{Name}/subj-{subject}"
+ - Distinguished Name: "uni/tn-{tenant}/taboo-{name}/subj-{subject}"
 GUI Location:
  - Tenants > {tenant} > Contracts > Taboo Contracts: {name}: Subjects
 _______________________________________________________________________________________________________________________
@@ -154,9 +154,12 @@ resource "aci_rest_managed" "taboo_contract_subjects" {
 
 API Information:
  - Class: "vzRsSubjFiltAtt"
- - Distinguished Name: "uni/tn-{tenant}/oobbrc-{name}/subj-{subject}/rssubjFiltAtt-{filter}"
-GUI Location:
- - Tenants > {tenant} > Contracts > Out-Of-Band Contracts: {contract}: Subjects
+ - Distinguished Names:
+     "uni/tn-{tenant}/oobbrc-{name}/subj-{subject}/rssubjFiltAtt-{filter}"
+     "uni/tn-mgmt/oobbrc-{name}/subj-{subject}/rssubjFiltAtt-{filter}"
+GUI Locations:
+ - Tenants > {tenant} > Contracts > Standard: {contract}: Subjects
+ - Tenants > mgmt > Contracts > Out-Of-Band Contracts: {contract}: Subjects
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "contract_subject_filter" {
@@ -180,6 +183,15 @@ resource "aci_rest_managed" "contract_subject_filter" {
   }
 }
 
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "vzRsDenyRule"
+ - Distinguished Name: "uni/tn-{tenant}/taboo-{name}/subj-{subject}/rsdenyRule-{filter}"
+GUI Location:
+ - Tenants > {tenant} > Contracts > Out-Of-Band Contracts: {contract}: Subjects
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "taboo_subject_filter" {
   depends_on = [aci_rest_managed.taboo_contract_subjects, ]
   for_each   = { for k, v in local.subject_filters : k => v if v.contract_type == "taboo" }

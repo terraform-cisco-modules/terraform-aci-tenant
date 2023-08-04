@@ -926,7 +926,7 @@ locals {
       for s in range(length(v.secondary_addresses)) : {
         ipv6_dad                = v.ipv6_dad
         l3out_interface_profile = k
-        path_type = "other"
+        path_type               = "other"
         secondary_ip_address    = element(v.secondary_addresses, s)
       }
     ]
@@ -937,7 +937,7 @@ locals {
       for s in range(length(v.secondary_addresses)) : {
         ipv6_dad                = v.ipv6_dad
         l3out_interface_profile = k
-        path_type = "svi"
+        path_type               = "svi"
         secondary_ip_address    = element(v.secondary_addresses, s)
       }
     ]

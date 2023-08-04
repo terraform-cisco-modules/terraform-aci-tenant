@@ -160,9 +160,9 @@ resource "aci_rest_managed" "application_epgs_global_alias" {
 
 API Information:
  - Class: "fvRsDomAtt"
- - Distinguished Name: uni/tn-{Tenant}/ap-{App_Profile}/epg-{EPG}/rsdomAtt-[uni/{domain}]
+ - Distinguished Name: uni/tn-{tenant}/ap-{application_profile}/epg-{application_epg}/rsdomAtt-[uni/{domain}]
 GUI Location:
-Tenants > {Tenant} > Application Profiles > {App_Profile} > Application EPGs > {EPG} > Domains (VMs and Bare-Metals)
+Tenants > {tenant} > Application Profiles > {application_profile} > Application EPGs > {application_epg} > Domains (VMs and Bare-Metals)
 _______________________________________________________________________________________________________________________
 */
 resource "aci_epg_to_domain" "map" {

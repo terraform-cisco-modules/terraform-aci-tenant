@@ -72,14 +72,6 @@ defaults:
         name: '**REQUIRED**'
         preferred_group_member: false
         qos_class: unspecified
-        static_paths:
-          encapsulation_type: vlan # micro_seg, qinq, vlan, vxlan
-          mode: trunk # access, dot1p, trunk
-          names: [1/1] # A List of ports/policy_groups to configure with this encapsulation
-          nodes: [201] # A List of one node for physical and port-channels, two for vpc's.
-          path_type: port # pc, port, vpc
-          pod: 1
-          vlans: [1] # For VLAN and VXLAN this is a list of One.  For micro_seg and qinq this is a list of Two.
         useg_epg: false
         vlans: [] # This is just used for the Inband Management EPG
     #=============================
@@ -141,6 +133,7 @@ defaults:
               reset: false
               synchronize: false
         global_alias: ''
+        name: '**REQUIRED**'
     create: true
     description: ''
     global_alias: ''
@@ -480,6 +473,7 @@ defaults:
           source: static # 
         target_dscp: unspecified
         vrf: default
+        vrf_template: ''
       #=============================
       # VRFs
       #=============================

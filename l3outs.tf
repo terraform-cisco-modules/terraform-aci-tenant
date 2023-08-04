@@ -546,15 +546,15 @@ ________________________________________________________________________________
 # Attach a Node Interface Path to a Logical Interface Profile
 #-------------------------------------------------------------
 resource "aci_l3out_path_attachment_secondary_ip" "map" {
-  depends_on               = [
+  depends_on = [
     aci_l3out_path_attachment.map
   ]
-  for_each                 = local.l3out_paths_secondary_ips
+  for_each = local.l3out_paths_secondary_ips
   l3out_path_attachment_dn = length(regexall("svi", each.value.path_type)
-  ) > 0 ? aci_l3out_vpc_member.map[each.value.l3out_interface_profile
+    ) > 0 ? aci_l3out_vpc_member.map[each.value.l3out_interface_profile
   ].id : aci_l3out_path_attachment.map[each.value.l3out_interface_profile].id
-  addr                     = each.value.secondary_ip_address
-  ipv6_dad                 = each.value.ipv6_dad
+  addr     = each.value.secondary_ip_address
+  ipv6_dad = each.value.ipv6_dad
 }
 
 

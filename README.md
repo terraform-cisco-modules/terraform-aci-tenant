@@ -18,7 +18,7 @@ A Terraform module to configure ACI Tenant Policies.
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.0 |
 | <a name="requirement_aci"></a> [aci](#requirement\_aci) | >=2.9.0 |
-| <a name="requirement_mso"></a> [mso](#requirement\_mso) | >=0.11.0 |
+| <a name="requirement_mso"></a> [mso](#requirement\_mso) | >=0.11.1 |
 ## Providers
 
 | Name | Version |
@@ -170,6 +170,8 @@ A Terraform module to configure ACI Tenant Policies.
 | [aci_rest_managed.taboo_subject_filter](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.tenant_annotations](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.tenant_global_alias](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
+| [aci_rest_managed.track_lists](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
+| [aci_rest_managed.track_member](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.vrf_annotations](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.vrf_global_alias](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.vzany_contracts](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
