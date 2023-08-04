@@ -101,6 +101,15 @@ resource "aci_rest_managed" "route_map_set_rules" {
   }
 }
 
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlSetAddComm"
+ - Distinguished Name: "uni/tn-{tenant}/attr-{name}/saddcomm-{community}"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Set Rules > {name}
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "set_rules_additional_communities" {
   depends_on = [
     aci_rest_managed.route_map_set_rules
@@ -116,6 +125,15 @@ resource "aci_rest_managed" "set_rules_additional_communities" {
   }
 }
 
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlSetRedistMultipath"
+ - Distinguished Name: "uni/tn-{tenant}/attr-{name}/redistmpath"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Set Rules > {name}: Multipath
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "set_rules_multipath" {
   depends_on = [
     aci_rest_managed.route_map_set_rules
@@ -128,6 +146,15 @@ resource "aci_rest_managed" "set_rules_multipath" {
   }
 }
 
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlSetNhUnchanged"
+ - Distinguished Name: "uni/tn-{tenant}/attr-{name}/nhunchanged"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Set Rules > {name}: Next Hop Propegation
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "set_rules_next_hop_propegation" {
   depends_on = [
     aci_rest_managed.route_map_set_rules
@@ -140,6 +167,15 @@ resource "aci_rest_managed" "set_rules_next_hop_propegation" {
   }
 }
 
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlSetASPath"
+ - Distinguished Name: "uni/tn-{tenant}/attr-{name}/saspath-{criteria}"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Set Rules > {name}: Set AS Path
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "set_rules_set_as_path" {
   depends_on = [
     aci_rest_managed.route_map_set_rules
@@ -165,7 +201,16 @@ resource "aci_rest_managed" "set_rules_set_as_path" {
   }
 }
 
-resource "aci_rest_managed" "route_map_set_rules_set_communities" {
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlSetAddComm"
+ - Distinguished Name: "uni/tn-{tenant}/attr-{name}/scomm"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Set Rules > {name}: Set community
+_______________________________________________________________________________________________________________________
+*/
+resource "aci_rest_managed" "route_map_set_rules_set_community" {
   depends_on = [
     aci_rest_managed.route_map_set_rules
   ]
@@ -179,6 +224,15 @@ resource "aci_rest_managed" "route_map_set_rules_set_communities" {
   }
 }
 
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlSetPolicyTag"
+ - Distinguished Name: "uni/tn-{tenant}/attr-{name}/sptag"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Set Rules > {name}: Set External EPG
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "route_map_set_rules_set_external_epg" {
   depends_on = [
     aci_rest_managed.route_map_set_rules
@@ -198,6 +252,15 @@ resource "aci_rest_managed" "route_map_set_rules_set_external_epg" {
   }
 }
 
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlSetDamp"
+ - Distinguished Name: "uni/tn-{tenant}/attr-{name}/sdamp"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Set Rules > {name}: Set Dampening
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "route_map_set_rules_set_dampening" {
   depends_on = [
     aci_rest_managed.route_map_set_rules
@@ -214,6 +277,15 @@ resource "aci_rest_managed" "route_map_set_rules_set_dampening" {
   }
 }
 
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlSetRtMetric"
+ - Distinguished Name: "uni/tn-{tenant}/attr-{name}/smetric"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Set Rules > {name}: Set Metric
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "route_map_set_rules_set_metric" {
   depends_on = [
     aci_rest_managed.route_map_set_rules
@@ -227,6 +299,15 @@ resource "aci_rest_managed" "route_map_set_rules_set_metric" {
   }
 }
 
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlSetRtMetricType"
+ - Distinguished Name: "uni/tn-{tenant}/attr-{name}/smetrict"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Set Rules > {name}: Set Metric Type
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "route_map_set_rules_set_metric_type" {
   depends_on = [
     aci_rest_managed.route_map_set_rules
@@ -240,6 +321,15 @@ resource "aci_rest_managed" "route_map_set_rules_set_metric_type" {
   }
 }
 
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlAttrP"
+ - Distinguished Name: "uni/tn-{tenant}/attr-{name}/nh"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Set Rules > {name}: Set Next Hop Address
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "route_map_set_rules_set_next_hop_address" {
   depends_on = [
     aci_rest_managed.route_map_set_rules
@@ -253,6 +343,15 @@ resource "aci_rest_managed" "route_map_set_rules_set_next_hop_address" {
   }
 }
 
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlSetPref"
+ - Distinguished Name: "uni/tn-{tenant}/attr-{name}/spref"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Set Rules > {name}: Set Preference
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "route_map_set_rules_set_preference" {
   depends_on = [
     aci_rest_managed.route_map_set_rules
@@ -266,6 +365,15 @@ resource "aci_rest_managed" "route_map_set_rules_set_preference" {
   }
 }
 
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlSetTag"
+ - Distinguished Name: "uni/tn-{tenant}/attr-{name}/srttag"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Set Rules > {name}: Set Route Tag
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "route_map_set_rules_set_route_tag" {
   depends_on = [
     aci_rest_managed.route_map_set_rules
@@ -279,6 +387,15 @@ resource "aci_rest_managed" "route_map_set_rules_set_route_tag" {
   }
 }
 
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlSetWeight"
+ - Distinguished Name: "uni/tn-{tenant}/attr-{name}/sweight"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Set Rules > {name}: Set Weight
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "route_map_set_rules_set_weight" {
   depends_on = [
     aci_rest_managed.route_map_set_rules
@@ -297,6 +414,15 @@ resource "aci_rest_managed" "route_map_set_rules_set_weight" {
 Tenant — Policies — Route-Maps for Route Control — Variables
 _______________________________________________________________________________________________________________________
 */
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlAttrP"
+ - Distinguished Name: "uni/tn-{tenant}/prof-{name}"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Route Maps for Route Control > {name}
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "route_maps_for_route_control" {
   for_each   = local.route_maps_for_route_control
   dn         = "uni/tn-${each.value.tenant}/prof-${each.key}"
@@ -309,6 +435,15 @@ resource "aci_rest_managed" "route_maps_for_route_control" {
   }
 }
 
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlCtxP"
+ - Distinguished Name: "uni/tn-{tenant}/prof-{name}/ctx-{vrf}"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Route Maps for Route Control > {name}: Contexts: {context}
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "route_maps_contexts" {
   depends_on = [
     aci_match_rule.map
@@ -334,6 +469,15 @@ resource "aci_rest_managed" "route_maps_contexts" {
   }
 }
 
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "rtctrlScope"
+ - Distinguished Name: "uni/tn-{tenant}/prof-{name}/ctx-{vrf}/scp"
+GUI Location:
+ - Tenants > {tenant} > Networking > Policies > Protocol > Route Maps for Route Control > {name}: Contexts: {context} > Set Rule
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "route_maps_context_set_rules" {
   depends_on = [
     aci_rest_managed.route_maps_contexts
