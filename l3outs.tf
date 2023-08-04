@@ -90,7 +90,7 @@ resource "aci_rest_managed" "l3out_global_alias" {
 
 API Information:
  - Class: "l3extRsRedistributePol"
- - Distinguished Name: "uni/tn-{tenant}/out-{l3out}/pimextp"
+ - Distinguished Name: "uni/tn-{tenant}/out-{l3out}/rsredistributePol-[{route_profile}]-{src}"
 GUI Location:
  - tenants > {tenant} > Networking > L3Outs > {l3out}
 _______________________________________________________________________________________________________________________
@@ -156,9 +156,9 @@ resource "aci_rest_managed" "l3out_consumer_label" {
 
 API Information:
  - Class: "l3extInstP"
- - Distinguised Name: "uni/tn-{tenant}/out-{l3out}/instP-{Ext_EPG}"
+ - Distinguised Name: "uni/tn-{tenant}/out-{l3out}/instP-{external_epg}"
 GUI Location:
- - tenants > {tenant} > Networking > L3Outs > {l3out} > External EPGs > {Ext_EPG}
+ - tenants > {tenant} > Networking > L3Outs > {l3out} > External EPGs > {external_epg}
 _______________________________________________________________________________________________________________________
 */
 resource "aci_external_network_instance_profile" "map" {

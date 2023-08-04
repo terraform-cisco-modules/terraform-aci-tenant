@@ -82,7 +82,7 @@ resource "aci_vrf" "map" {
 /*_____________________________________________________________________________________________________________________
 
 API Information:
- - Class: "snmpCtxP"
+ - Class: "vzAny"
  - Distinguished Name: "uni/tn-{tenant}/ctx-{vrf}/any"
 GUI Location:
  - Tenants > {tenant} > Networking > VRFs > {vrf}: Policy >  Preferred Group
@@ -191,8 +191,11 @@ resource "aci_snmp_community" "vrf_communities" {
 }
 /*_____________________________________________________________________________________________________________________
 
+API Information:
+ - Class: "vzRsAnyToProv"
+ - Distinguished Name: "uni/tn-{tenant}/ctx-{vrf}/any/rsanyToProv-{contract}"
 GUI Location:
- - Tenants > {tenant} > Networking > VRFs > {vrf} > EPG Collection for VRF: [Provided/Consumed Contracts]
+ - Tenants > {tenant} > Networking > VRFs > {vrf} > EPG Collection for VRF: [Provided Contracts]
 _______________________________________________________________________________________________________________________
 */
 resource "aci_rest_managed" "vzany_provider_contracts" {
@@ -209,6 +212,21 @@ resource "aci_rest_managed" "vzany_provider_contracts" {
   }
 }
 
+/*_____________________________________________________________________________________________________________________
+
+API Information:
+ - Class: "vzRsAnyToCons"
+ - Distinguished Name: "uni/tn-{tenant}/ctx-{vrf}/any/rsanyToCons-{contract}"
+GUI Location:
+ - Tenants > {tenant} > Networking > VRFs > {vrf} > EPG Collection for VRF: [Consumer Contracts]
+
+API Information:
+ - Class: "vzRsAnyToConsIf"
+ - Distinguished Name: "uni/tn-{tenant}/ctx-{vrf}/any/rsanyToCons-{contract}"
+GUI Location:
+ - Tenants > {tenant} > Networking > VRFs > {vrf} > EPG Collection for VRF: [Consumer Interface Contracts]
+_______________________________________________________________________________________________________________________
+*/
 resource "aci_rest_managed" "vzany_contracts" {
   depends_on = [aci_contract.map]
   for_each   = { for k, v in local.vzany_contracts : k => v if var.controller_type == "apic" && v.contract_type != "provided" }
