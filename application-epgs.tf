@@ -10,7 +10,7 @@ ________________________________________________________________________________
 resource "aci_application_epg" "map" {
   depends_on = [aci_tenant.map, aci_application_profile.map, aci_bridge_domain.map]
   for_each = {
-    for k, v in local.application_epgs : k => v if v.epg_type == "standard" && var.controller_type == "apic"
+    for k, v in local.application_epgs : k => v if v.epg_type == "standard" && local.controller.type == "apic"
   }
   application_profile_dn = aci_application_profile.map[each.value.application_profile].id
   description            = each.value.description
@@ -27,9 +27,9 @@ resource "aci_application_epg" "map" {
   prio                   = each.value.qos_class
   shutdown               = each.value.epg_admin_state == "admin_shut" ? "yes" : "no"
   relation_fv_rs_bd      = "uni/tn-${each.value.tenant}/BD-${each.value.bridge_domain}"
-  relation_fv_rs_sec_inherited = each.value.epg_contract_masters != [] ? [
+  relation_fv_rs_sec_inherited = [
     for s in each.value.epg_contract_masters : "uni/tn-${each.value.tenant}/ap-${s.application_profile}/epg-${s.application_epg}"
-  ] : []
+  ]
   relation_fv_rs_cust_qos_pol = length(compact([each.value.custom_qos_policy])
   ) > 0 ? "uni/tn-${local.policy_tenant}/qoscustom-${each.value.custom_qos_policy}" : ""
   relation_fv_rs_dpp_pol = each.value.data_plane_policer
@@ -61,7 +61,7 @@ resource "aci_node_mgmt_epg" "mgmt_epgs" {
   depends_on = [aci_bridge_domain.map]
   for_each = {
     for k, v in local.application_epgs : k => v if length(regexall("(inb|oob)", v.epg_type)
-    ) > 0 && var.controller_type == "apic"
+    ) > 0 && local.controller.type == "apic"
   }
   management_profile_dn    = "uni/tn-mgmt/mgmtp-default"
   name                     = each.value.name
@@ -124,7 +124,7 @@ resource "aci_rest_managed" "application_epgs_annotations" {
         }
       ]
       ]) : "${i.application_profile}:${i.application_epg}:${i.key}" => i if length(regexall("standard", i.epg_type)
-    ) > 0 && var.controller_type == "apic"
+    ) > 0 && local.controller.type == "apic"
   }
   dn         = "uni/tn-${each.value.tenant}/ap-${each.value.application_profile}/epg-${each.value.application_epg}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
@@ -147,7 +147,7 @@ ________________________________________________________________________________
 */
 resource "aci_rest_managed" "application_epgs_global_alias" {
   depends_on = [aci_application_epg.map]
-  for_each   = { for k, v in local.application_epgs : k => v if v.global_alias != "" && var.controller_type == "apic" }
+  for_each   = { for k, v in local.application_epgs : k => v if v.global_alias != "" && local.controller.type == "apic" }
   class_name = "tagAliasInst"
   dn         = "uni/tn-${each.value.tenant}/ap-${each.value.application_profile}/epg-${each.value.name}/alias"
   content = {
@@ -168,7 +168,7 @@ ________________________________________________________________________________
 resource "aci_epg_to_domain" "map" {
   depends_on = [aci_application_epg.map]
   for_each = {
-    for k, v in local.epg_to_domains : k => v if var.controller_type == "apic" && v.epg_type == "standard"
+    for k, v in local.epg_to_domains : k => v if local.controller.type == "apic" && v.epg_type == "standard"
   }
   application_epg_dn = aci_application_epg.map[each.value.key].id
   tdn = length(
@@ -344,7 +344,7 @@ ________________________________________________________________________________
 */
 resource "aci_epgs_using_function" "epg_to_aaeps" {
   depends_on        = [aci_application_epg.map]
-  for_each          = { for k, v in local.epg_to_aaeps : k => v if var.controller_type == "apic" }
+  for_each          = { for k, v in local.epg_to_aaeps : k => v if local.controller.type == "apic" }
   access_generic_dn = "uni/infra/attentp-${each.value.aaep}/gen-default"
   encap             = length(each.value.vlans) > 0 ? "vlan-${element(each.value.vlans, 0)}" : "unknown"
   instr_imedcy      = each.value.instrumentation_immediacy == "on-demand" ? "lazy" : each.value.instrumentation_immediacy
@@ -365,7 +365,7 @@ ________________________________________________________________________________
 */
 resource "aci_rest_managed" "epg_to_static_paths" {
   depends_on = [aci_application_epg.map]
-  for_each   = { for k, v in local.epg_to_static_paths : k => v if var.controller_type == "apic" }
+  for_each   = { for k, v in local.epg_to_static_paths : k => v if local.controller.type == "apic" }
   dn         = "each.value.distinguished_name[${each.value.tdn}]"
   class_name = "fvRsPathAtt"
   content = {
@@ -396,7 +396,7 @@ resource "mso_schema_template_anp_epg" "map" {
     mso_schema_template_anp.map,
     mso_schema_template_bd.map
   ]
-  for_each         = { for k, v in local.application_epgs : k => v if var.controller_type == "ndo" }
+  for_each         = { for k, v in local.application_epgs : k => v if local.controller.type == "ndo" }
   anp_name         = each.value.application_profile
   bd_name          = each.value.bd.name
   bd_schema_id     = data.mso_schema.map[each.value.bd.ndo.schema].id
@@ -422,7 +422,7 @@ resource "mso_schema_site_anp_epg_domain" "map" {
   provider   = mso
   depends_on = [mso_schema_template_anp_epg.map]
   for_each = {
-    for k, v in local.ndo_epg_to_domains : k => v if var.controller_type == "ndo"
+    for k, v in local.ndo_epg_to_domains : k => v if local.controller.type == "ndo"
   }
   allow_micro_segmentation = length(regexall("vmm", each.value.domain_type)
   ) > 0 ? each.value.allow_micro_segmentation : null
@@ -463,7 +463,7 @@ resource "mso_schema_site_anp_epg_domain" "map" {
 resource "mso_schema_template_anp_epg_contract" "map" {
   provider               = mso
   depends_on             = [mso_schema_template_anp_epg.map]
-  for_each               = { for k, v in local.contract_to_epgs : k => v if var.controller_type == "ndo" }
+  for_each               = { for k, v in local.contract_to_epgs : k => v if local.controller.type == "ndo" }
   anp_name               = each.value.application_profile
   epg_name               = each.value.application_epg
   contract_name          = each.value.contract
@@ -478,7 +478,7 @@ resource "mso_schema_template_anp_epg_contract" "map" {
 resource "mso_schema_site_anp_epg_static_port" "static_port" {
   provider             = mso
   depends_on           = [mso_schema_template_anp_epg.map]
-  for_each             = { for k, v in local.epg_to_static_paths : k => v if var.controller_type == "ndo" }
+  for_each             = { for k, v in local.epg_to_static_paths : k => v if local.controller.type == "ndo" }
   anp_name             = each.value.application_profile
   deployment_immediacy = each.value.instrumentation_immediacy
   epg_name             = each.value.application_epg

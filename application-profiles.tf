@@ -10,7 +10,7 @@ ________________________________________________________________________________
 resource "aci_application_profile" "map" {
   depends_on = [aci_tenant.map]
   for_each = {
-    for k, v in local.application_profiles : k => v if var.controller_type == "apic" && v.create == true
+    for k, v in local.application_profiles : k => v if local.controller.type == "apic" && v.create == true
   }
   tenant_dn   = "uni/tn-${each.value.tenant}"
   description = each.value.description
@@ -38,7 +38,7 @@ resource "aci_rest_managed" "application_profiles_annotations" {
       for a, b in local.application_profiles : [
         for v in b.annotations : { application_profile = a, key = v.key, tenant = b.tenant, value = v.value }
       ]
-    ]) : "${i.application_profile}:${i.key}" => i if var.controller_type == "apic"
+    ]) : "${i.application_profile}:${i.key}" => i if local.controller.type == "apic"
   }
   dn         = "uni/tn-${each.value.tenant}/ap-${each.value.application_profile}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
@@ -61,7 +61,7 @@ ________________________________________________________________________________
 */
 resource "aci_rest_managed" "application_profiles_global_alias" {
   depends_on = [aci_application_profile.map]
-  for_each   = { for k, v in local.application_profiles : k => v if v.global_alias != "" && var.controller_type == "apic" }
+  for_each   = { for k, v in local.application_profiles : k => v if v.global_alias != "" && local.controller.type == "apic" }
   class_name = "tagAliasInst"
   dn         = "uni/tn-${each.key}/ap-${each.value.application_profile}/alias"
   content = {
@@ -77,7 +77,7 @@ ________________________________________________________________________________
 */
 resource "mso_schema_template_anp" "map" {
   provider     = mso
-  for_each     = { for k, v in local.application_profiles : k => v if var.controller_type == "ndo" && v.create == true }
+  for_each     = { for k, v in local.application_profiles : k => v if local.controller.type == "ndo" && v.create == true }
   display_name = each.key
   name         = each.key
   schema_id    = data.mso_schema.map[each.value.ndo.schema].id
@@ -87,14 +87,4 @@ resource "mso_schema_template_anp" "map" {
       schema_id
     ]
   }
-}
-
-data "mso_schema_template_anp" "map" {
-  depends_on   = [mso_schema_template_anp.map]
-  provider     = mso
-  for_each     = { for k, v in local.application_profiles : k => v if var.controller_type == "ndo" }
-  display_name = lookup(each.value, "display_name", each.key)
-  name         = each.key
-  schema_id    = data.mso_schema.map[each.value.ndo.schema].id
-  template     = each.value.ndo.template
 }

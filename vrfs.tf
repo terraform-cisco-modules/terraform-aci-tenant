@@ -9,7 +9,7 @@ ________________________________________________________________________________
 */
 resource "aci_vrf" "map" {
   depends_on = [aci_tenant.map]
-  for_each   = { for k, v in local.vrfs : k => v if var.controller_type == "apic" && v.create == true }
+  for_each   = { for k, v in local.vrfs : k => v if local.controller.type == "apic" && v.create == true }
   #  bd_enforced_enable     = each.value.bd_enforcement_status == true ? "yes" : "no"
   description            = each.value.description
   ip_data_plane_learning = each.value.ip_data_plane_learning
@@ -91,7 +91,7 @@ ________________________________________________________________________________
 */
 resource "aci_any" "vz_any" {
   depends_on   = [aci_vrf.map]
-  for_each     = { for k, v in local.vrfs : k => v if var.controller_type == "apic" && v.create == true }
+  for_each     = { for k, v in local.vrfs : k => v if local.controller.type == "apic" && v.create == true }
   description  = each.value.description
   pref_gr_memb = each.value.preferred_group == true ? "enabled" : "disabled"
   match_t      = each.value.epg_esg_collection_for_vrfs.label_match_criteria
@@ -115,7 +115,7 @@ resource "aci_rest_managed" "vrf_annotations" {
       for a, b in local.vrfs : [
         for v in b.annotations : { create = b.create, key = v.key, tenant = b.tenant, vrf = a, value = v.value }
       ]
-    ]) : "${i.tenant}:${i.vrf}:${i.key}" => i if var.controller_type == "apic" && i.create == true
+    ]) : "${i.tenant}:${i.vrf}:${i.key}" => i if local.controller.type == "apic" && i.create == true
   }
   dn         = "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
@@ -137,7 +137,7 @@ ________________________________________________________________________________
 */
 resource "aci_rest_managed" "vrf_global_alias" {
   depends_on = [aci_vrf.map]
-  for_each   = { for k, v in local.vrfs : k => v if v.global_alias != "" && var.controller_type == "apic" && v.create == true }
+  for_each   = { for k, v in local.vrfs : k => v if v.global_alias != "" && local.controller.type == "apic" && v.create == true }
   class_name = "tagAliasInst"
   dn         = "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/alias"
   content = {
@@ -157,7 +157,7 @@ ________________________________________________________________________________
 */
 resource "aci_vrf_snmp_context" "map" {
   depends_on = [aci_vrf.map]
-  for_each   = { for k, v in local.vrfs : k => v if var.controller_type == "apic" && v.create == true }
+  for_each   = { for k, v in local.vrfs : k => v if local.controller.type == "apic" && v.create == true }
   name       = each.key
   vrf_dn     = aci_vrf.map[each.key].id
 }
@@ -174,20 +174,16 @@ resource "aci_snmp_community" "vrf_communities" {
   for_each = { for i in flatten([
     for k, v in local.vrfs : [
       for s in v.communities : {
-        community_variable = s.community_variable
-        description        = lookup(s, "description", "")
-        vrf                = k
+        community   = s.community
+        description = lookup(s, "description", "")
+        vrf         = k
       }
     ]
-    ]) : "${i.vrf}:${i.community_variable}" => i if var.controller_type == "apic"
+    ]) : "${i.vrf}:${i.community}" => i if local.controller.type == "apic"
   }
   description = each.value.description
-  name = length(regexall(
-    5, each.value.community_variable)) > 0 ? var.vrf_snmp_community_5 : length(regexall(
-    4, each.value.community_variable)) > 0 ? var.vrf_snmp_community_4 : length(regexall(
-    3, each.value.community_variable)) > 0 ? var.vrf_snmp_community_3 : length(regexall(
-  2, each.value.community_variable)) > 0 ? var.vrf_snmp_community_2 : var.vrf_snmp_community_1
-  parent_dn = aci_vrf_snmp_context.map[each.value.vrf].id
+  name        = var.tenant_sensitive.vrf.snmp_community[each.value.community]
+  parent_dn   = aci_vrf_snmp_context.map[each.value.vrf].id
 }
 /*_____________________________________________________________________________________________________________________
 
@@ -202,7 +198,7 @@ resource "aci_rest_managed" "vzany_provider_contracts" {
   depends_on = [
     aci_contract.map
   ]
-  for_each   = { for k, v in local.vzany_contracts : k => v if var.controller_type == "apic" && v.contract_type == "provided" }
+  for_each   = { for k, v in local.vzany_contracts : k => v if local.controller.type == "apic" && v.contract_type == "provided" }
   dn         = "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/any/rsanyToProv-${each.value.contract}"
   class_name = "vzRsAnyToProv"
   content = {
@@ -229,7 +225,7 @@ ________________________________________________________________________________
 */
 resource "aci_rest_managed" "vzany_contracts" {
   depends_on = [aci_contract.map]
-  for_each   = { for k, v in local.vzany_contracts : k => v if var.controller_type == "apic" && v.contract_type != "provided" }
+  for_each   = { for k, v in local.vzany_contracts : k => v if local.controller.type == "apic" && v.contract_type != "provided" }
   dn = length(regexall(
     "consumed", each.value.contract_type)
     ) > 0 ? "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/any/rsanyToCons-${each.value.contract}" : length(regexall(
@@ -255,7 +251,7 @@ ________________________________________________________________________________
 resource "mso_schema_template_vrf" "map" {
   provider               = mso
   depends_on             = [mso_tenant.map, mso_schema.map]
-  for_each               = { for k, v in local.vrfs : k => v if var.controller_type == "ndo" && v.create == true }
+  for_each               = { for k, v in local.vrfs : k => v if local.controller.type == "ndo" && v.create == true }
   display_name           = each.key
   ip_data_plane_learning = each.value.ip_data_plane_learning
   name                   = each.key
@@ -270,7 +266,7 @@ resource "mso_schema_template_vrf" "map" {
 resource "mso_schema_site_vrf" "map" {
   provider      = mso
   depends_on    = [mso_schema_template_vrf.map, ]
-  for_each      = { for k, v in local.vrf_sites : k => v if var.controller_type == "ndo" && v.create == true }
+  for_each      = { for k, v in local.vrf_sites : k => v if local.controller.type == "ndo" && v.create == true }
   schema_id     = data.mso_schema.map[each.value.schema].id
   site_id       = data.mso_site.map[each.value.site].id
   template_name = each.value.template
@@ -281,7 +277,7 @@ resource "mso_schema_site_vrf" "map" {
 resource "mso_schema_template_vrf_contract" "map" {
   provider          = mso
   depends_on        = [mso_schema_template_vrf.map]
-  for_each          = { for k, v in local.vzany_contracts : k => v if var.controller_type == "ndo" }
+  for_each          = { for k, v in local.vzany_contracts : k => v if local.controller.type == "ndo" }
   schema_id         = data.mso_schema.map[each.value.schema].id
   template_name     = each.value.template
   vrf_name          = each.value.vrf

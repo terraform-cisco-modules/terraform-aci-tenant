@@ -9,7 +9,7 @@ ________________________________________________________________________________
 */
 resource "aci_l3_outside" "map" {
   depends_on             = [aci_tenant.map, aci_vrf.map]
-  for_each               = { for k, v in local.l3outs : k => v if var.controller_type == "apic" }
+  for_each               = { for k, v in local.l3outs : k => v if local.controller.type == "apic" }
   description            = each.value.description
   enforce_rtctrl         = each.value.route_control_enforcement.import == true ? ["export", "import"] : ["export"]
   name                   = each.key
@@ -34,7 +34,7 @@ resource "aci_l3_outside" "map" {
 
 resource "aci_l3out_bgp_external_policy" "map" {
   depends_on    = [aci_l3_outside.map]
-  for_each      = { for k, v in local.l3outs : k => v if var.controller_type == "apic" && v.enable_bgp == true }
+  for_each      = { for k, v in local.l3outs : k => v if local.controller.type == "apic" && v.enable_bgp == true }
   l3_outside_dn = aci_l3_outside.map[each.key].id
 }
 
@@ -55,7 +55,7 @@ resource "aci_rest_managed" "l3out_annotations" {
       for a, b in local.l3outs : [
         for v in b.annotations : { key = v.key, tenant = b.tenant, l3out = a, value = v.value }
       ]
-    ]) : "${i.tenant}:${i.l3out}:${i.key}" => i if var.controller_type == "apic"
+    ]) : "${i.tenant}:${i.l3out}:${i.key}" => i if local.controller.type == "apic"
   }
   dn         = "uni/tn-${each.value.tenant}/out-${each.value.l3out}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
@@ -77,7 +77,7 @@ ________________________________________________________________________________
 */
 resource "aci_rest_managed" "l3out_global_alias" {
   depends_on = [aci_l3_outside.map]
-  for_each   = { for k, v in local.l3outs : k => v if v.global_alias != "" && var.controller_type == "apic" }
+  for_each   = { for k, v in local.l3outs : k => v if v.global_alias != "" && local.controller.type == "apic" }
   class_name = "tagAliasInst"
   dn         = "uni/tn-${each.value.tenant}/out-${each.value.l3out}/alias"
   content = {
@@ -119,7 +119,7 @@ ________________________________________________________________________________
 */
 resource "aci_rest_managed" "l3out_multicast" {
   depends_on = [aci_l3_outside.map]
-  for_each   = { for k, v in local.l3outs : k => v if var.controller_type == "apic" && (v.pim == true || v.pimv6 == true) }
+  for_each   = { for k, v in local.l3outs : k => v if local.controller.type == "apic" && (v.pim == true || v.pimv6 == true) }
   dn         = "uni/tn-${each.value.tenant}/out-${each.key}/pimextp"
   class_name = "pimExtP"
   content = {
@@ -145,7 +145,7 @@ ________________________________________________________________________________
 */
 resource "aci_rest_managed" "l3out_consumer_label" {
   depends_on = [aci_l3_outside.map]
-  for_each   = { for k, v in local.l3outs : k => v if var.controller_type == "apic" && v.consumer_label == "hcloudGolfLabel" }
+  for_each   = { for k, v in local.l3outs : k => v if local.controller.type == "apic" && v.consumer_label == "hcloudGolfLabel" }
   dn         = "uni/tn-${each.value.tenant}/out-${each.key}/conslbl-hcloudGolfLabel"
   class_name = "l3extConsLbl"
   content    = { name = "hcloudGolfLabel" }
@@ -208,7 +208,7 @@ resource "aci_rest_managed" "external_epg_intra_epg_contracts" {
     aci_external_network_instance_profile.map,
   ]
   for_each = {
-    for k, v in local.l3out_ext_epg_contracts : k => v if var.controller_type == "apic" && v.contract_type == "intra_epg"
+    for k, v in local.l3out_ext_epg_contracts : k => v if local.controller.type == "apic" && v.contract_type == "intra_epg"
   }
   dn         = "uni/tn-${var.tenant}/out-${each.value.l3out}/instP-${each.value.epg}/rsintraEpg-${each.value.contract}"
   class_name = "fvRsIntraEpg"
@@ -238,7 +238,7 @@ resource "aci_rest_managed" "external_epg_contracts" {
   ]
   for_each = {
     for k, v in local.l3out_ext_epg_contracts : k => v if length(regexall("(intra_epg|taboo)", v.contract_type)
-    ) == 0 && var.controller_type == "apic"
+    ) == 0 && local.controller.type == "apic"
   }
   dn = length(regexall(
     "consumed", each.value.contract_type)
@@ -267,7 +267,7 @@ resource "aci_rest_managed" "external_epg_contracts_taboo" {
   ]
   for_each = {
     for k, v in local.l3out_ext_epg_contracts : k => v if length(regexall("taboo", v.contract_type)
-    ) > 0 && var.controller_type == "apic"
+    ) > 0 && local.controller.type == "apic"
   }
   dn         = "uni/tn-${var.tenant}/out-${each.value.l3out}/instP-${each.value.external_epg}/rsprotBy-${each.value.contract}"
   class_name = "fvRsProtBy"
@@ -617,12 +617,8 @@ resource "aci_bgp_peer_connectivity_profile" "map" {
     ) > 0 ? aci_l3out_path_attachment.map[each.value.l3out_interface_profile].id : length(
     regexall("loopback", each.value.peer_level)
   ) > 0 ? aci_logical_node_profile.map[each.value.node_profile].id : ""
-  password = length(
-    regexall(5, each.value.password)) > 0 ? var.bgp_password_5 : length(
-    regexall(4, each.value.password)) > 0 ? var.bgp_password_4 : length(
-    regexall(3, each.value.password)) > 0 ? var.bgp_password_3 : length(
-    regexall(2, each.value.password)) > 0 ? var.bgp_password_2 : length(
-  regexall(1, each.value.password)) > 0 ? var.bgp_password_1 : ""
+  password = length(var.tenant_sensitive.bgp.password[each.value.password]
+  ) > 0 ? var.tenant_sensitive.bgp.password[each.value.password] : ""
   peer_ctrl = anytrue(
     [
       each.value.peer_controls.bidirectional_forwarding_detection,
@@ -774,18 +770,9 @@ resource "aci_l3out_ospf_interface_profile" "map" {
     aci_ospf_interface_policy.map,
   ]
   for_each = local.l3out_ospf_interface_profiles
-  auth_key = length(regexall(
-    "(md5|simple)", each.value.authentication_type)
-    ) > 0 && each.value.ospf_key == 5 ? var.ospf_key_5 : length(regexall(
-    "(md5|simple)", each.value.authentication_type)
-    ) > 0 && each.value.ospf_key == 4 ? var.ospf_key_4 : length(regexall(
-    "(md5|simple)", each.value.authentication_type)
-    ) > 0 && each.value.ospf_key == 3 ? var.ospf_key_3 : length(regexall(
-    "(md5|simple)", each.value.authentication_type)
-    ) > 0 && each.value.ospf_key == 2 ? var.ospf_key_2 : length(regexall(
-    "(md5|simple)", each.value.authentication_type)
-  ) > 0 && each.value.ospf_key == 1 ? var.ospf_key_1 : ""
-  auth_key_id                  = each.value.authentication_type == "md5" ? each.value.ospf_key : ""
+  auth_key = length(regexall("(md5|simple)", each.value.authentication_type)
+  ) > 0 ? var.tenant_sensitive.ospf.authentication_key[each.value.authentication_key] : ""
+  auth_key_id                  = each.value.authentication_type == "md5" ? each.value.authentication_key : ""
   auth_type                    = each.value.authentication_type
   description                  = each.value.description
   logical_interface_profile_dn = aci_logical_interface_profile.map[each.value.l3out_interface_profile].id
@@ -851,7 +838,7 @@ resource "aci_l3out_static_route_next_hop" "map" {
 resource "mso_schema_template_l3out" "map" {
   provider          = mso
   depends_on        = [mso_schema.map]
-  for_each          = { for k, v in local.l3outs : k => v if var.controller_type == "ndo" }
+  for_each          = { for k, v in local.l3outs : k => v if local.controller.type == "ndo" }
   display_name      = each.key
   l3out_name        = each.key
   schema_id         = mso_schema.map[each.value.ndo.schema].id

@@ -12,7 +12,7 @@ ________________________________________________________________________________
 */
 resource "aci_contract" "map" {
   depends_on  = [aci_tenant.map]
-  for_each    = { for k, v in local.contracts : k => v if var.controller_type == "apic" && v.contract_type == "standard" }
+  for_each    = { for k, v in local.contracts : k => v if local.controller.type == "apic" && v.contract_type == "standard" }
   tenant_dn   = "uni/tn-${each.value.tenant}"
   description = each.value.description
   name        = each.key
@@ -37,7 +37,7 @@ ________________________________________________________________________________
 */
 resource "aci_rest_managed" "oob_contracts" {
   depends_on = [aci_tenant.map]
-  for_each   = { for k, v in local.contracts : k => v if var.controller_type == "apic" && v.contract_type == "oob" }
+  for_each   = { for k, v in local.contracts : k => v if local.controller.type == "apic" && v.contract_type == "oob" }
   dn         = "uni/tn-${each.value.tenant}/oobbrc-${each.key}"
   class_name = "vzOOBBrCP"
   content = {
@@ -66,7 +66,7 @@ ________________________________________________________________________________
 */
 resource "aci_taboo_contract" "map" {
   depends_on  = [aci_tenant.map, ]
-  for_each    = { for k, v in local.contracts : k => v if var.controller_type == "apic" && v.contract_type == "taboo" }
+  for_each    = { for k, v in local.contracts : k => v if local.controller.type == "apic" && v.contract_type == "taboo" }
   tenant_dn   = "uni/tn-${each.value.tenant}"
   description = each.value.description
   name        = each.key
@@ -218,7 +218,7 @@ ________________________________________________________________________________
 resource "mso_schema_template_contract" "map" {
   provider      = mso
   depends_on    = [mso_schema.map, mso_schema_template_filter_entry.map]
-  for_each      = { for k, v in local.contracts : k => v if var.controller_type == "ndo" }
+  for_each      = { for k, v in local.contracts : k => v if local.controller.type == "ndo" }
   contract_name = each.key
   directives    = each.value.log == true ? ["log"] : ["none"]
   display_name  = each.key

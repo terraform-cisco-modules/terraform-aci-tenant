@@ -14,7 +14,7 @@ content: |-
 
   ### A comprehensive example using this module is available below:
   
-  ## [Easy ACI](https://github.com/terraform-cisco-modules/easy-aci-complete)
+  ## [Easy ACI](https://github.com/terraform-cisco-modules/easy-aci)
 
   {{ .Requirements }}
   {{ .Providers }}

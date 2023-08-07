@@ -9,7 +9,7 @@ ________________________________________________________________________________
 */
 resource "aci_tenant" "map" {
   for_each = {
-    for k, v in local.tenants : k => v if var.controller_type == "apic" && v.create == true
+    for k, v in local.tenants : k => v if local.controller.type == "apic" && v.create == true
   }
   description                   = each.value.description
   name                          = each.key
@@ -33,7 +33,7 @@ resource "aci_rest_managed" "tenant_annotations" {
       for a, b in local.tenants : [
         for v in b.annotations : { key = v.key, tenant = a, value = v.value }
       ]
-    ]) : "${i.tenant}:${i.key}" => i if var.controller_type == "apic"
+    ]) : "${i.tenant}:${i.key}" => i if local.controller.type == "apic"
   }
   dn         = "uni/tn-${each.value.tenant}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
@@ -56,7 +56,7 @@ ________________________________________________________________________________
 */
 resource "aci_rest_managed" "tenant_global_alias" {
   depends_on = [aci_tenant.map]
-  for_each   = { for k, v in local.tenants : k => v if v.global_alias != "" && var.controller_type == "apic" }
+  for_each   = { for k, v in local.tenants : k => v if v.global_alias != "" && local.controller.type == "apic" }
   class_name = "tagAliasInst"
   dn         = "uni/tn-${each.key}/alias"
   content = {
@@ -72,27 +72,27 @@ ________________________________________________________________________________
 */
 data "mso_site" "map" {
   provider = mso
-  for_each = { for v in local.sites : v => v if var.controller_type == "ndo" }
+  for_each = { for v in local.sites : v => v if local.controller.type == "ndo" }
   name     = each.value
 }
 
 data "mso_tenant" "map" {
   depends_on = [mso_tenant.map]
   provider   = mso
-  for_each   = { for k, v in local.tenants : k => v if var.controller_type == "ndo" }
+  for_each   = { for k, v in local.tenants : k => v if local.controller.type == "ndo" }
   name       = each.value.name
 }
 
 data "mso_user" "map" {
   provider = mso
-  for_each = { for v in local.users : v => v if var.controller_type == "ndo" }
+  for_each = { for v in local.users : v => v if local.controller.type == "ndo" }
   username = each.value
 }
 
 resource "mso_tenant" "map" {
   provider = mso
   for_each = {
-    for k, v in local.tenants : k => v if var.controller_type == "ndo" && v.create == true
+    for k, v in local.tenants : k => v if local.controller.type == "ndo" && v.create == true
   }
   description  = each.value.description
   name         = each.key

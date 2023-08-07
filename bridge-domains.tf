@@ -9,7 +9,7 @@ ________________________________________________________________________________
 */
 resource "aci_bridge_domain" "map" {
   depends_on = [aci_tenant.map, aci_vrf.map, aci_l3_outside.map]
-  for_each   = { for k, v in local.bridge_domains : k => v if var.controller_type == "apic" }
+  for_each   = { for k, v in local.bridge_domains : k => v if local.controller.type == "apic" }
   # General
   arp_flood                 = each.value.general.arp_flooding == true ? "yes" : "no"
   bridge_domain_type        = each.value.general.type
@@ -86,7 +86,7 @@ ________________________________________________________________________________
 */
 resource "aci_bd_dhcp_label" "map" {
   depends_on       = [aci_bridge_domain.map]
-  for_each         = { for k, v in local.bridge_domain_dhcp_labels : k => v if var.controller_type == "apic" }
+  for_each         = { for k, v in local.bridge_domain_dhcp_labels : k => v if local.controller.type == "apic" }
   bridge_domain_dn = "uni/tn-${each.value.tenant}/BD-${each.value.bridge_domain}"
   name             = each.value.name
   owner            = each.value.scope
@@ -105,7 +105,7 @@ ________________________________________________________________________________
 */
 resource "aci_subnet" "bridge_domain_subnets" {
   depends_on = [aci_bridge_domain.map, aci_l3_outside.map]
-  for_each   = { for k, v in local.bridge_domain_subnets : k => v if var.controller_type == "apic" }
+  for_each   = { for k, v in local.bridge_domain_subnets : k => v if local.controller.type == "apic" }
   parent_dn  = aci_bridge_domain.map[each.value.bridge_domain].id
   ctrl = anytrue([each.value.subnet_control["neighbor_discovery"
     ], each.value.subnet_control["no_default_svi_gateway"], each.value.subnet_control["querier_ip"]
@@ -149,7 +149,7 @@ resource "aci_rest_managed" "bridge_domain_annotations" {
       for a, b in local.bridge_domains : [
         for v in b.general.annotations : { bridge_domain = a, key = v.key, tenant = b.tenant, value = v.value }
       ]
-    ]) : "${i.bridge_domain}:${i.key}" => i if var.controller_type == "apic"
+    ]) : "${i.bridge_domain}:${i.key}" => i if local.controller.type == "apic"
   }
   dn         = "uni/tn-${each.value.tenant}/BD-${each.value.bridge_domain}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
@@ -172,7 +172,7 @@ ________________________________________________________________________________
 */
 resource "aci_rest_managed" "bridge_domain_global_alias" {
   depends_on = [aci_bridge_domain.map]
-  for_each   = { for k, v in local.bridge_domains : k => v if v.general.global_alias != "" && var.controller_type == "apic" }
+  for_each   = { for k, v in local.bridge_domains : k => v if v.general.global_alias != "" && local.controller.type == "apic" }
   class_name = "tagAliasInst"
   dn         = "uni/tn-${each.key}/BD-${each.value.bridge_domain}/alias"
   content = {
@@ -214,7 +214,7 @@ resource "mso_schema_template_bd" "map" {
     mso_schema_site_vrf.map,
     mso_schema_template_vrf.map
   ]
-  for_each     = { for k, v in local.bridge_domains : k => v if var.controller_type == "ndo" }
+  for_each     = { for k, v in local.bridge_domains : k => v if local.controller.type == "ndo" }
   arp_flooding = each.value.general.arp_flooding
   dynamic "dhcp_policies" {
     for_each = each.value.dhcp_relay_labels
@@ -256,7 +256,7 @@ resource "mso_schema_template_bd" "map" {
 resource "mso_schema_site_bd" "map" {
   provider      = mso
   depends_on    = [mso_schema_template_bd.map]
-  for_each      = { for k, v in local.ndo_bd_sites : k => v if var.controller_type == "ndo" }
+  for_each      = { for k, v in local.ndo_bd_sites : k => v if local.controller.type == "ndo" }
   bd_name       = each.value.bridge_domain
   host_route    = each.value.advertise_host_routes
   schema_id     = data.mso_schema.map[each.value.schema].id
@@ -268,7 +268,7 @@ resource "mso_schema_site_bd" "map" {
 resource "mso_schema_site_bd_l3out" "map" {
   provider      = mso
   depends_on    = [mso_schema_site_bd.map]
-  for_each      = { for k, v in local.ndo_bd_sites : k => v if var.controller_type == "ndo" && length(compact([v.l3out])) > 0 }
+  for_each      = { for k, v in local.ndo_bd_sites : k => v if local.controller.type == "ndo" && length(compact([v.l3out])) > 0 }
   bd_name       = each.value.bridge_domain
   l3out_name    = each.value.l3out
   schema_id     = data.mso_schema.map[each.value.schema].id
@@ -280,7 +280,7 @@ resource "mso_schema_site_bd_l3out" "map" {
 resource "mso_schema_template_bd_subnet" "map" {
   provider           = mso
   depends_on         = [mso_schema_template_bd.map, mso_schema_site_bd.map]
-  for_each           = { for k, v in local.bridge_domain_subnets : k => v if var.controller_type == "ndo" }
+  for_each           = { for k, v in local.bridge_domain_subnets : k => v if local.controller.type == "ndo" }
   bd_name            = each.value.bridge_domain
   description        = each.value.description
   ip                 = each.value.gateway_ip

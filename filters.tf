@@ -9,7 +9,7 @@ ________________________________________________________________________________
 */
 resource "aci_filter" "map" {
   depends_on                     = [aci_tenant.map]
-  for_each                       = { for k, v in local.filters : k => v if var.controller_type == "apic" }
+  for_each                       = { for k, v in local.filters : k => v if local.controller.type == "apic" }
   tenant_dn                      = "uni/tn-${each.value.tenant}"
   description                    = each.value.description
   name                           = each.key
@@ -30,7 +30,7 @@ ________________________________________________________________________________
 */
 resource "aci_filter_entry" "map" {
   depends_on    = [aci_tenant.map, aci_filter.map]
-  for_each      = { for k, v in local.filter_entries : k => v if var.controller_type == "apic" }
+  for_each      = { for k, v in local.filter_entries : k => v if local.controller.type == "apic" }
   filter_dn     = aci_filter.map[each.value.filter_name].id
   description   = each.value.description
   name          = each.key
@@ -73,7 +73,7 @@ resource "mso_schema_template_filter_entry" "map" {
   provider   = mso
   depends_on = [mso_schema.map]
   for_each = {
-    for k, v in local.filter_entries : k => v if var.controller_type == "ndo"
+    for k, v in local.filter_entries : k => v if local.controller.type == "ndo"
   }
   arp_flag             = each.value.arp_flag
   destination_from     = each.value.destination_port_from

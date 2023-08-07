@@ -3,16 +3,18 @@ locals {
   #
   # Model Inputs
   #__________________________________________________________
-
+  annotations      = var.model.annotations
+  controller       = var.model.controller
   defaults         = yamldecode(file("${path.module}/defaults.yaml")).defaults.tenants
+  mgmt_epgs        = var.model.management_epgs
   npfx             = merge(local.defaults.name_prefix, lookup(var.model, "name_prefix", {}))
   nsfx             = merge(local.defaults.name_suffix, lookup(var.model, "name_suffix", {}))
   networking       = lookup(var.model, "networking", {})
   node_mgmt_add    = lookup(var.model, "node_management_addresses", {})
   policies         = lookup(var.model, "policies", {})
-  template_bds     = lookup(var.templates, "bridge_domains", {})
-  template_epgs    = lookup(var.templates, "application_epgs", {})
-  template_subnets = lookup(var.templates, "subnets", {})
+  template_bds     = lookup(var.model, "bridge_domains", {})
+  template_epgs    = lookup(var.model, "application_epgs", {})
+  template_subnets = lookup(var.model, "subnets", {})
   tenant_contracts = lookup(var.model, "contracts", {})
 
   # Defaults
@@ -73,8 +75,7 @@ locals {
       local.tnt, v,
       {
         annotations = length(lookup(v, "annotations", local.tnt.annotations)
-        ) > 0 ? lookup(v, "annotations", local.tnt.annotations) : var.annotations
-        controller_type = var.controller_type
+        ) > 0 ? lookup(v, "annotations", local.tnt.annotations) : local.annotations
         sites = [
           for i in lookup(lookup(v, "ndo", {}), "sites", []) : merge(
             local.tnt.ndo.sites, i,
@@ -122,7 +123,7 @@ locals {
 
   static_node_management_addresses = {
     for v in lookup(local.node_mgmt_add, "static_node_management_addresses", []) : v.node_id => merge(
-      local.static_mgmt, v, { mgmt_epg_type = var.management_epgs[index(var.management_epgs.*.name, lookup(
+      local.static_mgmt, v, { mgmt_epg_type = local.mgmt_epgs[index(local.mgmt_epgs[*].name, lookup(
       v, "management_epg", local.static_mgmt.management_epg))].type }
     )
   }
@@ -136,7 +137,7 @@ locals {
       ) : "${local.npfx.vrfs}${v.name}${local.nsfx.vrfs}" => merge(
       local.vrf, v,
       { annotations = length(lookup(v, "annotations", local.vrf.annotations)
-      ) > 0 ? lookup(v, "annotations", local.vrf.annotations) : var.annotations },
+      ) > 0 ? lookup(v, "annotations", local.vrf.annotations) : local.annotations },
       { bgp_timers_per_address_family = [for e in lookup(v, "bgp_timers_per_address_family", []
       ) : merge(local.vrf.bgp_timers_per_address_family, e)] },
       { eigrp_timers_per_address_family = [for e in lookup(v, "eigrp_timers_per_address_family", []
@@ -179,7 +180,7 @@ locals {
         template = v.template
         vrf      = k
       }
-    ] if var.controller_type == "ndo"
+    ] if local.controller.type == "ndo"
   ]) : "${i.vrf}:${i.site}" => i }
 
   #__________________________________________________________
@@ -263,7 +264,7 @@ locals {
         template              = v.ndo.template
       }
     ]
-  ]) : "${i.bridge_domain}:${i.site}" => i if var.controller_type == "ndo" }
+  ]) : "${i.bridge_domain}:${i.site}" => i if local.controller.type == "ndo" }
 
   bridge_domain_dhcp_labels = { for i in flatten([
     for key, value in local.bridge_domains : [
@@ -289,7 +290,7 @@ locals {
         mac_address   = s
         tenant        = v.tenant
       }
-    ] if var.controller_type == "apic"
+    ] if local.controller.type == "apic"
   ]) : "${i.bridge_domain}:${i.mac_address}" => i }
 
 
@@ -304,7 +305,7 @@ locals {
       local.app, v,
       {
         annotations = length(lookup(v, "annotations", local.app.annotations)
-        ) > 0 ? lookup(v, "annotations", local.app.annotations) : var.annotations
+        ) > 0 ? lookup(v, "annotations", local.app.annotations) : local.annotations
         application_epgs = lookup(v, "application_epgs", [])
         name             = "${local.npfx.application_profiles}${v.name}${local.nsfx.application_profiles}"
         ndo = merge(
@@ -361,16 +362,15 @@ locals {
   application_epgs = { for i in flatten([
     for k, v in local.merged_epgs : merge(local.epg, v, {
       annotations = length(lookup(v, "annotations", local.epg.annotations)
-      ) > 0 ? lookup(v, "annotations", local.epg.annotations) : var.annotations
+      ) > 0 ? lookup(v, "annotations", local.epg.annotations) : local.annotations
       application_profile = "${local.npfx.application_profiles}${v.application_profile}${local.nsfx.application_profiles}"
       bd = length(compact([lookup(v, "bridge_domain", "")])) > 0 ? {
         name = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].name
         ndo = merge({ schema = "", sites = [], template = "" },
         local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].ndo)
       } : { name = "", ndo = { schema = "", sites = [], template = "" } }
-      contracts       = lookup(v, "contracts", [])
-      controller_type = var.controller_type
-      domains         = lookup(v, "domains", [])
+      contracts = lookup(v, "contracts", [])
+      domains   = lookup(v, "domains", [])
       epg_contract_masters = [
         for s in lookup(v, "epg_contract_masters", []) : {
           application_profile = "${local.npfx.application_profiles}${lookup(s, "application_profile", v.application_profile)}${local.nsfx.application_profiles}"
@@ -399,7 +399,6 @@ locals {
         {
           application_profile = value.application_profile
           application_epg     = value.name
-          controller_type     = value.controller_type
           domain              = v.name
           epg_type            = value.epg_type
           key                 = key
@@ -412,10 +411,10 @@ locals {
     for k, v in local.epg_to_domains : [
       for s in range(length(v.sites)) : merge(v, { site = element(v.sites, s) })
     ]
-  ]) : "${i.application_profile}:${i.application_epg}:${i.domain}:${i.site}" => i if i.controller_type == "ndo" }
+  ]) : "${i.application_profile}:${i.application_epg}:${i.domain}:${i.site}" => i if local.controller.type == "ndo" }
 
   aaep_to_epgs_loop = [
-    for v in var.aaep_to_epgs : {
+    for k, v in var.model.aaep_to_epgs : {
       aaep                      = v.name
       access                    = lookup(v, "access_or_native_vlan", 0)
       allowed_vlans             = lookup(v, "allowed_vlans", "")
@@ -453,7 +452,7 @@ locals {
   ]) : "${i.application_profile}:${i.application_epg}:${i.aaep}" => i }
 
   switch_loop_1 = [
-    for v in lookup(var.switch, "switch_profiles", []) : [
+    for v in lookup(var.model.switch, "switch_profiles", []) : [
       for i in lookup(v, "interfaces", []) : {
         access                    = lookup(v, "access_or_native_vlan", 0)
         allowed_vlans             = lookup(v, "allowed_vlans", "")
@@ -464,7 +463,7 @@ locals {
         pod_id                    = lookup(v, "pod_id", 1)
         site                      = lookup(v, "site", "")
         instrumentation_immediacy = lookup(i, "instrumentation_immediacy", lookup(v, "instrumentation_immediacy", "immediate"))
-        vpc_pair = flatten([for e in lookup(var.switch, "vpc_domains", []
+        vpc_pair = flatten([for e in lookup(var.model.switch, "vpc_domains", []
         ) : e.switches if contains(e.switches, v.node_id)])
         mode = length(regexall("(,|-)", jsonencode(lookup(v, "allowed_vlans", "")))
         ) > 0 ? "trunk" : "native"
@@ -482,7 +481,7 @@ locals {
     ) if length(v.vpc_pair) == 2 ? element(
     v.vpc_pair, 1) == v.node_id && v.interface_type == "bundle" ? false : true : true
   ]
-  switch_loop_3 = [for v in local.switch_loop_1 : merge(v, {
+  switch_loop_3 = [for v in local.switch_loop_2 : merge(v, {
     vlan_list = length(regexall("(,|-)", jsonencode(v.allowed_vlans))) > 0 ? flatten([
       for s in v.vlan_split : length(regexall("-", s)) > 0 ? [for v in range(tonumber(
       element(split("-", s), 0)), (tonumber(element(split("-", s), 1)) + 1)) : tonumber(v)] : [tonumber(s)]
@@ -572,7 +571,7 @@ locals {
       local.contract, v,
       {
         annotations = length(lookup(v, "annotations", local.contract.annotations)
-        ) > 0 ? lookup(v, "annotations", local.contract.annotations) : var.annotations
+        ) > 0 ? lookup(v, "annotations", local.contract.annotations) : local.annotations
         apply_both_directions = length(lookup(v, "subjects", [])) > 0 ? lookup(
           v.subjects[0], "apply_both_directions", local.contract.subjects.apply_both_directions
         ) : false
@@ -597,7 +596,7 @@ locals {
           tenant        = value.tenant
         }
       )
-    ] if var.controller_type == "apic"
+    ] if local.controller.type == "apic"
   ]) : "${i.contract}:${i.name}" => i }
 
   subject_filters = { for i in flatten([
@@ -621,7 +620,7 @@ locals {
     for v in lookup(local.tenant_contracts, "filters", []) : "${local.npfx.filters}${v.name}${local.nsfx.filters}" => {
       alias = lookup(v, "alias", local.filter.alias)
       annotations = length(lookup(v, "annotations", local.filter.annotations)
-      ) > 0 ? lookup(v, "annotations", local.filter.annotations) : var.annotations
+      ) > 0 ? lookup(v, "annotations", local.filter.annotations) : local.annotations
       description    = lookup(v, "description", local.filter.description)
       filter_entries = lookup(v, "filter_entries", [])
       name           = "${local.npfx.filters}${v.name}${local.nsfx.filters}"
@@ -663,7 +662,7 @@ locals {
     for v in lookup(local.networking, "l3outs", []) : v.name => merge(
       local.l3out, v, {
         annotations = length(lookup(v, "annotations", local.l3out.annotations)
-        ) > 0 ? lookup(v, "annotations", local.l3out.annotations) : var.annotations
+        ) > 0 ? lookup(v, "annotations", local.l3out.annotations) : local.annotations
         external_epgs         = lookup(v, "external_epgs", [])
         logical_node_profiles = lookup(v, "logical_node_profiles", [])
         ndo = {
@@ -846,7 +845,7 @@ locals {
           key         = key
           next_hop_ip = e.next_hop_ip
           preference  = lookup(e, "preference", local.lnpsrnh.next_hop_ips.preference)
-          prefix_dn   = "${key}"
+          prefix_dn   = key
           track_list  = lookup(v, "track_list", false) == true ? "${value.vrf}_${e.next_hop_ip}" : ""
           track_member = lookup(v, "track_list", false) == true && lookup(v, "track_member", false
           ) == true ? "${value.vrf}_${e.next_hop_ip}" : ""

@@ -29,7 +29,7 @@ defaults:
         contract_exception_tag: 0
         contracts:
             contract_type: provided # consumed|contract_interface|intra_epg|provided|taboo
-            name: '**REQUIRED**'
+            name: ''
             qos_class: unspecified
             ndo:
               schema: '' # If in NDO and Not the Same Schema
@@ -43,7 +43,7 @@ defaults:
           custom_epg_name: ''
           delimiter: '|'
           deploy_immediacy: on-demand
-          domain: '**REQUIRED**' # Name of the Domain
+          domain: '' # Name of the Domain
           domain_type: physical # physical or vmm
           enhanced_lag_policy: ''
           number_of_ports: 2
@@ -69,7 +69,7 @@ defaults:
         label_match_criteria: AtleastOne
         intra_epg_isolation: unenforced
         monitoring_policy: default
-        name: '**REQUIRED**'
+        name: ''
         preferred_group_member: false
         qos_class: unspecified
         useg_epg: false
@@ -85,7 +85,7 @@ defaults:
         description: ''
         global_alias: ''
         log: false
-        name: '**REQUIRED**'
+        name: ''
         qos_class: unspecified
         scope: context # application-profile|context|global|tenant
         subjects:
@@ -97,7 +97,7 @@ defaults:
               log: false
           filters: []
           label_match_criteria: AtleastOne
-          name: '**REQUIRED**'
+          name: ''
           qos_class: unspecified
           target_dscp: unspecified
         target_dscp: unspecified
@@ -133,12 +133,12 @@ defaults:
               reset: false
               synchronize: false
         global_alias: ''
-        name: '**REQUIRED**'
+        name: ''
     create: true
     description: ''
     global_alias: ''
     monitoring_policy: default
-    name: '**REQUIRED**' # Name of the Tenant
+    name: '' # Name of the Tenant
     name_prefix:
       application_profiles: ''
       application_epgs: ''
@@ -168,9 +168,9 @@ defaults:
     ndo:
       schemas: # REQUIRED FOR NDO
         create: true
-        name: '**REQUIRED**'
+        name: ''
         templates:
-          name: '**REQUIRED**'
+          name: ''
           sites: []
       sites:
         aws:
@@ -194,7 +194,7 @@ defaults:
       users: [] # REQUIRED FOR NDO
     netflow_monitor_policies:
       filter_type: ipv4 # ipv4, ipv6
-      #netflow_policy: '**REQUIRED**'
+      #netflow_policy: ''
     networking:
       #=============================
       # Bridge Domains
@@ -209,7 +209,7 @@ defaults:
           monitoring_policy: ''
           netflow_monitor_policies:
             filter_type: ipv4 # ipv4, ipv6
-            #netflow_policy: '**REQUIRED**'
+            #netflow_policy: ''
           optimize_wan_bandwidth: false
           rogue_coop_exception_list: []
         combine_description: false
@@ -239,7 +239,7 @@ defaults:
           pimv6: false
           type: regular
           vrf:
-            name: '**REQUIRED**'
+            name: ''
             ndo:
               schema: ''
               template: ''
@@ -254,7 +254,7 @@ defaults:
           link_local_ipv6_address: '::'
           nd_policy: ''
           subnets:
-            gateway_ip: '**REQUIRED**'
+            gateway_ip: ''
             description: ''
             ip_data_plane_learning: enabled
             make_this_ip_address_primary: false
@@ -269,7 +269,7 @@ defaults:
             treat_as_virtual_ip_address: false
           unicast_routing: true
           virtual_mac_address: ''
-        name: '**REQUIRED**'
+        name: ''
         ndo:
           schema: ''
           sites: []
@@ -293,7 +293,7 @@ defaults:
           alias: ''
           contract_exception_tag: 0
           contracts:
-            name: '**REQUIRED**'
+            name: ''
             contract_type: consumed # consumed|interface|intra_epg|provided|taboo
             ndo:
               schema: ''
@@ -323,13 +323,13 @@ defaults:
               shared_route_control_subnet: false
             route_control_profiles:
               direction: export # export/import
-              route_map: '**REQUIRED**'
+              route_map: ''
               tenant: '' # If in different Tenant
             route_summarization_policy: ''
             subnets: [0.0.0.0/1, 128.0.0.0/1]
           route_control_profiles:
             direction: export # export/import
-            route_map: '**REQUIRED**'
+            route_map: ''
             tenant: '' # If in different Tenant
           target_dscp: unspecified
         global_alias: ''
@@ -361,8 +361,8 @@ defaults:
               ebgp_multihop_ttl: 1
               local_as_number: 0
               local_as_number_config: none
-              password: 0
-              peer_addresses: ['**REQUIRED**']
+              password: 1
+              peer_addresses: ['']
               peer_asn: null # **REQUIRED**
               peer_controls:
                 bidirectional_forwarding_detection: false
@@ -394,7 +394,7 @@ defaults:
                 ip_address: ''
                 ip_obtain_mode: admin
                 mac_address: ''
-                name: '**REQUIRED**'
+                name: ''
                 secondary_virtual_ips: []
               hsrp_interface_policy: default
               version: v2
@@ -405,14 +405,14 @@ defaults:
             mac_address: 00:22:BD:F8:19:FF
             mode: regular
             mtu: inherit # or 576 to 9216
-            name: '**REQUIRED**'
+            name: ''
             nd_policy: ''
             netflow_monitor_policies: []
             nodes: [201]
             ospf_interface_profile:
                 authentication_type: none # md5,none,simple
                 description: ''
-                ospf_key: 0
+                authentication_key: 1
                 ospf_interface_policy: default
             primary_preferred_address: 198.18.1.1/24
             qos_class: unspecified
@@ -421,10 +421,10 @@ defaults:
                 link_local_addresses: ['::', '::']
                 primary_preferred_addresses: [198.18.1.1/24, 198.18.1.2/24]
                 secondary_addresses: []
-          name: '**REQUIRED**'
+          name: ''
           nodes:
             node_id: 201 # REQUIRED
-            router_id: '**REQUIRED**'
+            router_id: ''
             use_router_id_as_loopback: true
           static_routes:
               aggregate: false
@@ -435,13 +435,13 @@ defaults:
                   alias: ''
                   description: ''
                   next_hop_ips:
-                    ip_address: '**REQUIRED**'
+                    ip_address: ''
                     preference: 0
                   next_hop_type: prefix
                   track_list: false
                   ip_sla_monitoring_policy: 'default'
                   track_member: false
-              prefixes: ['**REQUIRED**']
+              prefixes: ['']
               route_control:
                 bfd: false
               track_list_policy: ''
@@ -466,10 +466,10 @@ defaults:
           import: false
         route_control_for_dampening:
           address_family: ipv4
-          route_map: '**REQUIRED**'
+          route_map: ''
         route_profile_for_interleak: ''
         route_profiles_for_redistribution:
-          route_map: '**REQUIRED**'
+          route_map: ''
           source: static # 
         target_dscp: unspecified
         vrf: default
@@ -492,7 +492,7 @@ defaults:
         endpoint_retention_policy: default
         epg_esg_collection_for_vrfs:
           contracts:
-            name: '**REQUIRED**'
+            name: ''
             contract_type: provider
             ndo:
               schema: ''
@@ -578,16 +578,16 @@ defaults:
         dhcp:
           option_policies:
             description: ''
-            name: '**REQUIRED**'
+            name: ''
             options:
-              data: '**REQUIRED**'
+              data: ''
               name: ''
-              option_id: '**REQUIRED**'
+              option_id: ''
           relay_policies:
             application_profile: default
             description: ''
-            dhcp_servers: ['**REQUIRED**']
-            epg: '**REQUIRED**'
+            dhcp_servers: ['']
+            epg: ''
             epg_type: application_epg
             l3out: ''
             mode: visible
@@ -623,7 +623,7 @@ defaults:
             detect_multiplier: 3 # 1-100
             http_uri: ''
             http_version: 1.0 # 1.0 or 1.1
-            name: '**REQUIRED**'
+            name: ''
             operation_timeout: 900 # 0-604800000 (milliseconds)
             request_data_size: 28 # 0-17512
             sla_frequency: 60 # 1-300 (seconds)
@@ -645,7 +645,7 @@ defaults:
           enable_pod_id_aware_redirection: false
           hashing_algorithm: sip-dip-prototype # dip,sip, sip-dip-prototype
           ip_sla_monitoring_policy: ''
-          name: '**REQUIRED**'
+          name: ''
           max_threshold_percentage: 0 # 1-100
           min_threshold_percentage: 0 # 1-100
           resilient_hashing_enabled: false
@@ -653,7 +653,7 @@ defaults:
           threshold_down_action: permit # bypass, deny, permit
         l4-l7_redirect_health_groups:
           description: ''
-          name: '**REQUIRED**'
+          name: ''
         ospf:
           ospf_interface:
             cost_of_interface: 0
@@ -701,43 +701,43 @@ defaults:
           contexts:
             action: permit # deny, permit
             associated_match_rules:
-              rule_name: '**REQUIRED**'
+              rule_name: ''
             description: ''
             name: default
             set_rule: ''
-          name: '**REQUIRED**'
+          name: ''
           route_map_continue: false
           type: combinable # combinable or global
         route_map_match_rules: # UI Just shows 'Match Rules'
           alias: ''
           description: ''
-          name: '**REQUIRED**'
+          name: ''
           match_community_terms:
             description: ''
             match_community_factors:
-              community: '**REQUIRED**' # e.g., regular:as2-nn2:4:15, e.g., extended:as4-nn2:5:16, e.g., no-export, e.g., no-advertise
+              community: '' # e.g., regular:as2-nn2:4:15, e.g., extended:as4-nn2:5:16, e.g., no-export, e.g., no-advertise
               description: ''
               scope: 'transitive' # transitive, non-transitive
-            name: '**REQUIRED**'
+            name: ''
           match_regex_community_terms:
             community_type: regular # extended and regular
             description: ''
-            name: '**REQUIRED**'
-            regular_expression: '**REQUIRED**'
+            name: ''
+            regular_expression: ''
           match_route_destination_rule:
             description: ''
             greater_than_mask: 0
-            ip: '**REQUIRED**'
+            ip: ''
             less_than_mask: 0
         route_map_set_rules: # UI Just shows 'Set Rules'
           alias: ''
           additional_communities:
-            community: '**REQUIRED**'
+            community: ''
             # e.g., regular:as2-nn2:4:15, e.g., extended:as4-nn2:5:16, e.g., no-export, e.g., no-advertise
             description: ''
           description: ''
           multipath: false
-          name: '**REQUIRED**'
+          name: ''
           next_hop_propegation: false
           set_as_path:
             criteria: prepend # prepend|prepend-last-as
@@ -753,9 +753,9 @@ defaults:
             reuse_limit: 750 # 750 1-20000
             suppress_limit: 2000 # 2000 1-20000
           set_external_epg:
-            external_epg: '**REQUIRED**'
-            l3out: '**REQUIRED**'
-            tenant: '**REQUIRED**'
+            external_epg: ''
+            l3out: ''
+            tenant: ''
           set_metric: 0
           set_metric_type: '' # ospf-type1|ospf-type2
           set_next_hop_address: ''
