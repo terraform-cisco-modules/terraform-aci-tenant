@@ -493,7 +493,7 @@ resource "aci_l3out_path_attachment" "map" {
   addr        = each.value.interface_type != "ext-svi" ? each.value.primary_preferred_address : ""
   autostate   = each.value.interface_type == "ext-svi" ? each.value.auto_state : "disabled"
   encap       = each.value.interface_type != "l3-port" ? "vlan-${each.value.encap_vlan}" : "unknown"
-  mode        = each.value.mode == "trunk" ? "regular" : "native"
+  mode        = each.value.interface_type != "l3-port" && each.value.mode == "access" ? "native" : "regular"
   encap_scope = each.value.interface_type != "l3-port" ? each.value.encap_scope : "local"
   ipv6_dad    = each.value.ipv6_dad
   ll_addr     = each.value.interface_type != "ext-svi" ? each.value.link_local_address : "::"

@@ -11,7 +11,7 @@ locals {
   nsfx             = merge(local.defaults.name_suffix, lookup(var.model, "name_suffix", {}))
   networking       = lookup(var.model, "networking", {})
   node_mgmt_add    = lookup(var.model, "node_management_addresses", {})
-  policies         = lookup(var.model, "policies", {})
+  protocol         = lookup(lookup(var.model, "policies", {}), "protocol", {})
   template_bds     = lookup(var.model, "bridge_domains", {})
   template_epgs    = lookup(var.model, "application_epgs", {})
   template_subnets = lookup(var.model, "subnets", {})
@@ -741,25 +741,23 @@ locals {
   ]) : "${i.l3out}:${i.external_epg}:${i.contract_type}:${i.contract}" => i }
 
   l3out_external_epg_subnets = { for i in flatten([
-    for key, value in local.l3out_external_epgs : [
-      for v in lookup(value, "subnets", []) : [
-        for s in v.subnets : merge(
-          local.subnets, v, {
-            aggregate    = merge(local.subnets.aggregate, lookup(v, "aggregate", {}))
-            external_epg = key, l3out = value.l3out
-            route_control_profiles = [
-              for s in lookup(v, "route_control_profiles", []) : { direction = s.direction, route_map = s.route_map }
-            ]
-            external_epg_classification = merge(
-              local.subnets.external_epg_classification, lookup(v, "external_epg_classification", {})
-            )
-            ndo           = value.ndo
-            route_control = merge(local.subnets.route_control, lookup(v, "route_control", {}))
-            subnet        = s
-          }
-        )
-      ]
-    ] if length(lookup(value, "subnets", [])) > 0
+    for key, value in local.l3out_external_epgs : [for v in lookup(value, "subnets", []) : [
+      for s in v.subnets : merge(
+        local.subnets, v, {
+          aggregate    = merge(local.subnets.aggregate, lookup(v, "aggregate", {}))
+          external_epg = key, l3out = value.l3out
+          route_control_profiles = [
+            for s in lookup(v, "route_control_profiles", []) : { direction = s.direction, route_map = s.route_map }
+          ]
+          external_epg_classification = merge(
+            local.subnets.external_epg_classification, lookup(v, "external_epg_classification", {})
+          )
+          ndo           = value.ndo
+          route_control = merge(local.subnets.route_control, lookup(v, "route_control", {}))
+          subnet        = s
+        }
+      )
+    ]] if length(lookup(value, "subnets", [])) > 0
   ]) : "${i.external_epg}:${i.subnet}" => i }
 
   #=======================================================================================
@@ -767,14 +765,12 @@ locals {
   #=======================================================================================
 
   l3out_ospf_external_profile = { for i in flatten([
-    for key, value in local.l3outs : [
-      for v in value.ospf_external_profile : merge(
-        local.l3ospf, v, {
-          l3out             = key, tenant = var.tenant
-          ospf_area_control = merge(local.l3ospf.ospf_area_control, lookup(v, "ospf_area_control", {}))
-        }
-      )
-    ]
+    for key, value in local.l3outs : [for v in [value.ospf_external_profile] : merge(
+      local.l3ospf, v, {
+        l3out             = key, tenant = var.tenant
+        ospf_area_control = merge(local.l3ospf.ospf_area_control, lookup(v, "ospf_area_control", {}))
+      }
+    )] if length(value.ospf_external_profile) > 0
   ]) : "${i.l3out}:ospf-external-profile" => i }
 
   #=======================================================================================
@@ -854,19 +850,6 @@ locals {
       ]
     ]
   ]) : "${i.key}:${i.next_hop_ip}" => i }
-
-  track_lists = merge({
-    for k, v in local.l3out_static_routes_next_hop : "${v.vrf}_${v.next_hop_ip}" => {
-      name            = "${v.vrf}_${v.next_hop_ip}"
-      percentage_down = 50
-      percentage_up   = 100
-      tenant          = v.tenant
-      type            = "percentage"
-      weight_down     = 0
-      weight_up       = 1
-    } if v.track_list == true }
-  )
-  track_members = []
 
   #=======================================================================================
   # L3Outs - Logical Node Profiles - Logical Interface Profiles
@@ -989,12 +972,10 @@ locals {
   ]) : "${i.hsrp_interface_profile}:${i.name}" => i }
 
   hsrp_interface_profile_group_secondaries = { for i in flatten([
-    for key, value in local.hsrp_interface_profile_groups : [
-      for s in value.secondary_virtual_ips : {
-        hsrp_interface_profile_group = key
-        secondary_ip                 = s
-      }
-    ]
+    for key, value in local.hsrp_interface_profile_groups : [for s in value.secondary_virtual_ips : {
+      hsrp_interface_profile_group = key
+      secondary_ip                 = s
+    }]
   ]) : "${i.hsrp_interface_profile_group}:${i.secondary_ip}" => i }
 
   #=======================================================================================
@@ -1002,16 +983,12 @@ locals {
   #=======================================================================================
 
   l3out_ospf_interface_profiles = { for i in flatten([
-    for key, value in local.l3out_interface_profiles : [
-      for v in [value.ospf_interface_profile] : merge(
-        local.ospfip, v, {
-          l3out_interface_profile = key
-          l3out                   = value.l3out
-          ndo                     = value.ndo
-          tenant                  = value.tenant
-        }
-      )
-    ] if length(value.ospf_interface_profile) > 0
+    for key, value in local.l3out_interface_profiles : [for v in [value.ospf_interface_profile] : merge(local.ospfip, v, {
+      l3out_interface_profile = key
+      l3out                   = value.l3out
+      ndo                     = value.ndo
+      tenant                  = value.tenant
+    })] if length(value.ospf_interface_profile) > 0
   ]) : "${i.l3out_interface_profile}:ospf" => i }
 
 
@@ -1020,8 +997,8 @@ locals {
   # Policies - BFD Interface
   #__________________________________________________________
 
-  policies_bfd_interface = {
-    for v in lookup(local.policies, "bfd_interface", []
+  bfd_interface = {
+    for v in lookup(local.protocol, "bfd_interface", []
     ) : v.name => merge(local.bfd, v, { tenant = var.tenant })
   }
 
@@ -1030,36 +1007,25 @@ locals {
   #
   # Policies - BGP
   #__________________________________________________________
-
-  policies_bgp_address_family_context = {
-    for v in lookup(lookup(local.policies, "bgp", {}), "bgp_address_family_context", []
-    ) : v.name => merge(local.bgpa, v, { tenant = var.tenant })
+  bgp = lookup(local.protocol, "bgp", {})
+  bgp_address_family_context = {
+    for v in lookup(local.bgp, "bgp_address_family_context", []) : v.name => merge(local.bgpa, v, { tenant = var.tenant })
   }
-
-  policies_bgp_best_path = {
-    for v in lookup(lookup(local.policies, "bgp", {}), "bgp_best_path", []
-    ) : v.name => merge(local.bgpb, v, { tenant = var.tenant })
+  bgp_best_path = {
+    for v in lookup(local.bgp, "bgp_best_path", []) : v.name => merge(local.bgpb, v, { tenant = var.tenant })
   }
-
-  policies_bgp_peer_prefix = {
-    for v in lookup(lookup(local.policies, "bgp", {}), "bgp_peer_prefix", []
-    ) : v.name => merge(local.bgpp, v, { tenant = var.tenant })
+  bgp_peer_prefix = {
+    for v in lookup(local.bgp, "bgp_peer_prefix", []) : v.name => merge(local.bgpp, v, { tenant = var.tenant })
   }
-
-  policies_bgp_route_summarization = {
-    for v in lookup(lookup(local.policies, "bgp", {}), "bgp_route_summarization", []) : v.name => merge(
-      local.bgps, v,
-      {
-        address_type_controls = merge(local.bgps.address_type_controls, lookup(v, "address_type_controls", {}))
-        control_state         = merge(local.bgps.control_state, lookup(v, "control_state", {}))
-        tenant                = var.tenant
-      }
-    )
+  bgp_route_summarization = {
+    for v in lookup(local.bgp, "bgp_route_summarization", []) : v.name => merge(local.bgps, v, {
+      address_type_controls = merge(local.bgps.address_type_controls, lookup(v, "address_type_controls", {}))
+      control_state         = merge(local.bgps.control_state, lookup(v, "control_state", {}))
+      tenant                = var.tenant
+    })
   }
-
-  policies_bgp_timers = {
-    for v in lookup(lookup(local.policies, "bgp", {}), "bgp_timers", []
-    ) : v.name => merge(local.bgpt, v, { tenant = var.tenant })
+  bgp_timers = {
+    for v in lookup(local.bgp, "bgp_timers", []) : v.name => merge(local.bgpt, v, { tenant = var.tenant })
   }
 
 
@@ -1067,22 +1033,17 @@ locals {
   #
   # Policies - DHCP Variables
   #__________________________________________________________
-
-  policies_dhcp_option = {
-    for v in lookup(lookup(local.policies, "dhcp", {}), "option_policies", []) : v.name => {
-      description = lookup(v, "description", local.dhcpo.description)
-      options = { for value in lookup(v, "options", []) : value.option_id =>
-        { data = value.data, name = lookup(value, "name", value.option_id), option_id = value.option_id }
-      }
-      tenant = var.tenant
+  dhcp = lookup(local.protocol, "dhcp", {})
+  dhcp_option = { for v in lookup(local.dhcp, "option_policies", []) : v.name => {
+    description = lookup(v, "description", local.dhcpo.description)
+    options = { for value in lookup(v, "options", []) : value.option_id => {
+      data = value.data, name = lookup(value, "name", value.option_id), option_id = value.option_id }
     }
-  }
-
-  policies_dhcp_relay = flatten([
-    for v in lookup(lookup(local.policies, "dhcp", {}), "relay_policies", []) : [
-      for e in v.dhcp_servers : merge(local.dhcpr, v, { dhcp_server = e }, { tenant = var.tenant })
-    ]
-  ])
+    tenant = var.tenant
+  } }
+  dhcp_relay = flatten([for v in lookup(local.dhcp, "relay_policies", []) : [
+    for e in v.dhcp_servers : merge(local.dhcpr, v, { dhcp_server = e }, { tenant = var.tenant })
+  ]])
 
 
   #__________________________________________________________
@@ -1090,9 +1051,8 @@ locals {
   # Policies - Endpoint Retention Variables
   #__________________________________________________________
 
-  policies_endpoint_retention = {
-    for v in lookup(local.policies, "endpoint_retention", []
-    ) : v.name => merge(local.ep, v, { tenant = var.tenant })
+  endpoint_retention = {
+    for v in lookup(local.protocol, "endpoint_retention", []) : v.name => merge(local.ep, v, { tenant = var.tenant })
   }
 
 
@@ -1100,37 +1060,45 @@ locals {
   #
   # Policies - HSRP
   #__________________________________________________________
-
-  policies_hsrp_group = {
-    for v in lookup(lookup(local.policies, "hsrp", {}), "group_policies", []
-    ) : v.name => merge(local.hsrpg, v, { tenant = var.tenant })
-  }
-
-  policies_hsrp_interface = {
-    for v in lookup(lookup(local.policies, "hsrp", {}), "interface_policies", []
-    ) : v.name => merge(local.hsrpi, v, { tenant = var.tenant })
+  hsrp       = lookup(local.protocol, "hsrp", {})
+  hsrp_group = { for v in lookup(local.hsrp, "group_policies", []) : v.name => merge(local.hsrpg, v, { tenant = var.tenant }) }
+  hsrp_interface = {
+    for v in lookup(local.hsrp, "interface_policies", []) : v.name => merge(local.hsrpi, v, { tenant = var.tenant })
   }
 
   #__________________________________________________________
   #
   # Policies - IP SLA
   #__________________________________________________________
-  policies_ip_sla_monitoring = {
-    for v in lookup(lookup(local.policies, "ip_sla", {}), "ip_sla_monitoring_policies", []
-    ) : v.name => merge(local.sla, v, { tenant = var.tenant })
+  ip_sla = lookup(local.protocol, "ip_sla", {})
+  ip_sla_monitoring = {
+    for v in lookup(local.ip_sla, "ip_sla_monitoring_policies", []) : v.name => merge(local.sla, v, { tenant = var.tenant })
   }
+
+  track_lists = merge({
+    for k, v in local.l3out_static_routes_next_hop : "${v.vrf}_${v.next_hop_ip}" => {
+      name            = "${v.vrf}_${v.next_hop_ip}"
+      percentage_down = 50
+      percentage_up   = 100
+      tenant          = v.tenant
+      type            = "percentage"
+      weight_down     = 0
+      weight_up       = 1
+    } if v.track_list == true }
+  )
+  track_members = []
 
   #__________________________________________________________
   #
   # Policies - L4-L7 Policy-Based Redirect
   #__________________________________________________________
-  policies_l4_l7_pbr = {
-    for v in lookup(local.policies, "l4-l7_policy-based_redirect", []
+  l4_l7_policy_based_redirect = {
+    for v in lookup(local.protocol, "l4-l7_policy-based_redirect", []
     ) : v.name => merge(local.l4l7pbr, v, { destinations = lookup(v, "destinations", []) }, { tenant = var.tenant })
   }
 
-  policies_l4_l7_pbr_destinations = { for i in flatten([
-    for key, value in local.policies_l4_l7_pbr : [
+  l4_l7_pbr_destinations = { for i in flatten([
+    for key, value in local.l4_l7_policy_based_redirect : [
       for k, v in value.destinations : {
         additional_ipv4_ipv6 = length(regexall("L3", value.destination_type)
         ) > 0 ? lookup(v, "additional_ipv4_ipv6", local.l4l7pbr.destinations.additional_ipv4_ipv6) : "0.0.0.0"
@@ -1149,8 +1117,8 @@ locals {
   #
   # Policies - L4-L7 Redirect Health Groups
   #__________________________________________________________
-  policies_l4_l7_redirect_health_groups = {
-    for v in lookup(local.policies, "l4-l7_redirect_health_groups", []) : v.name => {
+  l4_l7_redirect_health_groups = {
+    for v in lookup(local.protocol, "l4-l7_redirect_health_groups", []) : v.name => {
       description = lookup(v, "description", local.l4l7rhg.description)
     }
   }
@@ -1160,30 +1128,19 @@ locals {
   #
   # Policies - OSPF Variables
   #__________________________________________________________
-
-  policies_ospf_interface = {
-    for v in lookup(lookup(local.policies, "ospf", {}), "ospf_interface", []) : v.name => merge(
-      local.ospfi, v,
-      {
-        interface_controls = merge(local.ospfi.interface_controls, lookup(v, "interface_controls"))
-        tenant             = var.tenant
-      }
-    )
+  ospf = lookup(local.protocol, "ospf", {})
+  ospf_interface = {
+    for v in lookup(local.ospf, "ospf_interface", []) : v.name => merge(local.ospfi, v, {
+      interface_controls = merge(local.ospfi.interface_controls, lookup(v, "interface_controls")), tenant = var.tenant
+    })
   }
-
-  policies_ospf_route_summarization = {
-    for v in lookup(lookup(local.policies, "ospf", {}), "ospf_route_summarization", []) : v.name => merge(
-      local.ospfs, v,
-      { tenant = var.tenant }
-    )
+  ospf_route_summarization = {
+    for v in lookup(local.ospf, "ospf_route_summarization", []) : v.name => merge(local.ospfs, v, { tenant = var.tenant })
   }
-
-  policies_ospf_timers = {
-    for v in lookup(lookup(local.policies, "ospf", {}), "ospf_timers", []) : v.name => merge(
-      local.ospft, v,
-      { control_knobs = merge(local.ospft.control_knobs, lookup(v, "control_knobs", {})) },
-      { tenant = var.tenant }
-    )
+  ospf_timers = {
+    for v in lookup(local.ospf, "ospf_timers", []) : v.name => merge(local.ospft, v, {
+      control_knobs = merge(local.ospft.control_knobs, lookup(v, "control_knobs", {})), tenant = var.tenant
+    })
   }
 
 
@@ -1193,7 +1150,7 @@ locals {
   #__________________________________________________________
 
   route_map_match_rules = {
-    for v in lookup(lookup(local.policies, "protocol", {}), "route_map_match_rules", []) : v.name => {
+    for v in lookup(local.protocol, "route_map_match_rules", []) : v.name => {
       description                  = lookup(v, "description", local.rmsr.description)
       match_community_terms        = lookup(v, "match_community_terms", [])
       match_regex_community_terms  = lookup(v, "match_regex_community_terms", [])
@@ -1201,7 +1158,6 @@ locals {
       tenant                       = var.tenant
     }
   }
-
   match_rules_match_community_terms = { for i in flatten([
     for key, value in local.route_map_match_rules : [
       for v in value.match_community_terms : {
@@ -1253,81 +1209,65 @@ locals {
   #__________________________________________________________
 
   route_map_set_rules = {
-    for v in lookup(lookup(local.policies, "protocol", {}), "route_map_set_rules", []) : v.name => merge(
-      local.rmsr, v,
-      {
-        additional_communities = lookup(v, "additional_communities", [])
-        set_as_path            = lookup(v, "set_as_path", [])
-        set_communities        = lookup(v, "set_communities", [])
-        set_dampening          = lookup(v, "set_dampening", [])
-        set_external_epg       = lookup(v, "set_external_epg", [])
-        tenant                 = var.tenant
-      }
-    )
+    for v in lookup(local.protocol, "route_map_set_rules", []) : v.name => merge(local.rmsr, v, {
+      additional_communities = lookup(v, "additional_communities", [])
+      set_as_path            = lookup(v, "set_as_path", [])
+      set_communities        = lookup(v, "set_communities", [])
+      set_dampening          = lookup(v, "set_dampening", [])
+      set_external_epg       = lookup(v, "set_external_epg", [])
+      tenant                 = var.tenant
+    })
   }
 
   set_rules_additional_communities = { for i in flatten([
-    for key, value in local.route_map_set_rules : [
-      for v in value.additional_communities : {
-        community   = v.community
-        description = lookup(v, "description", local.rmsr.rules.communites.description)
-        set_rule    = value.set_rule
-        tenant      = value.tenant
-      }
-    ]
+    for key, value in local.route_map_set_rules : [for v in value.additional_communities : {
+      community   = v.community
+      description = lookup(v, "description", local.rmsr.rules.communites.description)
+      set_rule    = value.set_rule
+      tenant      = value.tenant
+    }]
   ]) : "${i.set_rule}:${i.community}" => i }
 
   set_rules_set_as_path = { for i in flatten([
-    for key, value in local.route_map_set_rules : [
-      for v in value.set_as_path : {
-        autonomous_systems = length(lookup(v, "autonomous_systems", [])) > 0 ? [
-          for s in range(length(v.autonomous_systems)) : {
-            asn   = element(v.autonomous_systems, s)
-            order = s
-          }
-        ] : []
-        criteria      = lookup(v, "criteria", local.rmsr.set_as_path.criteria)
-        last_as_count = lookup(v, "last_as_count", local.rmsr.set_as_path.last_as_count)
-        set_rule      = value.set_rule
-        tenant        = value.tenant
-      }
-    ]
+    for key, value in local.route_map_set_rules : [for v in value.set_as_path : {
+      autonomous_systems = length(lookup(v, "autonomous_systems", [])) > 0 ? [
+        for s in range(length(v.autonomous_systems)) : { asn = element(v.autonomous_systems, s), order = s }
+      ] : []
+      criteria      = lookup(v, "criteria", local.rmsr.set_as_path.criteria)
+      last_as_count = lookup(v, "last_as_count", local.rmsr.set_as_path.last_as_count)
+      set_rule      = value.set_rule
+      tenant        = value.tenant
+    }]
   ]) : "${i.set_rule}:${i.criteria}" => i }
 
   set_rules_set_communities = { for i in flatten([
-    for key, value in local.route_map_set_rules : [
-      for v in value.set_communities : {
-        community = lookup(v, "community", local.rmsr.set_communities.community)
-        criteria  = lookup(v, "criteria", local.rmsr.set_communities.criteria)
-        set_rule  = key
-        tenant    = var.tenant
-      }
-    ]
+    for key, value in local.route_map_set_rules : [for v in value.set_communities : {
+      community = lookup(v, "community", local.rmsr.set_communities.community)
+      criteria  = lookup(v, "criteria", local.rmsr.set_communities.criteria)
+      set_rule  = key
+      tenant    = var.tenant
+    }]
   ]) : "${i.set_rule}:${i.criteria}" => i }
 
   set_rules_set_dampening = { for i in flatten([
-    for key, value in local.route_map_set_rules : [
-      for v in value.set_dampening : {
-        half_life         = lookup(v, "half_life", local.rmsr.rules.half_life)
-        max_suprress_time = lookup(v, "max_suprress_time", local.rmsr.rules.max_suprress_time)
-        reuse_limit       = lookup(v, "reuse_limit", local.rmsr.rules.reuse_limit)
-        set_rule          = key
-        suppress_limit    = lookup(v, "suppress_limit", local.rmsr.rules.suppress_limit)
-        tenant            = var.tenant
-      }
-    ]
+    for key, value in local.route_map_set_rules : [for v in value.set_dampening : {
+      half_life         = lookup(v, "half_life", local.rmsr.rules.half_life)
+      max_suprress_time = lookup(v, "max_suprress_time", local.rmsr.rules.max_suprress_time)
+      reuse_limit       = lookup(v, "reuse_limit", local.rmsr.rules.reuse_limit)
+      set_rule          = key
+      suppress_limit    = lookup(v, "suppress_limit", local.rmsr.rules.suppress_limit)
+      tenant            = var.tenant
+    }]
   ]) : "${i.set_rule}-dampening" => i }
 
   set_rules_set_external_epg = { for i in flatten([
-    for key, value in local.route_map_set_rules : [
-      for v in value.rules : {
-        epg_tenant     = v.tenant
-        external_epg   = v.external_epg
-        l3out          = v.l3out
-        set_rule       = key
-        suppress_limit = lookup(v, "suppress_limit", local.rmsr.rules.suppress_limit)
-      }
-    ]
+    for key, value in local.route_map_set_rules : [for v in value.rules : {
+      epg_tenant     = v.tenant
+      external_epg   = v.external_epg
+      l3out          = v.l3out
+      set_rule       = key
+      suppress_limit = lookup(v, "suppress_limit", local.rmsr.rules.suppress_limit)
+    }]
   ]) : "${i.set_rule}-external-epg" => i }
 
 
@@ -1337,7 +1277,7 @@ locals {
   #__________________________________________________________
 
   route_maps_for_route_control = {
-    for v in lookup(lookup(local.policies, "protocol", {}), "route_maps_for_route_control", []) : v.name => {
+    for v in lookup(local.protocol, "route_maps_for_route_control", []) : v.name => {
       contexts           = lookup(v, "contexts", [])
       description        = lookup(v, "description", local.rm.description)
       route_map_continue = lookup(v, "route_map_continue", local.rm.route_map_continue)
@@ -1347,22 +1287,16 @@ locals {
   }
 
   route_map_contexts = { for i in flatten([
-    for key, value in local.route_maps_for_route_control : [
-      for k, v in value.contexts : {
-        action      = v.action
-        description = lookup(v, "description", local.rm.contexts.description)
-        associated_match_rules = [
-          for i in lookup(v, "associated_match_rules", []) : {
-            rule_name = i
-          }
-        ]
-        name      = v.name
-        order     = k
-        route_map = key
-        set_rule  = lookup(v, "set_rule", local.rm.contexts.set_rule)
-        tenant    = value.tenant
-      }
-    ]
+    for key, value in local.route_maps_for_route_control : [for k, v in value.contexts : {
+      action                 = v.action
+      description            = lookup(v, "description", local.rm.contexts.description)
+      associated_match_rules = [for i in lookup(v, "associated_match_rules", []) : { rule_name = i }]
+      name                   = v.name
+      order                  = k
+      route_map              = key
+      set_rule               = lookup(v, "set_rule", local.rm.contexts.set_rule)
+      tenant                 = value.tenant
+    }]
   ]) : "${i.route_map}:${i.name}" => i }
 
 
@@ -1385,5 +1319,4 @@ locals {
   l4_l7_service_graph_templates   = {}
   l4_l7_service_graph_connections = {}
   function_nodes                  = {}
-
 }
