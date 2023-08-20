@@ -198,7 +198,7 @@ locals {
     for v in local.bds_with_template : [
       merge(local.networking.bridge_domains[index(local.networking.bridge_domains[*].name, v.name)
       ], local.template_bds[index(local.template_bds[*].template_name, v.template)])
-    ]
+    ] if length(local.template_bds) > 0
   ]) : i.name => i }
 
   bds = { for v in lookup(local.networking, "bridge_domains", []) : v.name => v }
@@ -242,7 +242,8 @@ locals {
           }
         ] },
         { subnets = [for i in lookup(v, "subnets", []) : length(compact([lookup(i, "template", "")])
-          ) > 0 ? merge(local.subnet, merge(i, local.template_subnets[index(local.template_subnets[*
+          ) > 0 && length(local.template_subnets) > 0 ? merge(local.subnet, merge(i, local.template_subnets[
+            index(local.template_subnets[*
         ].template_name, i.template)])) : merge(local.subnet, i)] }
       )
       name   = "${local.npfx.bridge_domains}${v.name}${local.nsfx.bridge_domains}"
@@ -899,8 +900,8 @@ locals {
           side           = length(regexall("false", tostring(s % 2 != 0))) > 0 ? "A" : "B"
           interface_type = value.interface_type
         }
-      ]
-    ] if value.interface_type == "ext-svi"
+      ]] if length(regexall("^eth[0-9]{1,2}/\\d{1,3}(/\\d{1,3})?$", value.interface_or_policy_group)
+    ) == 0 && value.interface_type == "ext-svi"
   ]) : "${i.l3out_interface_profile}:${i.side}" => i }
 
   interface_secondaries_ips = { for i in flatten([
