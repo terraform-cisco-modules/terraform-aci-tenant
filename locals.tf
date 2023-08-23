@@ -3,18 +3,18 @@ locals {
   #
   # Model Inputs
   #__________________________________________________________
-  annotations      = var.model.annotations
-  controller       = var.model.controller
+  annotations      = var.model.global_settings.annotations
+  controller       = var.model.global_settings.controller
   defaults         = yamldecode(file("${path.module}/defaults.yaml")).defaults.tenants
-  mgmt_epgs        = var.model.management_epgs
+  mgmt_epgs        = var.model.global_settings.management_epgs
   npfx             = merge(local.defaults.name_prefix, lookup(var.model, "name_prefix", {}))
   nsfx             = merge(local.defaults.name_suffix, lookup(var.model, "name_suffix", {}))
   networking       = lookup(var.model, "networking", {})
   node_mgmt_add    = lookup(var.model, "node_management_addresses", {})
   protocol         = lookup(lookup(var.model, "policies", {}), "protocol", {})
-  template_bds     = lookup(var.model, "bridge_domains", {})
-  template_epgs    = lookup(var.model, "application_epgs", {})
-  template_subnets = lookup(var.model, "subnets", {})
+  template_bds     = lookup(lookup(var.model, "templates", {}), "bridge_domains", {})
+  template_epgs    = lookup(lookup(var.model, "templates", {}), "application_epgs", {})
+  template_subnets = lookup(lookup(var.model, "templates", {}), "subnets", {})
   tenant_contracts = lookup(var.model, "contracts", {})
 
   # Defaults
