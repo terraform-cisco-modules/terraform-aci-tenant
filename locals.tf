@@ -415,7 +415,7 @@ locals {
   ]) : "${i.application_profile}:${i.application_epg}:${i.domain}:${i.site}" => i if local.controller.type == "ndo" }
 
   aaep_to_epgs_loop = [
-    for k, v in var.model.aaep_to_epgs : {
+    for k, v in lookup(var.model, "aaep_to_epgs", []) : {
       aaep                      = v.name
       access                    = lookup(v, "access_or_native_vlan", 0)
       allowed_vlans             = lookup(v, "allowed_vlans", "")
@@ -426,7 +426,7 @@ locals {
         ) > 0 ? tolist(split(",", lookup(v, "allowed_vlans", ""))) : length(
         regexall(",", lookup(v, "allowed_vlans", ""))) > 0 ? tolist(split(",", lookup(v, "allowed_vlans", ""))
       ) : [lookup(v, "allowed_vlans", "")]
-    } if lookup(v, "access_or_native_vlan", 0) > 0 || length(compact([lookup(v, "allowed_vlans", "")])) > 0
+    } if lookup(v, "access_or_native_vlan", 0) > 0 && length(compact([lookup(v, "allowed_vlans", "")])) > 0
   ]
   aaep_to_epgs_loop_2 = [for v in local.aaep_to_epgs_loop : merge(v, {
     vlan_list = length(regexall("(,|-)", jsonencode(v.allowed_vlans))) > 0 ? flatten([
@@ -452,11 +452,11 @@ locals {
     ] if v.epg_type == "standard"
   ]) : "${i.application_profile}:${i.application_epg}:${i.aaep}" => i }
 
-  switch_loop_1 = [
+  switch_loop_1 = flatten([
     for v in lookup(var.model.switch, "switch_profiles", []) : [
       for i in lookup(v, "interfaces", []) : {
-        access                    = lookup(v, "access_or_native_vlan", 0)
-        allowed_vlans             = lookup(v, "allowed_vlans", "")
+        access                    = lookup(i, "access_or_native_vlan", 0)
+        allowed_vlans             = lookup(i, "allowed_vlans", "")
         encapsulation_type        = lookup(i, "encapsulation_type", "vlan")
         interface                 = lookup(i, "policy_group_type", "access") == "bundle" ? i.policy_group : i.interface
         interface_type            = lookup(i, "policy_group_type", "access")
@@ -465,18 +465,16 @@ locals {
         site                      = lookup(v, "site", "")
         instrumentation_immediacy = lookup(i, "instrumentation_immediacy", lookup(v, "instrumentation_immediacy", "immediate"))
         vpc_pair = flatten([for e in lookup(var.model.switch, "vpc_domains", []
-        ) : e.switches if contains(e.switches, v.node_id)])
-        mode = length(regexall("(,|-)", jsonencode(lookup(v, "allowed_vlans", "")))
+        ) : e.switches if contains([for d in e.switches : tostring(d)], tostring(v.node_id))])
+        mode = length(regexall("(,|-)", jsonencode(lookup(i, "allowed_vlans", "")))
         ) > 0 ? "trunk" : "native"
-        vlan_split = length(regexall("-", lookup(v, "allowed_vlans", ""))
-          ) > 0 ? tolist(split(",", lookup(v, "allowed_vlans", ""))) : length(
-          regexall(",", lookup(v, "allowed_vlans", ""))) > 0 ? tolist(split(",", lookup(v, "allowed_vlans", ""))
-        ) : [lookup(v, "allowed_vlans", "")]
-        } if lookup(v, "access_or_native_vlan", 0) > 0 && v.node_type != "spine" || length(
-        compact([lookup(v, "allowed_vlans", "")])
-      ) > 0 && v.node_type != "spine"
+        vlan_split = length(regexall("-", lookup(i, "allowed_vlans", ""))
+          ) > 0 ? tolist(split(",", lookup(i, "allowed_vlans", ""))) : length(
+          regexall(",", lookup(i, "allowed_vlans", ""))) > 0 ? tolist(split(",", lookup(i, "allowed_vlans", ""))
+        ) : [lookup(i, "allowed_vlans", "")]
+      } if v.node_type != "spine" && length(compact([lookup(i, "allowed_vlans", "")])) > 0
     ]
-  ]
+  ])
   switch_loop_2 = [for v in local.switch_loop_1 : merge(v, { path_type = length(v.vpc_pair
     ) == 2 && v.interface_type == "bundle" ? "vpc" : v.interface_type == "bundle" ? "dpc" : "port" }
     ) if length(v.vpc_pair) == 2 ? element(
@@ -488,34 +486,34 @@ locals {
       element(split("-", s), 0)), (tonumber(element(split("-", s), 1)) + 1)) : tonumber(v)] : [tonumber(s)]
     ]) : tonumber(v.vlan_split)
   })]
-  epg_to_static_paths = { for i in flatten([
-    for k, v in local.application_epgs : [
-      for e in local.switch_loop_3 : {
-        access                    = e.access
-        application_epg           = v.name
-        application_profile       = v.application_profile
-        distinguished_name        = "${aci_application_epg.map[k].id}/rspathAtt-"
-        encapsulation_type        = e.encapsulation_type
-        instrumentation_immediacy = e.instrumentation_immediacy == "on-demand" ? "lazy" : "immediate"
-        interface                 = e.interface
-        mode                      = contains(v.vlans, tonumber(e.access)) ? "native" : e.mode
-        ndo                       = v.ndo
-        node_id                   = e.node_id
-        path_type                 = e.path_type
-        pod_id                    = e.pod_id
-        site                      = e.site
-        tdn = length(regexall("^vpc$", v.path_type)
-          ) > 0 ? "topology/pod-${v.pod_id}/protpaths-${element(v.vpc_pair, 0)}-${element(v.vpc_pair, 1)}/pathep-[${v.interface}]" : length(
-          regexall("^dpc$", v.path_type)
-          ) > 0 ? "topology/pod-${v.pod_id}/paths-${v.node_id}/pathep-[${v.interface}]" : length(1
-        ) > 0 ? "topology/pod-${v.pod_id}/paths-${v.node_id}/pathep-[eth${v.interface}]" : ""
-        vpc_pair = length(e.vpc_pair) == 2 ? "${element(e.vpc_pair, 0)}-${element(e.vpc_pair, 1)}" : ""
-        } if length(v.vlans) == 2 ? contains(e.vlan_list, tonumber(element(v.vlans, 0))) && contains(
-        e.vlan_list, tonumber(element(v.vlans, 1))) : length(v.vlans) == 1 ? contains(
-        e.vlan_list, tonumber(element(v.vlans, 0))
-      ) : false
-    ] if v.epg_type == "standard"
-  ]) : "${i.application_profile}:${i.application_epg}:${i.node_id}:${i.interface}" => i }
+  epg_to_static_paths = {
+    for k, v in local.application_epgs : k => {
+      static_paths = [
+        for e in local.switch_loop_3 : {
+          access                    = e.access
+          distinguished_name        = "${aci_application_epg.map[k].id}/rspathAtt-"
+          encapsulation_type        = e.encapsulation_type
+          instrumentation_immediacy = e.instrumentation_immediacy == "on-demand" ? "lazy" : "immediate"
+          mode                      = contains(v.vlans, tonumber(e.access)) ? "native" : e.mode
+          ndo                       = v.ndo
+          node_id                   = e.node_id
+          path_type                 = e.path_type
+          pod_id                    = e.pod_id
+          site                      = e.site
+          tdn = length(regexall("^vpc$", e.path_type)
+            ) > 0 ? "topology/pod-${e.pod_id}/protpaths-${element(e.vpc_pair, 0)}-${element(e.vpc_pair, 1)}/pathep-[${e.interface}]" : length(
+            regexall("^dpc$", e.path_type)
+            ) > 0 ? "topology/pod-${e.pod_id}/paths-${e.node_id}/pathep-[${e.interface}]" : length((regexall("^port$", e.path_type))
+          ) > 0 ? "topology/pod-${e.pod_id}/paths-${e.node_id}/pathep-[eth${e.interface}]" : ""
+          vpc_pair = length(e.vpc_pair) == 2 ? "${element(e.vpc_pair, 0)}-${element(e.vpc_pair, 1)}" : ""
+          vlans    = v.vlans
+          } if length(v.vlans) == 2 ? contains(e.vlan_list, tonumber(element(v.vlans, 0))) && contains(
+          e.vlan_list, tonumber(element(v.vlans, 1))) : length(v.vlans) == 1 ? contains(
+          e.vlan_list, tonumber(element(v.vlans, 0))
+        ) : false
+      ]
+    } if v.epg_type == "standard"
+  }
 
   contract_to_epgs = { for i in flatten([
     for key, value in local.application_epgs : [

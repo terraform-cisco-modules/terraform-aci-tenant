@@ -26,7 +26,9 @@ output "application_profiles" {
       for v in sort(keys(mso_schema_site_anp_epg_domain.map)) : v => mso_schema_site_anp_epg_domain.map[v].id
     } : {}
     epg_to_static_paths = local.controller.type == "apic" ? {
-      for v in sort(keys(aci_rest_managed.epg_to_static_paths)) : v => aci_rest_managed.epg_to_static_paths[v].id
+      for v in sort(keys(aci_bulk_epg_to_static_path.map)) : v => [
+        for e in aci_bulk_epg_to_static_path.map[v].static_path : e.interface_dn
+      ]
     } : local.controller.type == "ndo" ? {} : {}
   }
 }
@@ -162,4 +164,8 @@ output "tenants" {
     ) : v => aci_tenant.map[v].id } : local.controller.type == "ndo" ? {
     for v in sort(keys(mso_tenant.map)) : v => mso_tenant.map[v].id
   } : {}
+}
+
+output "aaeps" {
+  value = var.model.aaep_to_epgs
 }

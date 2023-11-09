@@ -23,8 +23,8 @@ A Terraform module to configure ACI Tenant Policies.
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aci"></a> [aci](#provider\_aci) | >=2.9.0 |
-| <a name="provider_mso"></a> [mso](#provider\_mso) | >=0.11.1 |
+| <a name="provider_aci"></a> [aci](#provider\_aci) | 2.10.1 |
+| <a name="provider_mso"></a> [mso](#provider\_mso) | 0.11.1 |
 ## Inputs
 
 | Name | Description | Type | Default | Required |
@@ -58,6 +58,7 @@ A Terraform module to configure ACI Tenant Policies.
 | [aci_bgp_route_summarization.map](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/bgp_route_summarization) | resource |
 | [aci_bgp_timers.map](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/bgp_timers) | resource |
 | [aci_bridge_domain.map](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/bridge_domain) | resource |
+| [aci_bulk_epg_to_static_path.map](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/bulk_epg_to_static_path) | resource |
 | [aci_concrete_device.map](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/concrete_device) | resource |
 | [aci_concrete_interface.map](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/concrete_interface) | resource |
 | [aci_connection.l4_l7_service_graph_connections](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/connection) | resource |
@@ -114,7 +115,6 @@ A Terraform module to configure ACI Tenant Policies.
 | [aci_rest_managed.contract_to_epgs](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.contract_to_inb_epgs](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.contract_to_oob_epgs](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
-| [aci_rest_managed.epg_to_static_paths](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.external_epg_contracts](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.external_epg_contracts_taboo](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |
 | [aci_rest_managed.external_epg_intra_epg_contracts](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/rest_managed) | resource |

@@ -363,24 +363,48 @@ GUI Location:
 Tenants > {tenant} > Application Profiles > {application_profile} > Application EPGs > {application_epg} > Static Ports > {GUI_Static}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_rest_managed" "epg_to_static_paths" {
-  depends_on = [aci_application_epg.map]
-  for_each   = { for k, v in local.epg_to_static_paths : k => v if local.controller.type == "apic" }
-  dn         = "each.value.distinguished_name[${each.value.tdn}]"
-  class_name = "fvRsPathAtt"
-  content = {
-    encap = length(
-      regexall("micro_seg", each.value.encapsulation_type)
-      ) > 0 ? "vlan-${element(each.value.vlans, 0)}" : length(
-      regexall("qinq", each.value.encapsulation_type)
-      ) > 0 ? "qinq-${element(each.value.vlans, 0)}-${element(each.value.vlans, 1)}" : length(
-      regexall("vlan", each.value.encapsulation_type)
-      ) > 0 ? "vlan-${element(each.value.vlans, 0)}" : length(
-      regexall("vxlan", each.value.encapsulation_type)
-    ) > 0 ? "vxlan-${element(each.value.vlans, 0)}" : ""
-    mode         = each.value.mode
-    primaryEncap = each.value.encapsulation_type == "micro_seg" ? "vlan-${element(each.value.vlans, 1)}" : "unknown"
-    tDn          = each.value.tdn
+#resource "aci_rest_managed" "epg_to_static_paths" {
+#  depends_on = [aci_application_epg.map]
+#  for_each   = { for k, v in local.epg_to_static_paths : k => v if local.controller.type == "apic" }
+#  dn         = "${each.value.distinguished_name}[${each.value.tdn}]"
+#  class_name = "fvRsPathAtt"
+#  content = {
+#    encap = length(
+#      regexall("micro_seg", each.value.encapsulation_type)
+#      ) > 0 ? "vlan-${element(each.value.vlans, 0)}" : length(
+#      regexall("qinq", each.value.encapsulation_type)
+#      ) > 0 ? "qinq-${element(each.value.vlans, 0)}-${element(each.value.vlans, 1)}" : length(
+#      regexall("vlan", each.value.encapsulation_type)
+#      ) > 0 ? "vlan-${element(each.value.vlans, 0)}" : length(
+#      regexall("vxlan", each.value.encapsulation_type)
+#    ) > 0 ? "vxlan-${element(each.value.vlans, 0)}" : ""
+#    mode         = each.value.mode
+#    primaryEncap = each.value.encapsulation_type == "micro_seg" ? "vlan-${element(each.value.vlans, 1)}" : "unknown"
+#    tDn          = each.value.tdn
+#  }
+#}
+resource "aci_bulk_epg_to_static_path" "map" {
+  depends_on         = [aci_application_epg.map]
+  for_each           = { for k, v in local.epg_to_static_paths : k => v if local.controller.type == "apic" }
+  application_epg_dn = aci_application_epg.map[each.key].id
+  dynamic "static_path" {
+    for_each = each.value.static_paths
+    content {
+      deployment_immediacy = static_path.value.instrumentation_immediacy
+      encap = length(
+        regexall("micro_seg", static_path.value.encapsulation_type)
+        ) > 0 ? "vlan-${element(static_path.value.vlans, 0)}" : length(
+        regexall("qinq", static_path.value.encapsulation_type)
+        ) > 0 ? "qinq-${element(static_path.value.vlans, 0)}-${element(static_path.value.vlans, 1)}" : length(
+        regexall("vlan", static_path.value.encapsulation_type)
+        ) > 0 ? "vlan-${element(static_path.value.vlans, 0)}" : length(
+        regexall("vxlan", static_path.value.encapsulation_type)
+      ) > 0 ? "vxlan-${element(static_path.value.vlans, 0)}" : ""
+      interface_dn = "${static_path.value.distinguished_name}[${static_path.value.tdn}]"
+      mode         = static_path.value.mode
+      primary_encap = length(regexall("micro_seg", static_path.value.encapsulation_type)
+      ) > 0 ? "vlan-${element(static_path.value.vlans, 1)}" : "unknown"
+    }
   }
 }
 
