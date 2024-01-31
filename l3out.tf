@@ -22,8 +22,8 @@ resource "aci_l3_outside" "map" {
   dynamic "relation_l3ext_rs_dampening_pol" {
     for_each = each.value.route_control_for_dampening
     content {
-      af                     = "${relation_l3ext_rs_dampening_pol.value.address_family}-ucast"
-      tn_rtctrl_profile_name = "uni/tn-${local.policy_tenant}/prof-${relation_l3ext_rs_dampening_pol.value.route_map}"
+      af                   = "${relation_l3ext_rs_dampening_pol.value.address_family}-ucast"
+      tn_rtctrl_profile_dn = "uni/tn-${local.policy_tenant}/prof-${relation_l3ext_rs_dampening_pol.value.route_map}"
     }
   }
   # Class l3extRsInterleakPol

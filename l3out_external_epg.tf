@@ -26,8 +26,8 @@ resource "aci_external_network_instance_profile" "map" {
   dynamic "relation_l3ext_rs_inst_p_to_profile" {
     for_each = each.value.route_control_profiles
     content {
-      direction              = each.value.direction
-      tn_rtctrl_profile_name = "uni/tn-${local.policy_tenant}/prof-${relation_l3ext_rs_inst_p_to_profile.value.route_map}"
+      direction            = each.value.direction
+      tn_rtctrl_profile_dn = "uni/tn-${local.policy_tenant}/prof-${relation_l3ext_rs_inst_p_to_profile.value.route_map}"
     }
   }
   # relation_l3ext_rs_l3_inst_p_to_dom_p        = each.value.l3_domain

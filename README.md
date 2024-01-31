@@ -17,14 +17,14 @@ A Terraform module to configure ACI Tenant Policies.
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.0 |
-| <a name="requirement_aci"></a> [aci](#requirement\_aci) | >=2.9.0 |
-| <a name="requirement_mso"></a> [mso](#requirement\_mso) | >=0.11.1 |
+| <a name="requirement_aci"></a> [aci](#requirement\_aci) | >=2.13.0 |
+| <a name="requirement_mso"></a> [mso](#requirement\_mso) | >=1.0.0 |
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aci"></a> [aci](#provider\_aci) | 2.10.1 |
-| <a name="provider_mso"></a> [mso](#provider\_mso) | 0.11.1 |
+| <a name="provider_aci"></a> [aci](#provider\_aci) | 2.13.0 |
+| <a name="provider_mso"></a> [mso](#provider\_mso) | 1.0.0 |
 ## Inputs
 
 | Name | Description | Type | Default | Required |
@@ -42,6 +42,7 @@ A Terraform module to configure ACI Tenant Policies.
 | <a name="output_nd_orchestrator"></a> [nd\_orchestrator](#output\_nd\_orchestrator) | n/a |
 | <a name="output_policies"></a> [policies](#output\_policies) | n/a |
 | <a name="output_tenants"></a> [tenants](#output\_tenants) | n/a |
+| <a name="output_aaeps"></a> [aaeps](#output\_aaeps) | n/a |
 ## Resources
 
 | Name | Type |

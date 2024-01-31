@@ -8,15 +8,13 @@ GUI Location:
 _______________________________________________________________________________________________________________________
 */
 resource "aci_filter" "map" {
-  depends_on                     = [aci_tenant.map]
-  for_each                       = { for k, v in local.filters : k => v if local.controller.type == "apic" }
-  tenant_dn                      = "uni/tn-${each.value.tenant}"
-  description                    = each.value.description
-  name                           = each.key
-  name_alias                     = each.value.alias
-  relation_vz_rs_filt_graph_att  = ""
-  relation_vz_rs_fwd_r_flt_p_att = ""
-  relation_vz_rs_rev_r_flt_p_att = ""
+  depends_on                    = [aci_tenant.map]
+  for_each                      = { for k, v in local.filters : k => v if local.controller.type == "apic" }
+  tenant_dn                     = "uni/tn-${each.value.tenant}"
+  description                   = each.value.description
+  name                          = each.key
+  name_alias                    = each.value.alias
+  relation_vz_rs_filt_graph_att = ""
 }
 
 /*_____________________________________________________________________________________________________________________

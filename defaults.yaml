@@ -254,6 +254,7 @@ defaults:
           link_local_ipv6_address: '::'
           nd_policy: ''
           subnets:
+            create: true
             gateway_ip: ''
             description: ''
             ip_data_plane_learning: enabled

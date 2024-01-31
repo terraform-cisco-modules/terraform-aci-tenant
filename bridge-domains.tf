@@ -105,7 +105,7 @@ ________________________________________________________________________________
 */
 resource "aci_subnet" "bridge_domain_subnets" {
   depends_on = [aci_bridge_domain.map, aci_l3_outside.map]
-  for_each   = { for k, v in local.bridge_domain_subnets : k => v if local.controller.type == "apic" }
+  for_each   = { for k, v in local.bridge_domain_subnets : k => v if local.controller.type == "apic" && v.create == true }
   parent_dn  = aci_bridge_domain.map[each.value.bridge_domain].id
   ctrl = anytrue([each.value.subnet_control["neighbor_discovery"
     ], each.value.subnet_control["no_default_svi_gateway"], each.value.subnet_control["querier_ip"]
@@ -280,7 +280,7 @@ resource "mso_schema_site_bd_l3out" "map" {
 resource "mso_schema_template_bd_subnet" "map" {
   provider           = mso
   depends_on         = [mso_schema_template_bd.map, mso_schema_site_bd.map]
-  for_each           = { for k, v in local.bridge_domain_subnets : k => v if local.controller.type == "ndo" }
+  for_each           = { for k, v in local.bridge_domain_subnets : k => v if local.controller.type == "ndo" && v.create == true }
   bd_name            = each.value.bridge_domain
   description        = each.value.description
   ip                 = each.value.gateway_ip

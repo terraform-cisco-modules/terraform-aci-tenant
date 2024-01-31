@@ -36,8 +36,8 @@ resource "aci_logical_interface_profile" "map" {
   dynamic "relation_l3ext_rs_l_if_p_to_netflow_monitor_pol" {
     for_each = each.value.netflow_monitor_policies
     content {
-      flt_type                    = relation_l3ext_rs_l_if_p_to_netflow_monitor_pol.value.filter_type
-      tn_netflow_monitor_pol_name = relation_l3ext_rs_l_if_p_to_netflow_monitor_pol.value.netflow_policy
+      flt_type                  = relation_l3ext_rs_l_if_p_to_netflow_monitor_pol.value.filter_type
+      tn_netflow_monitor_pol_dn = relation_l3ext_rs_l_if_p_to_netflow_monitor_pol.value.netflow_policy
     }
   }
 }

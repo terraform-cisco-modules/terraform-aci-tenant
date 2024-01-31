@@ -102,7 +102,7 @@ resource "mso_tenant" "map" {
     content {
       aws_access_key_id = site_associations.value.aws.access_key_id
       aws_account_id    = site_associations.value.aws.account_id
-      aws_secret_key    = var.aws_secret_key
+      aws_secret_key    = var.tenant_sensitive.nexus_dashboard.aws_secret_key
       site_id           = data.mso_site.sites[site_associations.value.site].id
       vendor            = site_associations.value.vendor
     }
@@ -136,7 +136,7 @@ resource "mso_tenant" "map" {
       gcp_email       = site_associations.value.gcp.email
       gcp_project_id  = site_associations.value.gcp_project_id
       gcp_key_id      = site_associations.value.gcp.gcp_key_id
-      gcp_private_key = var.gcp_private_key
+      gcp_private_key = var.tenant_sensitive.nexus_dashboard.gcp_private_key
       site_id         = data.mso_site.sites[site_associations.value.site].id
       vendor          = site_associations.value.vendor
     }
