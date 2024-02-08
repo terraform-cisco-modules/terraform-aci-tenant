@@ -571,10 +571,9 @@ locals {
       {
         annotations = length(lookup(v, "annotations", local.contract.annotations)
         ) > 0 ? lookup(v, "annotations", local.contract.annotations) : local.annotations
-        apply_both_directions = length(lookup(v, "subjects", [])) > 0 ? lookup(
-          v.subjects[0], "apply_both_directions", local.contract.subjects.apply_both_directions
-        ) : false
-        filters  = flatten([for s in lookup(v, "subjects", []) : [s.filters]])
+        filters = flatten([for s in lookup(v, "subjects", []) : [
+          for e in s.filters : merge(local.contract.subjects, s, { name = "${local.npfx.filters}${e}${local.nsfx.filters}" })]
+        ])
         name     = "${local.npfx.contracts}${v.name}${local.nsfx.contracts}"
         subjects = lookup(v, "subjects", [])
         schema   = local.schema
@@ -600,11 +599,10 @@ locals {
 
   subject_filters = { for i in flatten([
     for k, v in local.contract_subjects : [
-      for s in v.filters : merge(
+      for s in v.filters : merge(local.contract.subjects,
         v, {
-          directives = merge(local.contract.subjects.directives, lookup(v, "directives", {}))
-          filter     = "${local.npfx.filters}${s}${local.nsfx.filters}"
-          subject    = v.name
+          filter  = "${local.npfx.filters}${s}${local.nsfx.filters}"
+          subject = v.name
         }
       )
     ]

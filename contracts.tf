@@ -220,18 +220,29 @@ resource "mso_schema_template_contract" "map" {
   depends_on    = [mso_schema.map, mso_schema_template_filter_entry.map]
   for_each      = { for k, v in local.contracts : k => v if local.controller.type == "ndo" }
   contract_name = each.key
-  directives    = each.value.log == true ? ["log"] : ["none"]
   display_name  = each.key
   filter_type   = each.value.apply_both_directions == true ? "bothWay" : "oneWay"
+  priority      = each.value.qos_class
   schema_id     = data.mso_schema.map[each.value.schema].id
   scope         = each.value.scope
+  target_dscp   = each.value.target_dscp
   template_name = each.value.template
   dynamic "filter_relationship" {
-    for_each = toset(each.value.filters)
+    for_each = { for v in each.value.filters : v.name => v }
     content {
+      action = filter_relationship.value.action
+      directives = anytrue([
+        filter_relationship.value.enable_policy_compression,
+        filter_relationship.value.log
+        ]) ? compact(concat([
+          length(regexall(true, filter_relationship.value.enable_policy_compression)) > 0 ? "no_stats" : ""], [
+          length(regexall(true, filter_relationship.value.log)) > 0 ? "log" : ""]
+      )) : ["none"]
+      filter_name          = filter_relationship.value.name
       filter_schema_id     = mso_schema.map[each.value.schema].id
       filter_template_name = each.value.template
-      filter_name          = filter_relationship.value
+      filter_type          = filter_relationship.value.apply_both_directions == false ? "oneWay" : "bothWay"
+      priority             = filter_relationship.value.qos_class
     }
   }
   lifecycle { ignore_changes = [schema_id] }
