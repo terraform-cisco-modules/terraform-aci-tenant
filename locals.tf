@@ -119,7 +119,7 @@ locals {
         }
       ]
     ]
-  ]) : "${i.schema}:${i.template}:${i.site}" => i }
+  ]) : "${i.schema}/${i.template}/${i.site}" => i }
 
   static_node_management_addresses = {
     for v in lookup(local.node_mgmt_add, "static_node_management_addresses", []) : v.node_id => merge(
@@ -163,25 +163,24 @@ locals {
         contract_tenant      = lookup(v, "tenant", value.tenant)
         label_match_criteria = value.epg_esg_collection_for_vrfs.label_match_criteria
         qos_class            = lookup(v, "template", local.vrf.epg_esg_collection_for_vrfs.contracts.qos_class)
-        schema               = value.ndo.schema
-        template             = value.ndo.template
+        ndo                  = value.ndo
         tenant               = value.tenant
         vrf                  = key
       }
     ]
-  ]) : "${i.vrf}:${i.contract}:${i.contract_type}" => i }
+  ]) : "${i.vrf}/${i.contract}/${i.contract_type}" => i }
 
   vrf_sites = { for i in flatten([
     for k, v in local.vrfs : [
       for s in v.ndo.sites : {
         create   = v.create
-        schema   = v.schema
+        schema   = v.ndo.schema
         site     = s
-        template = v.template
+        template = v.ndo.template
         vrf      = k
       }
     ] if local.controller.type == "ndo"
-  ]) : "${i.vrf}:${i.site}" => i }
+  ]) : "${i.vrf}/${i.site}" => i }
 
   #__________________________________________________________
   #
@@ -227,25 +226,29 @@ locals {
           description = lookup(lookup(v, "general", {}), "description", lookup(v, "description", ""))
           tenant      = var.tenant
         },
-        { vrf = merge(
+        { vrf = [for s in [lookup(lookup(v, "general", {}), "vrf", {})] : merge(
           local.general.vrf, lookup(lookup(v, "general", {}), "vrf", {}),
-          { tenant = lookup(lookup(lookup(v, "general", {}), "vrf", {}), "tenant", var.tenant) }
-        ) }
-      )
-      l3_configurations = merge(
-        local.l3, lookup(v, "l3_configurations", {}),
-        { associated_l3outs = [
-          for s in lookup(lookup(v, "l3_configurations", {}), "associated_l3outs", []) : {
-            l3outs        = s.l3outs
-            route_profile = lookup(s, "route_profile", "")
-            tenant        = lookup(s, "tenant", var.tenant)
+          {
+            name   = "${local.npfx.vrfs}${s.name}${local.nsfx.vrfs}"
+            tenant = lookup(s, "tenant", var.tenant)
           }
-        ] },
-        { subnets = [for i in lookup(v, "subnets", []) : length(compact([lookup(i, "template", "")])
-          ) > 0 && length(local.template_subnets) > 0 ? merge(local.subnet, merge(i, local.template_subnets[
-            index(local.template_subnets[*
-        ].template_name, i.template)])) : merge(local.subnet, i)] }
+        )][0] }
       )
+      l3_configurations = merge(local.l3, lookup(v, "l3_configurations", {}), {
+        associated_l3outs = flatten([for e in lookup(lookup(v, "l3_configurations", {}), "associated_l3outs", {}) : [
+          for s in lookup(e, "l3outs", []) : {
+            l3out         = "${local.npfx.l3outs}${s}${local.npfx.l3outs}"
+            route_profile = lookup(e, "route_profile", "")
+            tenant        = lookup(e, "tenant", var.tenant)
+          }]
+        ])
+        subnets = [
+          for i in lookup(v, "subnets", []) : length(compact([lookup(i, "template", "")])
+            ) > 0 && length(local.template_subnets) > 0 ? merge(local.subnet, merge(i, local.template_subnets[
+              index(local.template_subnets[*
+          ].template_name, i.template)])) : merge(local.subnet, i)
+        ]
+      })
       name   = "${local.npfx.bridge_domains}${v.name}${local.nsfx.bridge_domains}"
       ndo    = merge({ sites = local.sites }, lookup(v, "ndo", {}))
       tenant = var.tenant
@@ -256,8 +259,8 @@ locals {
     for k, v in local.bridge_domains : [
       for s in range(length(v.ndo.sites)) : {
         advertise_host_routes = s % 2 != 0 ? false : v.general.advertise_host_routes
-        bridge_domain         = v.name
-        l3out                 = element(v.l3_configurations.associated_l3outs[0].l3outs, s + 1)
+        bridge_domain         = k
+        l3out                 = element(v.l3_configurations.associated_l3outs, s + 1).l3out
         l3out_schema          = v.general.vrf.ndo.schema
         l3out_template        = v.general.vrf.ndo.template
         schema                = v.ndo.schema
@@ -265,24 +268,26 @@ locals {
         template              = v.ndo.template
       }
     ]
-  ]) : "${i.bridge_domain}:${i.site}" => i if local.controller.type == "ndo" }
+  ]) : "${i.bridge_domain}/${i.site}" => i if local.controller.type == "ndo" }
 
   bridge_domain_dhcp_labels = { for i in flatten([
     for key, value in local.bridge_domains : [
-      for v in value.dhcp_relay_labels : merge(v, { bridge_domain = key }, { tenant = value.tenant })
+      for v in value.dhcp_relay_labels : merge(v, { bridge_domain = key, tenant = value.tenant })
     ]
-  ]) : "${i.bridge_domain}:${i.name}" => i }
+  ]) : "${i.bridge_domain}/${i.name}" => i }
 
   bridge_domain_subnets = { for i in flatten([
     for key, value in local.bridge_domains : [
       for v in value.l3_configurations.subnets : merge(
-        { bridge_domain = value.name, ndo = value.ndo },
         local.subnet, v,
-        { scope = merge(local.subnet.scope, lookup(v, "scope", {})) },
-        { subnet_control = merge(local.subnet.subnet_control, lookup(v, "subnet_control", {})) },
+        {
+          bridge_domain  = key, ndo = value.ndo,
+          scope          = merge(local.subnet.scope, lookup(v, "scope", {})),
+          subnet_control = merge(local.subnet.subnet_control, lookup(v, "subnet_control", {}))
+        }
       )
     ]
-  ]) : "${i.bridge_domain}:${i.gateway_ip}" => i }
+  ]) : "${i.bridge_domain}/${i.gateway_ip}" => i }
 
   rogue_coop_exception_list = { for i in flatten([
     for k, v in local.bridge_domains : [
@@ -292,7 +297,7 @@ locals {
         tenant        = v.tenant
       }
     ] if local.controller.type == "apic"
-  ]) : "${i.bridge_domain}:${i.mac_address}" => i }
+  ]) : "${i.bridge_domain}/${i.mac_address}" => i }
 
 
   #__________________________________________________________
@@ -330,11 +335,13 @@ locals {
   bd_to_epg = { for i in flatten([
     for v in local.bd_with_epgs : [
       merge(
-        { application_profile = v.application_epg.application_profile },
-        local.networking.bridge_domains[index(local.networking.bridge_domains[*].name, v.name)],
-        local.template_epgs[index(local.template_epgs[*].template_name, v.template)],
-        { name = v.name }, { bridge_domain = v.name },
-        { vlans = lookup(v.application_epg, "vlans", []) }
+        local.bridge_domains[v.name],
+        local.template_epgs[index(local.template_epgs[*].template_name, v.template)], {
+          application_profile = v.application_epg.application_profile
+          bridge_domain       = v.name
+          name                = replace(replace(v.name, local.npfx.bridge_domains, ""), local.nsfx.bridge_domains, "")
+          vlans               = lookup(v.application_epg, "vlans", [])
+        }
       )
     ]
   ]) : i.name => i }
@@ -366,12 +373,13 @@ locals {
       ) > 0 ? lookup(v, "annotations", local.epg.annotations) : local.annotations
       application_profile = "${local.npfx.application_profiles}${v.application_profile}${local.nsfx.application_profiles}"
       bd = length(compact([lookup(v, "bridge_domain", "")])) > 0 ? {
-        name = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].name
+        name = local.bridge_domains[v.bridge_domain].name
         ndo = merge({ schema = "", sites = [], template = "" },
-        local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].ndo)
+        local.bridge_domains[v.bridge_domain].ndo)
       } : { name = "", ndo = { schema = "", sites = [], template = "" } }
-      contracts = lookup(v, "contracts", [])
-      domains   = lookup(v, "domains", [])
+      contracts   = lookup(v, "contracts", [])
+      description = length(lookup(v, "description", "")) > 0 ? lookup(v, "description", "") : lookup(lookup(v, "general", {}), "description", "")
+      domains     = lookup(v, "domains", [])
       epg_contract_masters = [
         for s in lookup(v, "epg_contract_masters", []) : {
           application_profile = "${local.npfx.application_profiles}${lookup(s, "application_profile", v.application_profile)}${local.nsfx.application_profiles}"
@@ -383,14 +391,12 @@ locals {
       static_paths = lookup(v, "static_paths", [])
       tenant       = var.tenant
       vrf = length(compact([lookup(v, "bridge_domain", "")])) > 0 ? {
-        name = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.name
-        ndo = merge({ schema = "", sites = [], template = "" },
-          local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.ndo
-        )
-        tenant = local.bridge_domains["${local.npfx.bridge_domains}${v.bridge_domain}${local.nsfx.bridge_domains}"].general.vrf.tenant
+        name   = local.bridge_domains[v.bridge_domain].general.vrf.name
+        ndo    = merge({ schema = "", sites = [], template = "" }, local.bridge_domains[v.bridge_domain].general.vrf.ndo)
+        tenant = local.bridge_domains[v.bridge_domain].general.vrf.tenant
       } : { name = "", ndo = { schema = "", sites = [], template = "" }, tenant = "" }
     })
-  ]) : "${i.application_profile}:${i.name}" => i }
+  ]) : "${i.application_profile}/${i.name}" => i }
 
   epg_to_domains = { for i in flatten([
     for key, value in local.application_epgs : [
@@ -407,12 +413,12 @@ locals {
         }
       )
     ]
-  ]) : "${i.application_profile}:${i.application_epg}:${i.domain}" => i }
+  ]) : "${i.application_profile}/${i.application_epg}/${i.domain}" => i }
   ndo_epg_to_domains = { for i in flatten([
     for k, v in local.epg_to_domains : [
       for s in range(length(v.sites)) : merge(v, { site = element(v.sites, s) })
     ]
-  ]) : "${i.application_profile}:${i.application_epg}:${i.domain}:${i.site}" => i if local.controller.type == "ndo" }
+  ]) : "${i.application_profile}/${i.application_epg}/${i.domain}/${i.site}" => i if local.controller.type == "ndo" }
 
   aaep_to_epgs_loop = [
     for k, v in lookup(var.model, "aaep_to_epgs", []) : {
@@ -450,7 +456,7 @@ locals {
         e.vlan_list, tonumber(element(v.vlans, 0))
       ) : false
     ] if v.epg_type == "standard"
-  ]) : "${i.application_profile}:${i.application_epg}:${i.aaep}" => i }
+  ]) : "${i.application_profile}/${i.application_epg}/${i.aaep}" => i }
 
   switch_loop_1 = flatten([
     for v in lookup(var.model.switch, "switch_profiles", []) : [
@@ -557,7 +563,7 @@ locals {
         tenant    = value.tenant
       }
     ]
-  ]) : "${i.application_profile}:${i.application_epg}:${i.contract_type}:${i.contract}" => i }
+  ]) : "${i.application_profile}/${i.application_epg}/${i.contract_type}/${i.contract}" => i }
 
 
   #__________________________________________________________
@@ -595,7 +601,7 @@ locals {
         }
       )
     ] if local.controller.type == "apic"
-  ]) : "${i.contract}:${i.name}" => i }
+  ]) : "${i.contract}/${i.name}" => i }
 
   subject_filters = { for i in flatten([
     for k, v in local.contract_subjects : [
@@ -606,7 +612,7 @@ locals {
         }
       )
     ]
-  ]) : "${i.contract}:${i.subject}:${i.filter}" => i }
+  ]) : "${i.contract}/${i.subject}/${i.filter}" => i }
 
 
   #__________________________________________________________
@@ -643,7 +649,7 @@ locals {
         }
       )
     ]
-  ]) : "${i.filter_name}:${i.name}" => i }
+  ]) : "${i.filter_name}/${i.name}" => i }
 
 
   #__________________________________________________________
@@ -691,7 +697,7 @@ locals {
         route_map = v.route_map
       }
     ]
-  ]) : "${i.l3out}:${i.route_map}:${i.source}" => i }
+  ]) : "${i.l3out}/${i.route_map}/${i.source}" => i }
 
   #==================================
   # L3Outs - External EPGs
@@ -719,7 +725,7 @@ locals {
         }
       )
     ]
-  ]) : "${i.l3out}:${i.name}" => i }
+  ]) : "${i.l3out}/${i.name}" => i }
 
   l3out_ext_epg_contracts = { for i in flatten([
     for key, value in local.l3out_external_epgs : [
@@ -735,7 +741,7 @@ locals {
         }
       )
     ]
-  ]) : "${i.l3out}:${i.external_epg}:${i.contract_type}:${i.contract}" => i }
+  ]) : "${i.l3out}/${i.external_epg}/${i.contract_type}/${i.contract}" => i }
 
   l3out_external_epg_subnets = { for i in flatten([
     for key, value in local.l3out_external_epgs : [for v in lookup(value, "subnets", []) : [
@@ -755,7 +761,7 @@ locals {
         }
       )
     ]] if length(lookup(value, "subnets", [])) > 0
-  ]) : "${i.external_epg}:${i.subnet}" => i }
+  ]) : "${i.external_epg}/${i.subnet}" => i }
 
   #=======================================================================================
   # L3Outs - OSPF External Policies
@@ -784,7 +790,7 @@ locals {
           nodes = [
             for s in lookup(v, "nodes", []) : {
               l3out         = key, node_id = s.node_id, router_id = s.router_id, tenant = value.tenant
-              node_profile  = "${key}:${v.name}"
+              node_profile  = "${key}/${v.name}"
               pod_id        = lookup(v, "pod_id", local.lnp.pod_id)
               static_routes = lookup(v, "static_routes", [])
               use_router_id_as_loopback = lookup(
@@ -796,7 +802,7 @@ locals {
         }
       )
     ]
-  ]) : "${i.l3out}:${i.name}" => i }
+  ]) : "${i.l3out}/${i.name}" => i }
 
   l3out_node_profiles_nodes = { for i in flatten([
     for key, value in local.l3out_node_profiles : [
@@ -808,7 +814,7 @@ locals {
         vrf    = value.vrf
       })
     ]
-  ]) : "${i.node_profile}:${i.node_id}" => i }
+  ]) : "${i.node_profile}/${i.node_id}" => i }
 
   #=======================================================================================
   # L3Outs - Logical Node Profiles - Static Routes
@@ -829,7 +835,7 @@ locals {
         })
       ]
     ]
-  ]) : "${i.key}:${i.prefix}" => i }
+  ]) : "${i.key}/${i.prefix}" => i }
 
   l3out_static_routes_next_hop = { for i in flatten([
     for key, value in local.l3out_node_profile_static_routes : [
@@ -846,7 +852,7 @@ locals {
         })
       ]
     ]
-  ]) : "${i.key}:${i.next_hop_ip}" => i }
+  ]) : "${i.key}/${i.next_hop_ip}" => i }
 
   #=======================================================================================
   # L3Outs - Logical Node Profiles - Logical Interface Profiles
@@ -877,7 +883,7 @@ locals {
         }
       )
     ]
-  ]) : "${i.node_profile}:${i.name}" => i }
+  ]) : "${i.node_profile}/${i.name}" => i }
 
   l3out_paths_svi_addressing = { for i in flatten([
     for key, value in local.l3out_interface_profiles : [
@@ -898,7 +904,7 @@ locals {
         }
       ]] if length(regexall("^eth[0-9]{1,2}/\\d{1,3}(/\\d{1,3})?$", value.interface_or_policy_group)
     ) == 0 && value.interface_type == "ext-svi"
-  ]) : "${i.l3out_interface_profile}:${i.side}" => i }
+  ]) : "${i.l3out_interface_profile}/${i.side}" => i }
 
   interface_secondaries_ips = { for i in flatten([
     for k, v in local.l3out_interface_profiles : [
@@ -909,7 +915,7 @@ locals {
         secondary_ip_address    = element(v.secondary_addresses, s)
       }
     ]
-  ]) : "${i.l3out_interface_profile}:${i.secondary_ip_address}" => i }
+  ]) : "${i.l3out_interface_profile}/${i.secondary_ip_address}" => i }
 
   svi_secondaries_ips = { for i in flatten([
     for k, v in local.l3out_paths_svi_addressing : [
@@ -920,7 +926,7 @@ locals {
         secondary_ip_address    = element(v.secondary_addresses, s)
       }
     ]
-  ]) : "${i.l3out_interface_profile}:${i.secondary_ip_address}" => i }
+  ]) : "${i.l3out_interface_profile}/${i.secondary_ip_address}" => i }
   l3out_paths_secondary_ips = merge(local.interface_secondaries_ips, local.svi_secondaries_ips)
 
   #=======================================================================================
@@ -948,7 +954,7 @@ locals {
         )
       ]
     ]
-  ]) : "${i.l3out_interface_profile}-bgp:${i.peer_address}" => i }
+  ]) : "${i.l3out_interface_profile}-bgp/${i.peer_address}" => i }
 
 
   #=======================================================================================
@@ -966,14 +972,14 @@ locals {
     for key, value in local.hsrp_interface_profile : [
       for v in value.groups : merge(local.hip.groups, v, { hsrp_interface_profile = key })
     ]
-  ]) : "${i.hsrp_interface_profile}:${i.name}" => i }
+  ]) : "${i.hsrp_interface_profile}/${i.name}" => i }
 
   hsrp_interface_profile_group_secondaries = { for i in flatten([
     for key, value in local.hsrp_interface_profile_groups : [for s in value.secondary_virtual_ips : {
       hsrp_interface_profile_group = key
       secondary_ip                 = s
     }]
-  ]) : "${i.hsrp_interface_profile_group}:${i.secondary_ip}" => i }
+  ]) : "${i.hsrp_interface_profile_group}/${i.secondary_ip}" => i }
 
   #=======================================================================================
   # L3Outs - Logical Node Profiles - Logical Interface Profiles - OSPF Interface Policies
@@ -1108,7 +1114,7 @@ locals {
         ) > 0 ? lookup(v, "redirect_health_group", local.l4l7pbr.destinations.redirect_health_group) : ""
       }
     ]
-  ]) : "${i.l4_l7_pbr_policy}:${i.dest_key}" => i }
+  ]) : "${i.l4_l7_pbr_policy}/${i.dest_key}" => i }
 
   #__________________________________________________________
   #
@@ -1171,7 +1177,7 @@ locals {
         tenant     = value.tenant
       }
     ]
-  ]) : "${i.match_rule}:${i.name}" => i }
+  ]) : "${i.match_rule}/${i.name}" => i }
 
   match_rules_match_regex_community_terms = { for i in flatten([
     for key, value in local.route_map_match_rules : [
@@ -1184,7 +1190,7 @@ locals {
         tenant             = value.tenant
       }
     ]
-  ]) : "${i.match_rule}:${i.community_type}" => i }
+  ]) : "${i.match_rule}/${i.community_type}" => i }
 
   match_rules_match_route_destination_rule = { for i in flatten([
     for key, value in local.route_map_match_rules : [
@@ -1197,7 +1203,7 @@ locals {
         tenant            = value.tenant
       }
     ]
-  ]) : "${i.match_rule}:${i.ip}" => i }
+  ]) : "${i.match_rule}/${i.ip}" => i }
 
 
   #__________________________________________________________
@@ -1223,7 +1229,7 @@ locals {
       set_rule    = value.set_rule
       tenant      = value.tenant
     }]
-  ]) : "${i.set_rule}:${i.community}" => i }
+  ]) : "${i.set_rule}/${i.community}" => i }
 
   set_rules_set_as_path = { for i in flatten([
     for key, value in local.route_map_set_rules : [for v in value.set_as_path : {
@@ -1235,7 +1241,7 @@ locals {
       set_rule      = value.set_rule
       tenant        = value.tenant
     }]
-  ]) : "${i.set_rule}:${i.criteria}" => i }
+  ]) : "${i.set_rule}/${i.criteria}" => i }
 
   set_rules_set_communities = { for i in flatten([
     for key, value in local.route_map_set_rules : [for v in value.set_communities : {
@@ -1244,7 +1250,7 @@ locals {
       set_rule  = key
       tenant    = var.tenant
     }]
-  ]) : "${i.set_rule}:${i.criteria}" => i }
+  ]) : "${i.set_rule}/${i.criteria}" => i }
 
   set_rules_set_dampening = { for i in flatten([
     for key, value in local.route_map_set_rules : [for v in value.set_dampening : {
@@ -1294,7 +1300,7 @@ locals {
       set_rule               = lookup(v, "set_rule", local.rm.contexts.set_rule)
       tenant                 = value.tenant
     }]
-  ]) : "${i.route_map}:${i.name}" => i }
+  ]) : "${i.route_map}/${i.name}" => i }
 
 
   #__________________________________________________________

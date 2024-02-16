@@ -223,7 +223,7 @@ resource "mso_schema_template_contract" "map" {
   display_name  = each.key
   filter_type   = each.value.apply_both_directions == true ? "bothWay" : "oneWay"
   priority      = each.value.qos_class
-  schema_id     = data.mso_schema.map[each.value.schema].id
+  schema_id     = data.mso_schema.map[each.value.ndo.schema].id
   scope         = each.value.scope
   target_dscp   = each.value.target_dscp
   template_name = each.value.template
@@ -236,10 +236,10 @@ resource "mso_schema_template_contract" "map" {
         filter_relationship.value.log
         ]) ? compact(concat([
           length(regexall(true, filter_relationship.value.enable_policy_compression)) > 0 ? "no_stats" : ""], [
-          length(regexall(true, filter_relationship.value.log)) > 0 ? "log" : ""]
+        length(regexall(true, filter_relationship.value.log)) > 0 ? "log" : ""]
       )) : ["none"]
       filter_name          = filter_relationship.value.name
-      filter_schema_id     = mso_schema.map[each.value.schema].id
+      filter_schema_id     = mso_schema.map[each.value.ndo.schema].id
       filter_template_name = each.value.template
       filter_type          = filter_relationship.value.apply_both_directions == false ? "oneWay" : "bothWay"
       priority             = filter_relationship.value.qos_class

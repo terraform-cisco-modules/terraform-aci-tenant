@@ -39,10 +39,10 @@ resource "aci_bridge_domain" "map" {
   mac                 = each.value.l3_configurations.custom_mac_address
   # class: l3extOut
   relation_fv_rs_bd_to_out = length(each.value.l3_configurations.associated_l3outs
-  ) > 0 ? [for v in each.value.l3_configurations.associated_l3outs : "uni/tn-${v.tenant}/out-${v.l3outs[0]}"] : []
+  ) > 0 ? [for v in each.value.l3_configurations.associated_l3outs : "uni/tn-${v.tenant}/out-${v.l3out}"] : []
   # class: rtctrlProfile
   relation_fv_rs_bd_to_profile = join(",", [
-    for v in each.value.l3_configurations.associated_l3outs : "uni/tn-${v.tenant}/out-${v.l3out[0]}/prof-${v.route_profile}" if v.route_profile != ""
+    for v in each.value.l3_configurations.associated_l3outs : "uni/tn-${v.tenant}/out-${v.l3out}/prof-${v.route_profile}" if v.route_profile != ""
   ])
   # class: monEPGPol
   #relation_fv_rs_bd_to_nd_p = length(compact([each.value.nd_policy])
@@ -87,7 +87,7 @@ ________________________________________________________________________________
 resource "aci_bd_dhcp_label" "map" {
   depends_on       = [aci_bridge_domain.map]
   for_each         = { for k, v in local.bridge_domain_dhcp_labels : k => v if local.controller.type == "apic" }
-  bridge_domain_dn = "uni/tn-${each.value.tenant}/BD-${each.value.bridge_domain}"
+  bridge_domain_dn = aci_bridge_domain.map[each.value.bridge_domain].id
   name             = each.value.name
   owner            = each.value.scope
   relation_dhcp_rs_dhcp_option_pol = length(compact([each.value.dhcp_option_policy])
@@ -151,7 +151,7 @@ resource "aci_rest_managed" "bridge_domain_annotations" {
       ]
     ]) : "${i.bridge_domain}:${i.key}" => i if local.controller.type == "apic"
   }
-  dn         = "uni/tn-${each.value.tenant}/BD-${each.value.bridge_domain}/annotationKey-[${each.value.key}]"
+  dn         = "${aci_bridge_domain.map[each.value.bridge_domain].id}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
   content = {
     key   = each.value.key
@@ -174,7 +174,7 @@ resource "aci_rest_managed" "bridge_domain_global_alias" {
   depends_on = [aci_bridge_domain.map]
   for_each   = { for k, v in local.bridge_domains : k => v if v.general.global_alias != "" && local.controller.type == "apic" }
   class_name = "tagAliasInst"
-  dn         = "uni/tn-${each.key}/BD-${each.value.bridge_domain}/alias"
+  dn         = "${aci_bridge_domain.map[each.value.bridge_domain].id}/alias"
   content = {
     name = each.value.general.global_alias
   }
@@ -193,7 +193,7 @@ ________________________________________________________________________________
 resource "aci_rest_managed" "rogue_coop_exception_list" {
   depends_on = [aci_bridge_domain.map]
   for_each   = local.rogue_coop_exception_list
-  dn         = "uni/tn-${each.value.tenant}/BD-${each.value.bridge_domain}/rgexpmac-${each.value.mac_address}"
+  dn         = "${aci_bridge_domain.map[each.value.bridge_domain].id}/rgexpmac-${each.value.mac_address}"
   class_name = "fvRogueExceptionMac"
   content = {
     mac = each.value.mac_address

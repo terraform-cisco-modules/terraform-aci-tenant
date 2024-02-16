@@ -499,24 +499,29 @@ resource "mso_schema_template_anp_epg_contract" "map" {
   lifecycle { ignore_changes = [contract_schema_id, schema_id] }
 }
 
-resource "mso_schema_site_anp_epg_static_port" "static_port" {
-  provider             = mso
-  depends_on           = [mso_schema_template_anp_epg.map]
-  for_each             = { for k, v in local.epg_to_static_paths : k => v if local.controller.type == "ndo" }
-  anp_name             = each.value.application_profile
-  deployment_immediacy = each.value.instrumentation_immediacy
-  epg_name             = each.value.application_epg
-  leaf                 = each.value.path_type == "vpc" ? each.value.vpc_pair : each.value.node_id
-  micro_seg_vlan = each.value.encapsulation_type == "micro_seg" && length(each.value.vlans
-  ) == 2 ? element(each.value.vlans, 1) : null
-  mode          = each.value.node
-  path          = each.value.interface
-  path_type     = each.value.path_type
-  pod           = each.value.pod_id
+resource "mso_schema_site_anp_epg_bulk_staticport" "static_port" {
+  provider      = mso
+  depends_on    = [mso_schema_template_anp_epg.map]
+  for_each      = { for k, v in local.epg_to_static_paths : k => v if local.controller.type == "ndo" && length(v.static_paths) > 0 }
+  anp_name      = each.value.application_profile
+  epg_name      = each.value.application_epg
   schema_id     = data.mso_schema.map[each.value.ndo.schema].id
   site_id       = data.mso_site.map[each.value.site].id
   template_name = each.value.ndo.template
-  vlan          = element(each.value.vlans, 0)
+  dynamic "static_ports" {
+    for_each = { for v in each.value.static_ports : "${v.pod}:${v.leaf}:${v.path}" => v }
+    content {
+      deployment_immediacy = static_ports.value.instrumentation_immediacy
+      leaf                 = static_ports.value.path_type == "vpc" ? static_ports.value.vpc_pair : static_ports.value.node_id
+      micro_seg_vlan = static_ports.value.encapsulation_type == "micro_seg" && length(static_ports.value.vlans
+      ) == 2 ? element(static_ports.value.vlans, 1) : null
+      mode      = static_ports.value.node
+      path      = static_ports.value.interface
+      path_type = static_ports.value.path_type
+      pod       = static_ports.value.pod_id
+      vlan      = element(static_ports.value.vlans, 0)
+    }
+  }
   lifecycle {
     ignore_changes = [
       schema_id,

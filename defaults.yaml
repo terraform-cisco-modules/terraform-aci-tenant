@@ -242,6 +242,7 @@ defaults:
             name: ''
             ndo:
               schema: ''
+              sites: []
               template: ''
             tenant: ''
         l3_configurations:

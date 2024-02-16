@@ -117,7 +117,7 @@ resource "aci_rest_managed" "vrf_annotations" {
       ]
     ]) : "${i.tenant}:${i.vrf}:${i.key}" => i if local.controller.type == "apic" && i.create == true
   }
-  dn         = "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/annotationKey-[${each.value.key}]"
+  dn         = "${aci_vrf.map[each.value.vrf].id}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
   content = {
     key   = each.value.key
@@ -139,7 +139,7 @@ resource "aci_rest_managed" "vrf_global_alias" {
   depends_on = [aci_vrf.map]
   for_each   = { for k, v in local.vrfs : k => v if v.global_alias != "" && local.controller.type == "apic" && v.create == true }
   class_name = "tagAliasInst"
-  dn         = "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/alias"
+  dn         = "${aci_vrf.map[each.value.vrf].id}/alias"
   content = {
     name = each.value.global_alias
   }
@@ -199,7 +199,7 @@ resource "aci_rest_managed" "vzany_provider_contracts" {
     aci_contract.map
   ]
   for_each   = { for k, v in local.vzany_contracts : k => v if local.controller.type == "apic" && v.contract_type == "provided" }
-  dn         = "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/any/rsanyToProv-${each.value.contract}"
+  dn         = "${aci_vrf.map[each.value.vrf].id}/any/rsanyToProv-${each.value.contract}"
   class_name = "vzRsAnyToProv"
   content = {
     #    matchT       = each.value.label_match_criteria
@@ -228,9 +228,9 @@ resource "aci_rest_managed" "vzany_contracts" {
   for_each   = { for k, v in local.vzany_contracts : k => v if local.controller.type == "apic" && v.contract_type != "provided" }
   dn = length(regexall(
     "consumed", each.value.contract_type)
-    ) > 0 ? "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/any/rsanyToCons-${each.value.contract}" : length(regexall(
+    ) > 0 ? "${aci_vrf.map[each.value.vrf].id}/any/rsanyToCons-${each.value.contract}" : length(regexall(
     "interface", each.value.contract_type)
-  ) > 0 ? "uni/tn-${each.value.tenant}/ctx-${each.value.vrf}/any/rsanyToConsif-${each.value.contract}" : ""
+  ) > 0 ? "${aci_vrf.map[each.value.vrf].id}/any/rsanyToConsif-${each.value.contract}" : ""
   class_name = length(regexall(
     "consumed", each.value.contract_type)
     ) > 0 ? "vzRsAnyToCons" : length(regexall(

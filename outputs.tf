@@ -169,3 +169,7 @@ output "tenants" {
 output "aaeps" {
   value = var.model.aaep_to_epgs
 }
+
+output "zepgs" {
+  value = local.application_epgs
+}
