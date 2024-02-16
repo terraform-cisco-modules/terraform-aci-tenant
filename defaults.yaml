@@ -25,7 +25,7 @@ defaults:
         alias: ''
         annotations: []
         bridge_domain: default
-        combine_description: false
+        combine_description: ''
         contract_exception_tag: 0
         contracts:
             contract_type: provided # consumed|contract_interface|intra_epg|provided|taboo

@@ -226,7 +226,7 @@ resource "mso_schema_template_bd" "map" {
     }
   }
   description  = each.value.general.description
-  display_name = each.value.combine_description == true ? "${each.value.name}-${each.value.general.description}" : each.value.name
+  display_name = length(each.value.combine_description) > 0 ? "${each.value.name}${each.value.combine_description}${each.value.general.description}" : each.value.name
   name         = each.value.name
   #
   intersite_bum_traffic           = each.value.advanced_troubleshooting.intersite_bum_traffic_allow
