@@ -23,8 +23,8 @@ A Terraform module to configure ACI Tenant Policies.
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aci"></a> [aci](#provider\_aci) | 2.13.0 |
 | <a name="provider_mso"></a> [mso](#provider\_mso) | 1.0.0 |
+| <a name="provider_aci"></a> [aci](#provider\_aci) | 2.13.2 |
 ## Inputs
 
 | Name | Description | Type | Default | Required |
@@ -43,6 +43,7 @@ A Terraform module to configure ACI Tenant Policies.
 | <a name="output_policies"></a> [policies](#output\_policies) | n/a |
 | <a name="output_tenants"></a> [tenants](#output\_tenants) | n/a |
 | <a name="output_aaeps"></a> [aaeps](#output\_aaeps) | n/a |
+| <a name="output_zepgs"></a> [zepgs](#output\_zepgs) | n/a |
 ## Resources
 
 | Name | Type |
@@ -165,8 +166,8 @@ A Terraform module to configure ACI Tenant Policies.
 | [aci_vrf_snmp_context.map](https://registry.terraform.io/providers/CiscoDevNet/aci/latest/docs/resources/vrf_snmp_context) | resource |
 | [mso_schema.map](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema) | resource |
 | [mso_schema_site.map](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site) | resource |
+| [mso_schema_site_anp_epg_bulk_staticport.static_port](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site_anp_epg_bulk_staticport) | resource |
 | [mso_schema_site_anp_epg_domain.map](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site_anp_epg_domain) | resource |
-| [mso_schema_site_anp_epg_static_port.static_port](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site_anp_epg_static_port) | resource |
 | [mso_schema_site_bd.map](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site_bd) | resource |
 | [mso_schema_site_bd_l3out.map](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site_bd_l3out) | resource |
 | [mso_schema_site_vrf.map](https://registry.terraform.io/providers/CiscoDevNet/mso/latest/docs/resources/schema_site_vrf) | resource |
