@@ -57,7 +57,7 @@ resource "aci_rest_managed" "l3out_annotations" {
       ]
     ]) : "${i.tenant}:${i.l3out}:${i.key}" => i if local.controller.type == "apic"
   }
-  dn         = "uni/tn-${each.value.tenant}/out-${each.value.l3out}/annotationKey-[${each.value.key}]"
+  dn         = "${aci_l3_outside.map[each.value.l3out].id}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
   content = {
     key   = each.value.key
@@ -79,7 +79,7 @@ resource "aci_rest_managed" "l3out_global_alias" {
   depends_on = [aci_l3_outside.map]
   for_each   = { for k, v in local.l3outs : k => v if v.global_alias != "" && local.controller.type == "apic" }
   class_name = "tagAliasInst"
-  dn         = "uni/tn-${each.value.tenant}/out-${each.value.l3out}/alias"
+  dn         = "${aci_l3_outside.map[each.value.l3out].id}/alias"
   content = {
     name = each.value.global_alias
   }
@@ -98,7 +98,7 @@ ________________________________________________________________________________
 resource "aci_rest_managed" "l3out_route_profiles_for_redistribution" {
   depends_on = [aci_l3_outside.map]
   for_each   = local.l3out_route_profiles_for_redistribution
-  dn         = "uni/tn-${each.value.tenant}/out-${each.value.l3out}/rsredistributePol-[${each.value.route_map}]-${each.value.source}"
+  dn         = "${aci_l3_outside.map[each.value.l3out].id}/rsredistributePol-[${each.value.route_map}]-${each.value.source}"
   class_name = "l3extRsRedistributePol"
   content = {
     src = each.value.source
@@ -120,7 +120,7 @@ ________________________________________________________________________________
 resource "aci_rest_managed" "l3out_multicast" {
   depends_on = [aci_l3_outside.map]
   for_each   = { for k, v in local.l3outs : k => v if local.controller.type == "apic" && (v.pim == true || v.pimv6 == true) }
-  dn         = "uni/tn-${each.value.tenant}/out-${each.key}/pimextp"
+  dn         = "${aci_l3_outside.map[each.key].id}/pimextp"
   class_name = "pimExtP"
   content = {
     #annotation = each.value.annotation
@@ -146,7 +146,7 @@ ________________________________________________________________________________
 resource "aci_rest_managed" "l3out_consumer_label" {
   depends_on = [aci_l3_outside.map]
   for_each   = { for k, v in local.l3outs : k => v if local.controller.type == "apic" && v.consumer_label == "hcloudGolfLabel" }
-  dn         = "uni/tn-${each.value.tenant}/out-${each.key}/conslbl-hcloudGolfLabel"
+  dn         = "${aci_l3_outside.map[each.key].id}/conslbl-hcloudGolfLabel"
   class_name = "l3extConsLbl"
   content    = { name = "hcloudGolfLabel" }
 }

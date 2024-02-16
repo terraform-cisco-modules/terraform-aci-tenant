@@ -662,7 +662,7 @@ locals {
   #==================================
 
   l3outs = {
-    for v in lookup(local.networking, "l3outs", []) : v.name => merge(
+    for v in lookup(local.networking, "l3outs", []) : "${local.npfx.l3outs}${v.name}${local.nsfx.l3outs}" => merge(
       local.l3out, v, {
         annotations = length(lookup(v, "annotations", local.l3out.annotations)
         ) > 0 ? lookup(v, "annotations", local.l3out.annotations) : local.annotations
@@ -712,6 +712,7 @@ locals {
           l3out_contract_masters = [
             for s in lookup(v, "l3out_contract_masters", []) : { external_epg = s.external_epg, l3out = s.l3out }
           ]
+          name = "${local.npfx.external_epgs}${v.name}${local.nsfx.external_epgs}"
           ndo = {
             schema   = lookup(lookup(v, "ndo", {}), "schema", value.ndo.schema)
             sites    = lookup(lookup(v, "ndo", {}), "sites", value.ndo.sites)
@@ -731,7 +732,8 @@ locals {
     for key, value in local.l3out_external_epgs : [
       for v in value.contracts : merge(
         local.l3out.external_epgs.contracts, v, {
-          contract = v.name, external_epg = value.name, l3out = value.l3out,
+          contract     = "${local.npfx.contracts}${v.name}${local.nsfx.contracts}",
+          external_epg = value.name, l3out = value.l3out,
           ndo = {
             schema   = lookup(lookup(v, "ndo", {}), "schema", value.ndo.schema)
             sites    = lookup(lookup(v, "ndo", {}), "sites", value.ndo.sites)
@@ -786,11 +788,12 @@ locals {
         local.lnp, v, {
           l3out              = key, tenant = value.tenant
           interface_profiles = lookup(v, "logical_interface_profiles", [])
+          name               = "${local.npfx.logical_node_profiles}${v.name}${local.nsfx.logical_node_profiles}"
           ndo                = value.ndo
           nodes = [
             for s in lookup(v, "nodes", []) : {
               l3out         = key, node_id = s.node_id, router_id = s.router_id, tenant = value.tenant
-              node_profile  = "${key}/${v.name}"
+              node_profile  = "${key}/${local.npfx.logical_node_profiles}${v.name}${local.nsfx.logical_node_profiles}"
               pod_id        = lookup(v, "pod_id", local.lnp.pod_id)
               static_routes = lookup(v, "static_routes", [])
               use_router_id_as_loopback = lookup(
@@ -872,6 +875,7 @@ locals {
               netflow_policy = s.netflow_policy
             }
           ]
+          name                   = "${local.npfx.logical_interface_profiles}${v.name}${local.nsfx.logical_interface_profiles}"
           ndo                    = value.ndo
           node_profile           = key
           nodes                  = [for keys, values in value.nodes : value.nodes[keys]["node_id"]]

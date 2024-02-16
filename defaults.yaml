@@ -212,7 +212,7 @@ defaults:
             #netflow_policy: ''
           optimize_wan_bandwidth: false
           rogue_coop_exception_list: []
-        combine_description: false
+        combine_description: ''
         dhcp_relay_labels:
           #dhcp_option_policy: ''
           #dhcp_option_policy_version: 1 # Used by NDO

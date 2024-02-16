@@ -385,7 +385,7 @@ ________________________________________________________________________________
 #}
 resource "aci_bulk_epg_to_static_path" "map" {
   depends_on         = [aci_application_epg.map]
-  for_each           = { for k, v in local.epg_to_static_paths : k => v if local.controller.type == "apic" }
+  for_each           = { for k, v in local.epg_to_static_paths : k => v if local.controller.type == "apic" && length(v.static_paths) > 0 }
   application_epg_dn = aci_application_epg.map[each.key].id
   dynamic "static_path" {
     for_each = each.value.static_paths

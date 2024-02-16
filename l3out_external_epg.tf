@@ -56,7 +56,7 @@ resource "aci_rest_managed" "external_epg_intra_epg_contracts" {
   for_each = {
     for k, v in local.l3out_ext_epg_contracts : k => v if local.controller.type == "apic" && v.contract_type == "intra_epg"
   }
-  dn         = "uni/tn-${var.tenant}/out-${each.value.l3out}/instP-${each.value.epg}/rsintraEpg-${each.value.contract}"
+  dn         = "${aci_external_network_instance_profile.map[each.value.external_epg].id}/rsintraEpg-${each.value.contract}"
   class_name = "fvRsIntraEpg"
   content = {
     tnVzBrCPName = each.value.contract
@@ -88,11 +88,11 @@ resource "aci_rest_managed" "external_epg_contracts" {
   }
   dn = length(regexall(
     "consumed", each.value.contract_type)
-    ) > 0 ? "uni/tn-${var.tenant}/out-${each.value.l3out}/instP-${each.value.external_epg}/rscons-${each.value.contract}" : length(
+    ) > 0 ? "${aci_external_network_instance_profile.map[each.value.external_epg].id}/rscons-${each.value.contract}" : length(
     regexall("interface", each.value.contract_type)
-    ) > 0 ? "uni/tn-${var.tenant}/out-${each.value.l3out}/instP-${each.value.external_epg}/rsconsIf-${each.value.contract}" : length(
+    ) > 0 ? "${aci_external_network_instance_profile.map[each.value.external_epg].id}/rsconsIf-${each.value.contract}" : length(
     regexall("provided", each.value.contract_type)
-  ) > 0 ? "uni/tn-${var.tenant}/out-${each.value.l3out}/instP-${each.value.external_epg}/rsprov-${each.value.contract}" : ""
+  ) > 0 ? "${aci_external_network_instance_profile.map[each.value.external_epg].id}/rsprov-${each.value.contract}" : ""
   class_name = length(regexall(
     "consumed", each.value.contract_type)
     ) > 0 ? "fvRsCons" : length(regexall(
@@ -115,7 +115,7 @@ resource "aci_rest_managed" "external_epg_contracts_taboo" {
     for k, v in local.l3out_ext_epg_contracts : k => v if length(regexall("taboo", v.contract_type)
     ) > 0 && local.controller.type == "apic"
   }
-  dn         = "uni/tn-${var.tenant}/out-${each.value.l3out}/instP-${each.value.external_epg}/rsprotBy-${each.value.contract}"
+  dn         = "${aci_external_network_instance_profile.map[each.value.external_epg].id}/rsprotBy-${each.value.contract}"
   class_name = "fvRsProtBy"
   content = {
     tDn           = "uni/tn-${each.value.tenant}/taboo-${each.value.contract}"
