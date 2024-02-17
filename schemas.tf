@@ -34,3 +34,28 @@ resource "mso_schema_site" "map" {
 }
 
 
+#resource "mso_schema_template_deploy_ndo" "name" {
+#  depends_on = [
+#    mso_schema.map,
+#    mso_schema_site.map,
+#    mso_schema_site_anp_epg_bulk_staticport.static_port,
+#    mso_schema_site_anp_epg_domain.map,
+#    mso_schema_site_bd.map,
+#    mso_schema_site_bd_l3out.map,
+#    mso_schema_site_vrf.map,
+#    mso_schema_template_anp.map,
+#    mso_schema_template_anp_epg.map,
+#    mso_schema_template_bd.map,
+#    mso_schema_template_bd_subnet.map,
+#    mso_schema_template_contract.map,
+#    mso_schema_template_filter_entry.map,
+#    mso_schema_template_l3out.map,
+#    mso_tenant.map
+#  ]
+#  for_each      = { for k, v in local.template_sites : k => v }
+#  schema_id     = data.mso_schema.map[each.value.schema].id
+#  template_name = each.value.template
+#  lifecycle {
+#    ignore_changes = [schema_id]
+#  }
+#}

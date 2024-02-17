@@ -225,14 +225,13 @@ locals {
         local.general, lookup(v, "general", {}), {
           description = lookup(lookup(v, "general", {}), "description", lookup(v, "description", ""))
           tenant      = var.tenant
-        },
-        { vrf = [for s in [lookup(lookup(v, "general", {}), "vrf", {})] : merge(
-          local.general.vrf, lookup(lookup(v, "general", {}), "vrf", {}),
-          {
-            name   = "${local.npfx.vrfs}${s.name}${local.nsfx.vrfs}"
-            tenant = lookup(s, "tenant", var.tenant)
-          }
-        )][0] }
+          vrf = [for s in [lookup(lookup(v, "general", {}), "vrf", {})] : merge(
+            local.general.vrf, lookup(lookup(v, "general", {}), "vrf", {}), {
+              name   = "${local.npfx.vrfs}${s.name}${local.nsfx.vrfs}"
+              tenant = lookup(s, "tenant", var.tenant)
+            }
+          )][0]
+        }
       )
       l3_configurations = merge(local.l3, lookup(v, "l3_configurations", {}), {
         associated_l3outs = flatten([for e in lookup(lookup(v, "l3_configurations", {}), "associated_l3outs", {}) : [
@@ -254,7 +253,6 @@ locals {
       tenant = var.tenant
     }
   }
-  #ndo_bd_sites = {}
   ndo_bd_sites = { for i in flatten([
     for k, v in local.bridge_domains : [
       for s in range(length(v.ndo.sites)) : {
@@ -358,7 +356,6 @@ locals {
       template = lookup(v, "template", "")
     } if length(compact([lookup(v, "template", "")])) > 0
   ]
-
   merge_templates = { for i in flatten([
     for v in local.epgs_with_template : [
       merge(local.template_epgs[index(local.template_epgs[*].template_name, v.template)], local.epgs[v.name])
@@ -470,8 +467,8 @@ locals {
         pod_id                    = lookup(v, "pod_id", 1)
         site                      = lookup(v, "site", "")
         instrumentation_immediacy = lookup(i, "instrumentation_immediacy", lookup(v, "instrumentation_immediacy", "immediate"))
-        vpc_pair = flatten([for e in lookup(var.model.switch, "vpc_domains", []
-        ) : e.switches if contains([for d in e.switches : tostring(d)], tostring(v.node_id))])
+        vpc_pair = distinct(flatten([for e in lookup(var.model.switch, "vpc_domains", []
+        ) : e.switches if contains([for d in e.switches : tostring(d)], tostring(v.node_id))]))
         mode = length(regexall("(,|-)", jsonencode(lookup(i, "allowed_vlans", "")))
         ) > 0 ? "trunk" : "native"
         vlan_split = length(regexall("-", lookup(i, "allowed_vlans", ""))
@@ -494,18 +491,24 @@ locals {
   })]
   epg_to_static_paths = {
     for k, v in local.application_epgs : k => {
+      application_profile = v.application_profile
+      application_epg     = v.name
+      ndo                 = v.ndo
+      sites               = distinct(compact([for e in local.switch_loop_3 : lookup(e, "site", "")]))
       static_paths = [
         for e in local.switch_loop_3 : {
-          access                    = e.access
-          distinguished_name        = "${aci_application_epg.map[k].id}/rspathAtt-"
+          access = e.access
+          distinguished_name = length(regexall("apic", local.controller.type)
+          ) > 0 ? "${aci_application_epg.map[k].id}/rspathAtt-" : ""
           encapsulation_type        = e.encapsulation_type
           instrumentation_immediacy = e.instrumentation_immediacy == "on-demand" ? "lazy" : "immediate"
-          mode                      = contains(v.vlans, tonumber(e.access)) ? "native" : e.mode
-          ndo                       = v.ndo
-          node_id                   = e.node_id
-          path_type                 = e.path_type
-          pod_id                    = e.pod_id
-          site                      = e.site
+          interface                 = e.interface
+          leaf = length(regexall("^vpc$", e.path_type)
+          ) > 0 ? "${element(e.vpc_pair, 0)}-${element(e.vpc_pair, 1)}" : e.node_id
+          mode      = contains(v.vlans, tonumber(e.access)) ? "native" : e.mode
+          node_id   = e.node_id
+          path_type = e.path_type
+          pod_id    = e.pod_id
           tdn = length(regexall("^vpc$", e.path_type)
             ) > 0 ? "topology/pod-${e.pod_id}/protpaths-${element(e.vpc_pair, 0)}-${element(e.vpc_pair, 1)}/pathep-[${e.interface}]" : length(
             regexall("^dpc$", e.path_type)
@@ -520,6 +523,13 @@ locals {
       ]
     } if v.epg_type == "standard"
   }
+
+  ndo_epg_to_static_paths = { for i in flatten([
+    for k, v in local.epg_to_static_paths : [
+      for e in v.sites : merge({ site = e }, v)
+    ] if local.controller.type == "ndo"
+    ]
+  ) : "${i.application_profile}/${i.application_epg}/${i.site}" => i }
 
   contract_to_epgs = { for i in flatten([
     for key, value in local.application_epgs : [
@@ -649,7 +659,7 @@ locals {
         }
       )
     ]
-  ]) : "${i.filter_name}/${i.name}" => i }
+  ]) : "${i.filter_name}:path${i.name}" => i }
 
 
   #__________________________________________________________
@@ -733,7 +743,7 @@ locals {
       for v in value.contracts : merge(
         local.l3out.external_epgs.contracts, v, {
           contract     = "${local.npfx.contracts}${v.name}${local.nsfx.contracts}",
-          external_epg = value.name, l3out = value.l3out,
+          external_epg = key,
           ndo = {
             schema   = lookup(lookup(v, "ndo", {}), "schema", value.ndo.schema)
             sites    = lookup(lookup(v, "ndo", {}), "sites", value.ndo.sites)
@@ -743,7 +753,7 @@ locals {
         }
       )
     ]
-  ]) : "${i.l3out}/${i.external_epg}/${i.contract_type}/${i.contract}" => i }
+  ]) : "${i.external_epg}/${i.contract_type}/${i.contract}" => i }
 
   l3out_external_epg_subnets = { for i in flatten([
     for key, value in local.l3out_external_epgs : [for v in lookup(value, "subnets", []) : [

@@ -282,7 +282,7 @@ resource "mso_schema_template_bd_subnet" "map" {
   depends_on         = [mso_schema_template_bd.map, mso_schema_site_bd.map]
   for_each           = { for k, v in local.bridge_domain_subnets : k => v if local.controller.type == "ndo" && v.create == true }
   bd_name            = each.value.bridge_domain
-  description        = each.value.description
+  description        = length(each.value.description) > 0 ? length(each.value.description) : each.value.gateway_ip
   ip                 = each.value.gateway_ip
   no_default_gateway = each.value.subnet_control.no_default_svi_gateway
   schema_id          = data.mso_schema.map[each.value.ndo.schema].id

@@ -363,26 +363,6 @@ GUI Location:
 Tenants > {tenant} > Application Profiles > {application_profile} > Application EPGs > {application_epg} > Static Ports > {GUI_Static}
 _______________________________________________________________________________________________________________________
 */
-#resource "aci_rest_managed" "epg_to_static_paths" {
-#  depends_on = [aci_application_epg.map]
-#  for_each   = { for k, v in local.epg_to_static_paths : k => v if local.controller.type == "apic" }
-#  dn         = "${each.value.distinguished_name}[${each.value.tdn}]"
-#  class_name = "fvRsPathAtt"
-#  content = {
-#    encap = length(
-#      regexall("micro_seg", each.value.encapsulation_type)
-#      ) > 0 ? "vlan-${element(each.value.vlans, 0)}" : length(
-#      regexall("qinq", each.value.encapsulation_type)
-#      ) > 0 ? "qinq-${element(each.value.vlans, 0)}-${element(each.value.vlans, 1)}" : length(
-#      regexall("vlan", each.value.encapsulation_type)
-#      ) > 0 ? "vlan-${element(each.value.vlans, 0)}" : length(
-#      regexall("vxlan", each.value.encapsulation_type)
-#    ) > 0 ? "vxlan-${element(each.value.vlans, 0)}" : ""
-#    mode         = each.value.mode
-#    primaryEncap = each.value.encapsulation_type == "micro_seg" ? "vlan-${element(each.value.vlans, 1)}" : "unknown"
-#    tDn          = each.value.tdn
-#  }
-#}
 resource "aci_bulk_epg_to_static_path" "map" {
   depends_on         = [aci_application_epg.map]
   for_each           = { for k, v in local.epg_to_static_paths : k => v if local.controller.type == "apic" && length(v.static_paths) > 0 }
@@ -401,7 +381,7 @@ resource "aci_bulk_epg_to_static_path" "map" {
         regexall("vxlan", static_path.value.encapsulation_type)
       ) > 0 ? "vxlan-${element(static_path.value.vlans, 0)}" : ""
       interface_dn = "${static_path.value.distinguished_name}[${static_path.value.tdn}]"
-      mode         = static_path.value.mode
+      mode         = static_path.value.mode == "trunk" ? "regular" : static_path.value.mode == "access" ? "untagged" : "native"
       primary_encap = length(regexall("micro_seg", static_path.value.encapsulation_type)
       ) > 0 ? "vlan-${element(static_path.value.vlans, 1)}" : "unknown"
     }
@@ -450,28 +430,51 @@ resource "mso_schema_site_anp_epg_domain" "map" {
   }
   allow_micro_segmentation = length(regexall("vmm", each.value.domain_type)
   ) > 0 ? each.value.allow_micro_segmentation : null
-  anp_name                 = each.value.application_profile
-  deploy_immediacy         = each.value.deploy_immediacy == "on-demand" ? "lazy" : each.value.deploy_immediacy
-  domain_name              = each.value.domain
-  domain_type              = length(regexall("vmm", each.value.domain_type)) > 0 ? "vmmDomain" : "physicalDomain"
-  enhanced_lag_policy_name = length(regexall("vmm", each.value.domain_type)) > 0 ? each.value.enhanced_lag_policy : null
+  allow_promiscuous = length(regexall("vmm", each.value.domain_type)
+  ) > 0 ? each.value.security.allow_promiscuous : null
+  anp_name = each.value.application_profile
+  binding_type = each.value.port_binding == "static_binding" && length(
+    regexall("vmm", each.value.domain_type)) > 0 ? "static" : each.value.port_binding == "dynamic_binding" && length(
+    regexall("vmm", each.value.domain_type)) > 0 ? "dynamic" : each.value.port_binding == "ephemeral" && length(
+    regexall("vmm", each.value.domain_type)) > 0 ? each.value.port_binding : length(
+  regexall("vmm", each.value.domain_type)) > 0 ? "none" : null
+  custom_epg_name = length(regexall("vmm", each.value.domain_type)
+  ) > 0 ? each.value.custom_epg_name : null
+  delimiter = length(regexall("vmm", each.value.domain_type)
+  ) > 0 ? each.value.delimiter : null
+  deploy_immediacy = each.value.deploy_immediacy == "on-demand" ? "lazy" : each.value.deploy_immediacy
+  domain_name      = each.value.domain
+  domain_type      = length(regexall("vmm", each.value.domain_type)) > 0 ? "vmmDomain" : "physicalDomain"
   enhanced_lag_policy_dn = length(regexall("vmm", each.value.domain_type)) > 0 && length(
     compact([each.value.enhanced_lag_policy])
   ) > 0 ? "uni/vmmp-${each.value.switch_provider}/dom-${each.value.domain}/vswitchpolcont/enlacplagp-${each.value.enhanced_lag_policy}" : null
-  epg_name = each.value.application_epg
-  micro_seg_vlan_type = length(regexall("vmm", each.value.domain_type)
-  ) > 0 && length(regexall("static", each.value.vlan_mode)) > 0 ? "vlan" : null
+  enhanced_lag_policy_name = length(regexall("vmm", each.value.domain_type)) > 0 ? each.value.enhanced_lag_policy : null
+  epg_name                 = each.value.application_epg
+  forged_transmits = length(regexall("vmm", each.value.domain_type)
+  ) > 0 ? each.value.security.forged_transmits : null
+  mac_changes = length(regexall("vmm", each.value.domain_type)
+  ) > 0 ? each.value.security.mac_changes : null
   micro_seg_vlan = length(regexall("vmm", each.value.domain_type)) > 0 && length(regexall("static", each.value.vlan_mode)
   ) > 0 && length(each.value.vlans) > 1 ? element(each.value.vlans, 2) : null
-  port_encap_vlan_type = length(regexall("vmm", each.value.domain_type)
+  micro_seg_vlan_type = length(regexall("vmm", each.value.domain_type)
   ) > 0 && length(regexall("static", each.value.vlan_mode)) > 0 ? "vlan" : null
+  netflow = length(regexall("vmm", each.value.domain_type)
+  ) > 0 ? "disabled" : null
+  num_ports = length(regexall("vmm", each.value.domain_type)) > 0 && (length(regexall(
+    "dynamic_binding", each.value.port_binding)) > 0 || length(regexall("static_binding", each.value.port_binding)) > 0
+  ) ? each.value.number_of_ports : 0
+  port_allocation = length(regexall("vmm", each.value.domain_type)) > 0 && length(regexall(
+    "static_binding", each.value.port_binding)
+  ) > 0 ? each.value.port_allocation : null
   port_encap_vlan = length(regexall("vmm", each.value.domain_type)) > 0 && length(regexall("static", each.value.vlan_mode)
   ) > 0 && length(each.value.vlans) > 0 ? element(each.value.vlans, 1) : null
+  port_encap_vlan_type = length(regexall("vmm", each.value.domain_type)
+  ) > 0 && length(regexall("static", each.value.vlan_mode)) > 0 ? "vlan" : null
   resolution_immediacy = each.value.resolution_immediacy == "on-demand" ? "lazy" : each.value.resolution_immediacy
   schema_id            = data.mso_schema.map[each.value.ndo.schema].id
   site_id              = data.mso_site.map[each.value.site].id
-  switching_mode       = length(regexall("vmm", each.value.domain_type)) > 0 ? "native" : null
   switch_type          = length(regexall("vmm", each.value.domain_type)) > 0 ? "default" : null
+  switching_mode       = length(regexall("vmm", each.value.domain_type)) > 0 ? "native" : null
   template_name        = each.value.ndo.template
   vlan_encap_mode = length(regexall("vmm", each.value.domain_type)
   ) > 0 ? each.value.vlan_mode : null
@@ -499,26 +502,26 @@ resource "mso_schema_template_anp_epg_contract" "map" {
   lifecycle { ignore_changes = [contract_schema_id, schema_id] }
 }
 
-resource "mso_schema_site_anp_epg_bulk_staticport" "static_port" {
+resource "mso_schema_site_anp_epg_bulk_staticport" "map" {
   provider      = mso
   depends_on    = [mso_schema_template_anp_epg.map]
-  for_each      = { for k, v in local.epg_to_static_paths : k => v if local.controller.type == "ndo" && length(v.static_paths) > 0 }
+  for_each      = { for k, v in local.ndo_epg_to_static_paths : k => v if local.controller.type == "ndo" && length(v.static_paths) > 0 }
   anp_name      = each.value.application_profile
   epg_name      = each.value.application_epg
   schema_id     = data.mso_schema.map[each.value.ndo.schema].id
   site_id       = data.mso_site.map[each.value.site].id
   template_name = each.value.ndo.template
   dynamic "static_ports" {
-    for_each = { for v in each.value.static_ports : "${v.pod}:${v.leaf}:${v.path}" => v }
+    for_each = { for v in each.value.static_paths : "${v.pod_id}/${v.leaf}/${v.interface}" => v }
     content {
       deployment_immediacy = static_ports.value.instrumentation_immediacy
-      leaf                 = static_ports.value.path_type == "vpc" ? static_ports.value.vpc_pair : static_ports.value.node_id
+      leaf                 = static_ports.value.leaf
       micro_seg_vlan = static_ports.value.encapsulation_type == "micro_seg" && length(static_ports.value.vlans
       ) == 2 ? element(static_ports.value.vlans, 1) : null
-      mode      = static_ports.value.node
-      path      = static_ports.value.interface
+      mode      = static_ports.value.mode == "trunk" ? "regular" : static_ports.value.mode == "access" ? "untagged" : "native"
+      path      = length(regexall("vpc|dpc", static_ports.value.interface)) > 0 ? static_ports.value.interface : "eth${static_ports.value.interface}"
       path_type = static_ports.value.path_type
-      pod       = static_ports.value.pod_id
+      pod       = "pod-${static_ports.value.pod_id}"
       vlan      = element(static_ports.value.vlans, 0)
     }
   }
