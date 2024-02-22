@@ -1,4 +1,22 @@
 output "application_profiles" {
+  description = <<-EOT
+    Identifiers for Application Profiles:
+     * application_profiles:
+       - ACI: Tenants => {Tenant Name} => Application Profiles: {Name}
+       - NDO: Nexus Dashboard => Orchestrator => Configure => Tenant Templates => Applications: {Schema Name} => {Template} => Application Profile: {Name}
+       - application_epgs:
+         * ACI: Tenants => {Tenant Name} => Application Profiles: {Name} => Application EPGs: {Name}
+         * NDO: Nexus Dashboard => Orchestrator => Configure => Tenant Templates => Applications: {Schema Name} => {Template} => Application Profile: {Name} => EPGs: {Name}
+         * epg_to_contracts:
+           - ACI: Tenants => {Tenant Name} => Application Profiles: {Name} => Application EPGs: {Name} => Contracts
+           - NDO: Nexus Dashboard => Orchestrator => Configure => Tenant Templates => Applications: {Schema Name} => {Template} => Application Profile: {Name} => EPGs: {Name}: Contracts
+         * epg_to_domains:
+           - ACI: Tenants => {Tenant Name} => Application Profiles: {Name} => Application EPGs: {Name} => Domains
+           - NDO: Nexus Dashboard => Orchestrator => Configure => Tenant Templates => Applications: {Schema Name} => {Template} => Application Profile: {Name} => EPGs: {Name}: {Select Site}: Domains
+         * epg_to_static_paths:
+           - ACI: Tenants => {Tenant Name} => Application Profiles: {Name} => Application EPGs: {Name} => Static Ports
+           - NDO: Nexus Dashboard => Orchestrator => Configure => Tenant Templates => Applications: {Schema Name} => {Template} => Application Profile: {Name} => EPGs: {Name}: {Select Site}: Static Ports
+  EOT
   value = {
     application_profiles = local.controller.type == "apic" ? {
       for v in sort(keys(aci_application_profile.map)) : v => aci_application_profile.map[v].id
@@ -38,30 +56,60 @@ output "application_profiles" {
 }
 
 output "contracts" {
+  description = <<-EOT
+    Identifiers for Contracts:
+     * contracts:
+       - oob_contracts: Tenants => {Tenant Name} => Contracts => Out-of-Band Contracts: {Name}
+       - standard_contracts:
+         * ACI: Tenants => {Tenant Name} => Contracts => Standard: {Name}
+         * NDO: Nexus Dashboard => Orchestrator => Configure => Tenant Templates => Applications: {Schema Name} => {Template} => Contracts: {Name}
+       - taboo_contracts: Tenants => {Tenant Name} => Contracts => Taboos: {Name}
+     * filters:
+       - filters: Tenants => {Tenant Name} => Contracts => Filters: {Name}
+       - filter_entries:
+         * ACI: Tenants => {Tenant Name} => Contracts => Filters: {Name} => Entries
+         * NDO: Nexus Dashboard => Orchestrator => Configure => Tenant Templates => Applications: {Schema Name} => {Template} => Filter: {Name}
+  EOT
   value = {
     contracts = local.controller.type == "apic" ? {
-      oob_contracts = { for v in sort(keys(aci_rest_managed.oob_contracts)
-      ) : v => aci_rest_managed.oob_contracts[v].id }
-      standard_contracts = { for v in sort(keys(aci_contract.map)
-      ) : v => aci_contract.map[v].id }
-      taboo_contracts = { for v in sort(keys(aci_taboo_contract.map)
-      ) : v => aci_taboo_contract.map[v].id }
+      oob_contracts      = { for v in sort(keys(aci_rest_managed.oob_contracts)) : v => aci_rest_managed.oob_contracts[v].id }
+      standard_contracts = { for v in sort(keys(aci_contract.map)) : v => aci_contract.map[v].id }
+      taboo_contracts    = { for v in sort(keys(aci_taboo_contract.map)) : v => aci_taboo_contract.map[v].id }
       } : local.controller.type == "ndo" ? {
-      standard_contracts = { for v in sort(keys(mso_schema_template_contract.map)
-      ) : v => mso_schema_template_contract.map[v].id }
+      standard_contracts = { for v in sort(keys(mso_schema_template_contract.map)) : v => mso_schema_template_contract.map[v].id }
     } : {}
     filters = local.controller.type == "apic" ? {
-      filters = { for v in sort(keys(aci_filter.map)
-      ) : v => aci_filter.map[v].id }
-      filter_entries = { for v in sort(keys(aci_filter_entry.map)
-      ) : v => aci_filter_entry.map[v].id }
+      filters        = { for v in sort(keys(aci_filter.map)) : v => aci_filter.map[v].id }
+      filter_entries = { for v in sort(keys(aci_filter_entry.map)) : v => aci_filter_entry.map[v].id }
       } : local.controller.type == "ndo" ? {
-      filter_entries = { for v in sort(keys(mso_schema_template_filter_entry.map)
-      ) : v => mso_schema_template_filter_entry.map[v].id }
+      filter_entries = { for v in sort(keys(mso_schema_template_filter_entry.map)) : v => mso_schema_template_filter_entry.map[v].id }
     } : {}
   }
 }
 output "networking" {
+  description = <<-EOT
+    Identifiers for Tenant Networking:
+     * bridge_domains:
+       - ACI: Tenants => {Tenant Name} => Networking => Bridge Domains: {Name}
+       - NDO: Nexus Dashboard => Orchestrator => Configure => Tenant Templates => Applications: {Schema Name} => Bridge Domains: {Name}
+       - bridge_domain_subnets: Tenants => {Tenant Name} => Networking => Bridge Domains: {Name} => Subnets
+     * l3outs:
+       - ACI: Tenants => {Tenant Name} => Networking => L3Outs: {Name}
+       - NDO: Nexus Dashboard => Orchestrator => Configure => Tenant Templates => Applications: {Schema Name} => Bridge Domains: {Name}
+       - l3out_bgp_external_policy: Tenants => {Tenant Name} => Networking => L3Outs: {Name} => Policy => Enabled BGP/EIGRP/OSPF: BGP
+       - l3out_external_epgs: Tenants => Tenants => {Tenant Name} => Networking => L3Outs: {Name} => External EPGs: {Name}
+         * l3out_external_epg_subnets: Tenants => Tenants => {Tenant Name} => Networking => L3Outs: {Name} => External EPGs: {Name} => Subnets
+       - l3out_node_profiles: Tenants => {Tenant Name} => Networking => L3Outs: {Name} => Logical Node Profiles: {Name}
+         * l3out_interface_profiles: Tenants => {Tenant Name} => Networking => L3Outs: {Name} => Logical Node Profiles: {Name} => Logical Interface Profiles: {Name}
+           - l3out_interface_profile_ospf_interfaces: Tenants => {Tenant Name} => Networking => L3Outs: {Name} => Logical Node Profiles: {Name} => Logical Interface Profiles: {Name} => OSPF Interface Profile
+           - l3out_interface_profile_path_attachment: Tenants => {Tenant Name} => Networking => L3Outs: {Name} => Logical Node Profiles: {Name} => Logical Interface Profiles: {Name}: Routed Sub-Interfaces/Routed Interfaces/SVI/Floating SVI
+         * l3out_node_profile_bgp_peers:  Tenants => {Tenant Name} => Networking => L3Outs: {Name} => Logical Node Profiles: {Name}: BGP Peer Connectivity
+         * l3out_node_profile_static_routes:  Tenants => {Tenant Name} => Networking => L3Outs: {Name} => Logical Node Profiles: {Name}: (Double click node under Nodes): Static Routes
+         * l3out_ospf_external_policy:  Tenants => {Tenant Name} => Networking => L3Outs: {Name} => Policy => Enabled BGP/EIGRP/OSPF: OSPF
+     * vrf:
+       - ACI: Tenants => {Tenant Name} => Networking => VRFs: {Name}
+       - NDO: Nexus Dashboard => Orchestrator => Configure => Tenant Templates => Applications: {Schema Name} => {Template} => VRFs
+  EOT
   value = {
     bridge_domains = local.controller.type == "apic" ? { for v in sort(keys(aci_bridge_domain.map)
       ) : v => aci_bridge_domain.map[v].id } : local.controller.type == "ndo" ? {
@@ -115,6 +163,15 @@ output "networking" {
 }
 
 output "nd_orchestrator" {
+  description = <<-EOT
+    Identifiers for Nexus Dashboard Orchestrator:
+     * schema: Nexus Dashboard => Orchestrator => Configure => Tenant Templates => Applications: {Schema Name}
+     * schema_sites: Nexus Dashboard => Orchestrator => Configure => Tenant Templates => Applications: {Schema Name} => Sites
+     * sites: Nexus Dashboard => Sites: {Site Name}
+     * users:
+       - External Users: Nexus Dashboard => Admin Console => Administrative => Authentication
+       - Local Users: Nexus Dashboard => Admin Console => Administrative => Users
+  EOT
   value = {
     schemas      = { for v in sort(keys(data.mso_schema.map)) : v => data.mso_schema.map[v].id }
     schema_sites = { for v in sort(keys(mso_schema_site.map)) : v => mso_schema_site.map[v].id }
@@ -124,6 +181,33 @@ output "nd_orchestrator" {
 }
 
 output "policies" {
+  description = <<-EOT
+    Identifiers for Tenant Policies:
+     * bfd: Tenants => {Tenant Name} => Policies => Protocol => BFD: {Name}
+     * bgp:
+       - bgp_address_family_context: Tenants => {Tenant Name} => Policies => Protocol => BGP => BGP Address Family Context: {Name}
+       - bgp_best_path: Tenants => {Tenant Name} => Policies => Protocol => BGP => BGP Best Path Policy: {Name}
+       - bgp_route_summarization: Tenants => {Tenant Name} => Policies => Protocol => BGP => BGP Route Summarization: {Name}
+       - bgp_timers: Tenants => {Tenant Name} => Policies => Protocol => BGP => BGP Timers: {Name}
+     * dhcp:
+       - dhcp_option: Tenants => {Tenant Name} => Policies => Protocol => DHCP => Option Policies: {Name}
+       - dhcp_relay: Tenants => {Tenant Name} => Policies => Protocol => DHCP => Relay Policies: {Name}
+     * endpoint_retention: Tenants => {Tenant Name} => Policies => Protocol => End Point Retention: {Name}
+     * hsrp:
+       - hsrp_group: Tenants => {Tenant Name} => Policies => Protocol => HSRP => Interface Policies: {Name}
+       - hsrp_interface: Tenants => {Tenant Name} => Policies => Protocol => HSRP => Group Policies: {Name}
+     * ip_sla:
+       - ip_sla_monitoring: Tenants => {Tenant Name} => Policies => Protocol => IP SLA => IP SLA Monitoring Policies: {Name}
+       - track_lists: Tenants => {Tenant Name} => Policies => Protocol => IP SLA => Track Lists: {Name}
+       - track_members: Tenants => {Tenant Name} => Policies => Protocol => IP SLA => Track Members: {Name}
+     * l4_l7_pbr: Tenants => {Tenant Name} => Policies => Protocol => L4-L7 Policy-Based Redirect: {Name}
+     * l4_l7_redirect_health_groups: Tenants => {Tenant Name} => Policies => Protocol => L4-L7 Policy-Based Redirect Health Groups: {Name}
+     * l4_l7_pbr_destinations: Tenants => {Tenant Name} => Policies => Protocol => L4-L7 Policy-Based Redirect Destinations: {Name}
+     * ospf:
+       - ospf_interface: Tenants => {Tenant Name} => Policies => Protocol => OSPF => OSPF Interface: {Name}
+       - ospf_route_summarization: Tenants => {Tenant Name} => Policies => Protocol => OSPF => OSPF Route Summarization: {Name}
+       - ospf_timers: Tenants => {Tenant Name} => Policies => Protocol => OSPF => OSPF Timers: {Name}
+  EOT
   value = { protocol = {
     bfd = { for v in sort(keys(aci_bfd_interface_policy.map)) : v => aci_bfd_interface_policy.map[v].id }
     bgp = {
@@ -146,7 +230,8 @@ output "policies" {
     }
     ip_sla = {
       ip_sla_monitoring = { for v in sort(keys(aci_ip_sla_monitoring_policy.map)) : v => aci_ip_sla_monitoring_policy.map[v].id }
-      hsrp_interface    = { for v in sort(keys(aci_hsrp_interface_policy.map)) : v => aci_hsrp_interface_policy.map[v].id }
+      track_lists       = { for v in sort(keys(aci_rest_managed.track_lists)) : v => aci_rest_managed.track_lists[v].id }
+      track_members     = { for v in sort(keys(aci_rest_managed.track_members)) : v => aci_rest_managed.track_members[v].id }
     }
     l4_l7_pbr = { for v in sort(keys(aci_service_redirect_policy.map)) : v => aci_service_redirect_policy.map[v].id }
     l4_l7_redirect_health_groups = {
@@ -164,6 +249,7 @@ output "policies" {
 }
 
 output "tenants" {
+  description = "Tenant Identifiers."
   value = local.controller.type == "apic" ? { for v in sort(keys(aci_tenant.map)
     ) : v => aci_tenant.map[v].id } : local.controller.type == "ndo" ? {
     for v in sort(keys(mso_tenant.map)) : v => mso_tenant.map[v].id

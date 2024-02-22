@@ -64,10 +64,10 @@ API Information:
  - Class: "fvTrackMember"
  - Distinguished Name: "uni/tn-{tenant}/trackmember-{vrf}_{next_hop_ip}"
 GUI Location:
- - Tenants > {tenant} > Networking > Policies > Protocol > IP SLA >  Track Member > {name}
+ - Tenants > {tenant} > Networking > Policies > Protocol > IP SLA >  Track Members > {name}
 _______________________________________________________________________________________________________________________
 */
-resource "aci_rest_managed" "track_member" {
+resource "aci_rest_managed" "track_members" {
   depends_on = [aci_l3_outside.map]
   for_each   = { for k, v in local.track_members : k => v }
   dn         = "uni/tn-${each.value.tenant}/trackmember-${each.value.vrf}_${each.value.next_hop_ip}"

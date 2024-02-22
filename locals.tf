@@ -453,7 +453,7 @@ locals {
         e.vlan_list, tonumber(element(v.vlans, 0))
       ) : false
     ] if v.epg_type == "standard"
-  ]) : "${i.application_profile}/${i.application_epg}/${i.aaep}" => i }
+  ]) : "${i.aaep}/${i.application_profile}/${i.application_epg}" => i }
 
   switch_loop_1 = flatten([
     for v in lookup(var.model.switch, "switch_profiles", []) : [
