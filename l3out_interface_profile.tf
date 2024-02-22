@@ -404,7 +404,7 @@ resource "aci_l3out_static_route_next_hop" "map" {
     aci_ip_sla_monitoring_policy.map,
     aci_l3out_static_route.map,
     aci_rest_managed.track_lists,
-    aci_rest_managed.track_member
+    aci_rest_managed.track_members
   ]
   for_each             = local.l3out_static_routes_next_hop
   description          = each.value.description
