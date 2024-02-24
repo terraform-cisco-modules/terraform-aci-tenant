@@ -435,7 +435,7 @@ locals {
     vlan_list = length(regexall("(,|-)", jsonencode(v.allowed_vlans))) > 0 ? flatten([
       for s in v.vlan_split : length(regexall("-", s)) > 0 ? [for v in range(tonumber(
       element(split("-", s), 0)), (tonumber(element(split("-", s), 1)) + 1)) : tonumber(v)] : [tonumber(s)]
-    ]) : tonumber(v.vlan_split)
+    ]) : [for s in v.vlan_split : tonumber(s)]
   })]
   epg_to_aaeps = { for i in flatten([
     for k, v in local.application_epgs : [
