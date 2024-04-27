@@ -35,10 +35,10 @@ resource "aci_rest_managed" "application_profiles_annotations" {
   depends_on = [aci_application_profile.map]
   for_each = {
     for i in flatten([
-      for a, b in local.application_profiles : [
-        for v in b.annotations : { application_profile = a, key = v.key, tenant = b.tenant, value = v.value }
+      for k, v in local.application_profiles : [
+        for e in v.annotations : { application_profile = k, create = v.create, key = e.key, tenant = v.tenant, value = e.value }
       ]
-    ]) : "${i.application_profile}:${i.key}" => i if local.controller.type == "apic"
+    ]) : "${i.application_profile}:${i.key}" => i if local.controller.type == "apic" && i.create == true
   }
   dn         = "uni/tn-${each.value.tenant}/ap-${each.value.application_profile}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"

@@ -12,7 +12,7 @@ resource "aci_application_epg" "map" {
   for_each = {
     for k, v in local.application_epgs : k => v if v.epg_type == "standard" && local.controller.type == "apic"
   }
-  application_profile_dn = aci_application_profile.map[each.value.application_profile].id
+  application_profile_dn = "uni/tn-${each.value.tenant}/ap-${each.value.application_profile}"
   description            = each.value.description
   exception_tag          = each.value.contract_exception_tag
   flood_on_encap         = each.value.flood_in_encapsulation

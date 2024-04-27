@@ -30,10 +30,10 @@ resource "aci_rest_managed" "tenant_annotations" {
   depends_on = [aci_tenant.map]
   for_each = {
     for i in flatten([
-      for a, b in local.tenants : [
-        for v in b.annotations : { key = v.key, tenant = a, value = v.value }
+      for k, v in local.tenants : [
+        for e in v.annotations : { create = v.create, key = e.key, tenant = k, value = e.value }
       ]
-    ]) : "${i.tenant}:${i.key}" => i if local.controller.type == "apic"
+    ]) : "${i.tenant}:${i.key}" => i if local.controller.type == "apic" && i.create == true
   }
   dn         = "uni/tn-${each.value.tenant}/annotationKey-[${each.value.key}]"
   class_name = "tagAnnotation"
