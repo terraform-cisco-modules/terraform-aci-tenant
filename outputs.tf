@@ -35,7 +35,11 @@ output "application_profiles" {
       }) : local.controller.type == "ndo" ? {
       for v in sort(keys(mso_schema_template_anp_epg.map)) : v => mso_schema_template_anp_epg.map[v].id
     } : {}
-    epg_to_aaep = { for v in sort(keys(aci_epgs_using_function.epg_to_aaeps)) : v => aci_epgs_using_function.epg_to_aaeps[v].id }
+    epg_to_aaep = { for v in sort(keys(aci_epgs_using_function.epg_to_aaeps)) : v => {
+      encap = aci_epgs_using_function.epg_to_aaeps[v].encap
+      dn    = aci_epgs_using_function.epg_to_aaeps[v].id
+      }
+    }
     epg_to_contracts = local.controller.type == "apic" ? merge({
       for v in sort(keys(aci_rest_managed.contract_to_epgs)) : v => aci_rest_managed.contract_to_epgs[v].id },
       { for v in sort(keys(aci_rest_managed.contract_to_oob_epgs)) : v => aci_rest_managed.contract_to_oob_epgs[v].id },
