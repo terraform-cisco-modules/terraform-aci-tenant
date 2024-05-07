@@ -418,7 +418,7 @@ locals {
   ]) : "${i.application_profile}/${i.application_epg}/${i.domain}/${i.site}" => i if local.controller.type == "ndo" }
 
   aaep_to_epgs_loop = [
-    for k, v in lookup(var.model, "aaep_to_epgs", []) : {
+    for k, v in lookup(var.model, "aaep_to_epgs", {}) : {
       aaep                      = v.name
       access                    = lookup(v, "access_or_native_vlan", 0)
       allowed_vlans             = lookup(v, "allowed_vlans", "")
@@ -429,7 +429,7 @@ locals {
         ) > 0 ? tolist(split(",", lookup(v, "allowed_vlans", ""))) : length(
         regexall(",", lookup(v, "allowed_vlans", ""))) > 0 ? tolist(split(",", lookup(v, "allowed_vlans", ""))
       ) : [lookup(v, "allowed_vlans", "")]
-    } if lookup(v, "access_or_native_vlan", 0) > 0 && length(compact([lookup(v, "allowed_vlans", "")])) > 0
+    } if length(compact([lookup(v, "allowed_vlans", "")])) > 0
   ]
   aaep_to_epgs_loop_2 = [for v in local.aaep_to_epgs_loop : merge(v, {
     vlan_list = length(regexall("(,|-)", jsonencode(v.allowed_vlans))) > 0 ? flatten([
